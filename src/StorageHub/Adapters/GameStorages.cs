@@ -43,11 +43,11 @@ internal sealed class GameStorages
     {
         Forget();
 
-        var cache = BaseSingleton<ReduxUISystem>.Instance?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>())?.OwnerCache;
-        var world = BaseSingleton<BattleLogicWorld>.Instance;
+        var cache = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>())?.OwnerCache;
+        var world = GameSingleton.Existing<BattleLogicWorld>();
         var agents = world?._AgentManager;
         var player = agents?.GetLeadingRole();
-        var config = BaseSingleton<ConfigManager>.Instance;
+        var config = GameSingleton.Existing<ConfigManager>();
 
         if (cache == null) return new InventoryRead.NotReady("no item data yet (load a save first)");
         if (world == null || agents == null || player == null || config == null) return new InventoryRead.NotReady("the game world is not loaded");
@@ -81,7 +81,7 @@ internal sealed class GameStorages
         try
         {
             var tags = furniture.GetAgentComponent<FurnitureTagComponent>();
-            var itemConfig = BaseSingleton<ConfigManager>.Instance?.Get_Config_Item(stack.ConfigId);
+            var itemConfig = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(stack.ConfigId);
 
             if (tags == null || itemConfig == null) return null;
 
@@ -101,7 +101,7 @@ internal sealed class GameStorages
     /// <summary>The game's quick-move of one whole stack. False when the game refuses, usually because the target is full.</summary>
     public bool Move(ItemStack stack, long targetOwnerId)
     {
-        var items = BaseSingleton<BattleLogicWorld>.Instance?._ItemManager;
+        var items = GameSingleton.Existing<BattleLogicWorld>()?._ItemManager;
 
         if (items == null) return false;
 
@@ -114,7 +114,7 @@ internal sealed class GameStorages
     /// </summary>
     public IReadOnlyList<ItemStack> ReadFloor()
     {
-        var drops = BaseSingleton<BattleLogicWorld>.Instance?._DropItemManager;
+        var drops = GameSingleton.Existing<BattleLogicWorld>()?._DropItemManager;
 
         if (drops == null) return Array.Empty<ItemStack>();
 
@@ -145,7 +145,7 @@ internal sealed class GameStorages
     /// </summary>
     public bool PickUp(ItemStack floorStack, long targetOwnerId)
     {
-        var drops = BaseSingleton<BattleLogicWorld>.Instance?._DropItemManager;
+        var drops = GameSingleton.Existing<BattleLogicWorld>()?._DropItemManager;
 
         if (drops == null) return false;
 
@@ -162,7 +162,7 @@ internal sealed class GameStorages
 
     public string NameOf(int configId)
     {
-        var config = BaseSingleton<ConfigManager>.Instance;
+        var config = GameSingleton.Existing<ConfigManager>();
 
         return config == null ? $"Item {configId}" : ItemName(config, configId);
     }
@@ -194,7 +194,7 @@ internal sealed class GameStorages
     /// <summary>The icon the item table names for the web UI, falling back to the in-world icon.</summary>
     public string? IconName(int configId)
     {
-        var item = BaseSingleton<ConfigManager>.Instance?.Get_Config_Item(configId);
+        var item = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(configId);
 
         return NonEmpty(item?.WebIcon) ?? NonEmpty(item?.Icon);
     }

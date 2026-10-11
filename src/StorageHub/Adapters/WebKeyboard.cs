@@ -13,7 +13,7 @@ internal sealed class WebKeyboard
 
     public void Claim()
     {
-        var layer = BaseSingleton<ReduxUISystem>.Instance?.GetWebUILayer();
+        var layer = GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer();
 
         if (layer == null) return;
 
@@ -26,6 +26,6 @@ internal sealed class WebKeyboard
         if (_wasEnabled is not { } wasEnabled) return;
 
         _wasEnabled = null;
-        BaseSingleton<ReduxUISystem>.Instance?.GetWebUILayer()?.SetKeyboardEnabled(wasEnabled);
+        GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.SetKeyboardEnabled(wasEnabled);
     }
 }

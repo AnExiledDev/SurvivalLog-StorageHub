@@ -26,7 +26,7 @@ Log: `BepInEx/storage-hub.log`.
 
 ## Install
 
-Copy `StorageHub.dll` into `BepInEx/plugins`. Needs BepInEx 6 (IL2CPP build).
+Download `StorageHub.dll` from the [latest release](https://github.com/AnExiledDev/SurvivalLog-StorageHub/releases/latest) and copy it into `BepInEx/plugins`. Needs BepInEx 6 (IL2CPP build).
 
 ## Build and test
 
@@ -36,6 +36,10 @@ dotnet test tests/StorageHub.Tests
 ```
 
 The build references BepInEx and the game's interop assemblies under `GameDir`, so BepInEx must be installed and the game launched once. The tests compile only the pure `Core` code and need nothing from the game.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
 
 ## Provenance
 

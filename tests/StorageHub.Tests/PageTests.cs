@@ -1,0 +1,154 @@
+using System.Text.Json;
+using StorageHub.Core;
+using Xunit;
+using static StorageHub.Tests.Fixtures;
+
+namespace StorageHub.Tests;
+
+public class PageCommandTests
+{
+    [Theory]
+    [InlineData("slmod|storagehub|take|1|200")]
+    [InlineData("slmod|storagehub|takeAll|1")]
+    [InlineData("slmod|storagehub|putAway|1")]
+    public void Item_commands_name_the_item_and_storage_the_player_clicked(string message)
+    {
+        var expected = message.Split('|')[2] switch
+        {
+            "take" => (PageCommand)new PageCommand.Take(Apple, Fridge.OwnerId),
+            "takeAll" => new PageCommand.TakeAll(Apple),
+            _ => new PageCommand.PutAway(Apple),
+        };
+
+        Assert.Equal(expected, PageCommand.Parse(message));
+    }
+
+    [Fact]
+    public void Storage_ids_beyond_the_int_range_survive_the_round_trip()
+    {
+        Assert.Equal(new PageCommand.Take(7, 9_007_199_254_740_993), PageCommand.Parse("slmod|storagehub|take|7|9007199254740993"));
+    }
+
+    [Fact]
+    public void Panel_commands_parse_without_arguments()
+    {
+        Assert.Equal(new PageCommand.PutAwayBag(), PageCommand.Parse("slmod|storagehub|putAwayBag"));
+        Assert.Equal(new PageCommand.PutAwayFloor(), PageCommand.Parse("slmod|storagehub|putAwayFloor"));
+        Assert.Equal(new PageCommand.Close(), PageCommand.Parse("slmod|storagehub|close"));
+        Assert.Equal(new PageCommand.Ready(), PageCommand.Parse("slmod|storagehub|ready"));
+        Assert.Equal(new PageCommand.NoScript(), PageCommand.Parse("slmod|storagehub|noscript"));
+    }
+
+    [Fact]
+    public void Focus_tells_whether_the_search_box_wants_the_keyboard()
+    {
+        Assert.Equal(new PageCommand.Focus(true), PageCommand.Parse("slmod|storagehub|focus|1"));
+        Assert.Equal(new PageCommand.Focus(false), PageCommand.Parse("slmod|storagehub|focus|0"));
+    }
+
+    [Theory]
+    [InlineData("slmod|storagehub|take|apple|200")]
+    [InlineData("slmod|storagehub|take|1")]
+    [InlineData("slmod|storagehub|explode")]
+    [InlineData("slmod|storagehub|")]
+    public void A_malformed_command_is_never_acted_on(string message)
+    {
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse(message));
+    }
+
+    [Fact]
+    public void Only_messages_with_our_prefix_are_claimed_so_other_mods_and_the_game_keep_theirs()
+    {
+        Assert.True(PageCommand.IsOurs("slmod|storagehub|close"));
+        Assert.False(PageCommand.IsOurs("slmod|itemtotals|popup shown"));
+        Assert.False(PageCommand.IsOurs("3\u001eBackpack\u001eSORT_BACKPACK\u001e{}"));
+        Assert.False(PageCommand.IsOurs(null));
+    }
+}
+
+public class IconIndexTests
+{
+    private static readonly IconIndex Icons = IconIndex.Build(new[]
+    {
+        "Res/Food/UI_Item_Icon_Food_steak.png",
+        "Res/Material/UI_Item_Icon_Mat_S_1503002201.png",
+        "Res/Material/UI_Item_Icon_Shared.png",
+        "Res/Structure/UI_Item_Icon_Shared.png",
+    });
+
+    [Theory]
+    [InlineData("UI_Item_Icon_Food_steak")]
+    [InlineData("UI_Item_Icon_Food_steak.png")]
+    [InlineData("../../Res/Food/UI_Item_Icon_Food_steak.png")]
+    [InlineData("Assets\\Art\\UI\\ui_item_icon_food_steak.png")]
+    public void Any_form_of_an_icon_name_finds_the_web_file(string named)
+    {
+        Assert.Equal("Res/Food/UI_Item_Icon_Food_steak.png", Icons.Resolve(named));
+    }
+
+    [Fact]
+    public void Two_files_with_one_name_are_told_apart_by_the_folder_the_item_names()
+    {
+        Assert.Equal("Res/Structure/UI_Item_Icon_Shared.png", Icons.Resolve("Res/Structure/UI_Item_Icon_Shared.png"));
+        Assert.Equal("Res/Material/UI_Item_Icon_Shared.png", Icons.Resolve("UI_Item_Icon_Shared"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("UI_Item_Icon_Missing")]
+    public void An_item_without_a_web_icon_gets_none(string? named)
+    {
+        Assert.Null(Icons.Resolve(named));
+    }
+}
+
+public class HubViewTests
+{
+    [Fact]
+    public void The_page_gets_each_item_with_its_total_icon_and_where_it_sits()
+    {
+        var home = Home(Stack(1, Apple, 3, Bag), Stack(2, Apple, 5, Fridge), Stack(3, Apple, 2, Fridge), Stack(4, Rope, 1, Box));
+
+        using var view = JsonDocument.Parse(HubView.Build(home, configId => configId == Apple ? "Res/Food/apple.png" : null));
+        var apple = view.RootElement.GetProperty("items").EnumerateArray().Single(item => item.GetProperty("name").GetString() == "Red Apple");
+        var rope = view.RootElement.GetProperty("items").EnumerateArray().Single(item => item.GetProperty("name").GetString() == "Rope");
+
+        Assert.Equal(Apple, apple.GetProperty("id").GetInt32());
+        Assert.Equal(10, apple.GetProperty("total").GetInt32());
+        Assert.Equal("Res/Food/apple.png", apple.GetProperty("icon").GetString());
+        Assert.Equal(new (string?, int)[] { ("100", 3), ("200", 7) }, apple.GetProperty("at").EnumerateArray().Select(at => (at[0].GetString(), at[1].GetInt32())));
+        Assert.Equal(JsonValueKind.Null, rope.GetProperty("icon").ValueKind);
+    }
+
+    [Fact]
+    public void Every_storage_is_listed_with_its_kind_so_the_page_knows_which_one_is_the_bag()
+    {
+        using var view = JsonDocument.Parse(HubView.Build(Home(), _ => null));
+
+        var storages = view.RootElement.GetProperty("storages").EnumerateArray()
+            .Select(storage => (storage.GetProperty("id").GetString(), storage.GetProperty("name").GetString(), storage.GetProperty("kind").GetString()));
+
+        Assert.Equal(new (string?, string?, string?)[] { ("100", "Bag", "bag"), ("200", "Fridge", "storage"), ("300", "Wooden Box", "storage"), ("400", "Workbench drawer", "drawer") }, storages);
+    }
+
+    [Fact]
+    public void Names_with_quotes_slashes_and_line_breaks_reach_the_page_intact()
+    {
+        var name = "Bob's \"best\" \\ jerky\n" + (char)0x2028 + "</script>";
+        var home = new Inventory(new[] { Bag }, new[] { Stack(1, Apple, 1, Bag) }, new Dictionary<int, string> { [Apple] = name });
+
+        using var view = JsonDocument.Parse(HubView.Build(home, _ => null));
+
+        Assert.Equal(name, view.RootElement.GetProperty("items")[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public void A_string_literal_survives_being_pasted_into_a_script()
+    {
+        var text = "Moved 3 stacks. \"Rope\" had nowhere to go" + (char)0x2029;
+
+        Assert.Equal(text, JsonSerializer.Deserialize<string>(HubView.Str(text)));
+        Assert.Equal("\"\"", HubView.Str(null));
+    }
+}

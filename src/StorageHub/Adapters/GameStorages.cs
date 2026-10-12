@@ -226,6 +226,30 @@ internal sealed class GameStorages
         return config == null ? $"Item {configId}" : ItemName(config, configId);
     }
 
+    /// <summary>
+    /// Every item in the game's item table (ConfigManager._Config_Item_Dict, which GetAll_Config_Item reads, RVA
+    /// 0x2c9f860) that has a name, for the keep list's search. Empty until the game has loaded its tables.
+    /// </summary>
+    public IReadOnlyList<CatalogItem> Catalog()
+    {
+        var config = GameSingleton.Existing<ConfigManager>();
+        var table = config?._Config_Item_Dict;
+        var catalog = new List<CatalogItem>();
+
+        if (config == null || table == null) return catalog;
+
+        foreach (var item in table.Values)
+        {
+            if (item == null) continue;
+
+            var name = ItemName(config, item.ID);
+
+            if (name != $"Item {item.ID}") catalog.Add(new CatalogItem(item.ID, name));
+        }
+
+        return catalog;
+    }
+
     /// <summary>Names are cached for the life of one world; a new world may come with a different language.</summary>
     private void ForgetNamesOfOtherWorld(BattleLogicWorld world)
     {

@@ -30,6 +30,15 @@ public abstract record PageCommand
     /// <summary>Put every item lying on the floor at home into the storages whose tags want it.</summary>
     public sealed record PutAwayFloor : PageCommand;
 
+    /// <summary>Add an item to the keep list, or change how many of it putting away leaves in the bag.</summary>
+    public sealed record SetKeep(int ConfigId, int Amount) : PageCommand;
+
+    /// <summary>Take an item off the keep list.</summary>
+    public sealed record RemoveKeep(int ConfigId) : PageCommand;
+
+    /// <summary>The keep list's search wants every item in the game, not just the ones the player owns.</summary>
+    public sealed record SendCatalog : PageCommand;
+
     public sealed record Close : PageCommand;
 
     /// <summary>The search box gained or lost focus, so the game should send keys to the page or stop.</summary>
@@ -62,6 +71,9 @@ public abstract record PageCommand
             ("putAway", 2) when TryInt(parts[1], out var configId) => new PutAway(configId),
             ("putAwayBag", 1) => new PutAwayBag(),
             ("putAwayFloor", 1) => new PutAwayFloor(),
+            ("keepSet", 3) when TryInt(parts[1], out var configId) && TryInt(parts[2], out var amount) => new SetKeep(configId, amount),
+            ("keepRemove", 2) when TryInt(parts[1], out var configId) => new RemoveKeep(configId),
+            ("catalog", 1) => new SendCatalog(),
             ("close", 1) => new Close(),
             ("focus", 2) when parts[1] is "0" or "1" => new Focus(parts[1] == "1"),
             ("menu", 2) when parts[1] is "0" or "1" => new Menu(parts[1] == "1"),

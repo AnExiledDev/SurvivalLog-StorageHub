@@ -21,17 +21,20 @@ internal sealed class HubSession
     private readonly KeyCode _toggleKey;
     private readonly bool _isVerbose;
     private readonly Action<string> _log;
+    private readonly IKeepListStore _keepStore;
+    private readonly bool _isKeepOn;
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
 
     private IconIndex? _icons;
     private Inventory _inventory = Inventory.Empty;
+    private KeepList _keep;
     private string _shownView = "";
     private float _nextRefreshAt;
     private bool _isOpen;
     private bool _hasLoggedIcons;
 
-    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log)
+    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, IKeepListStore keepStore, bool isKeepOn)
     {
         _game = game;
         _page = page;
@@ -39,6 +42,9 @@ internal sealed class HubSession
         _toggleKey = toggleKey;
         _isVerbose = isVerbose;
         _log = log;
+        _keepStore = keepStore;
+        _isKeepOn = isKeepOn;
+        _keep = keepStore.Load();
     }
 
     public void Update()
@@ -193,7 +199,8 @@ internal sealed class HubSession
         notReady = RefreshInventory(out var reason) ? null : "Not available right now: " + reason;
 
         var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
-        var view = HubView.Build(_inventory, IconPath, rot);
+        AddNames(_keep.Amounts.Keys);
+        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep)));
         LogIconsOnce();
 
         return view;
@@ -203,16 +210,17 @@ internal sealed class HubSession
     private IReadOnlyList<RotRow> ReadRottingSoon()
     {
         var floor = _game.ReadFloor();
-        AddNames(floor);
+        AddNames(floor.Select(stack => stack.ConfigId));
 
         return RottingSoon.Rows(_inventory, floor, _game.DaysLeft);
     }
 
-    private void AddNames(IEnumerable<ItemStack> stacks)
+    /// <summary>Names for items the storage read did not see, such as floor items and kept items the player does not hold.</summary>
+    private void AddNames(IEnumerable<int> configIds)
     {
         var names = _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
 
-        foreach (var stack in stacks) names.TryAdd(stack.ConfigId, _game.NameOf(stack.ConfigId));
+        foreach (var configId in configIds) names.TryAdd(configId, _game.NameOf(configId));
 
         _inventory = _inventory with { ItemNames = names };
     }
@@ -254,6 +262,15 @@ internal sealed class HubSession
                 break;
             case PageCommand.PutAwayFloor:
                 Act("put away floor items", PutAwayFloor);
+                break;
+            case PageCommand.SetKeep setKeep:
+                Act($"keep {setKeep.Amount} of item {setKeep.ConfigId}", () => ChangeKeep(_keep.With(setKeep.ConfigId, setKeep.Amount), setKeep.ConfigId));
+                break;
+            case PageCommand.RemoveKeep removeKeep:
+                Act($"stop keeping item {removeKeep.ConfigId}", () => ChangeKeep(_keep.Without(removeKeep.ConfigId), removeKeep.ConfigId));
+                break;
+            case PageCommand.SendCatalog:
+                SendCatalog();
                 break;
             case PageCommand.Close:
                 Close();
@@ -338,6 +355,7 @@ internal sealed class HubSession
         return Execute(StoragePlan.Take(_inventory, _inventory.Stacks.Where(wanted)), MoveAndLog);
     }
 
+    /// <summary>The keep list holds back its stacks first; what it kept is named after the result of the moves.</summary>
     private string PutAway(Func<ItemStack, bool> wanted)
     {
         if (!RefreshInventory(out var reason)) return "Not available right now: " + reason;
@@ -346,7 +364,41 @@ internal sealed class HubSession
 
         if (bag == null) return "No bag found.";
 
-        return Execute(StoragePlan.PutAway(_inventory, _inventory.Stacks.Where(stack => stack.OwnerId == bag.OwnerId && wanted(stack)), RankAndLog), MoveAndLog);
+        var split = BagKeep.Split(_inventory.Stacks.Where(stack => stack.OwnerId == bag.OwnerId && wanted(stack)), _isKeepOn ? _keep : KeepList.Empty, _game.DaysLeft);
+        var kept = BagKeep.Describe(split, _inventory);
+
+        if (_isVerbose) LogKept(split.Kept);
+
+        var moved = Execute(StoragePlan.PutAway(_inventory, split.PutAway, RankAndLog), MoveAndLog);
+
+        return kept.Length == 0 ? moved : moved + " " + kept;
+    }
+
+    private void LogKept(IEnumerable<ItemStack> kept)
+    {
+        foreach (var stack in kept) _log($"  keep {Describe(stack)}");
+    }
+
+    /// <summary>The list in memory only changes once it is saved, so the panel never shows a list the file does not hold.</summary>
+    private string ChangeKeep(KeepList changed, int configId)
+    {
+        if (!_keepStore.Save(changed)) return "Could not save the keep list, see BepInEx/storage-hub.log.";
+
+        _keep = changed;
+        var name = _game.NameOf(configId);
+
+        if (!changed.Has(configId)) return $"{name} is off the keep list.";
+
+        var amount = changed.AmountOf(configId);
+
+        return amount == 0 ? $"Keeping no {name} in your bag for now." : $"Keeping {amount} {name} in your bag.";
+    }
+
+    private void SendCatalog()
+    {
+        var catalog = _game.Catalog();
+        _page.Catalog(HubView.Catalog(catalog, IconPath));
+        _log($"keep list catalog sent: {catalog.Count} items");
     }
 
     /// <summary>Floor items are not in the storage read, so their names are added before anything is logged.</summary>

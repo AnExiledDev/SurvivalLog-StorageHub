@@ -47,6 +47,9 @@ internal sealed class WebPage
 
     public void Close() => Call("close()");
 
+    /// <summary>Every named item in the game, for the keep list's search; sent when the page asks, once per page load.</summary>
+    public void Catalog(string catalogJson) => Call($"catalog({catalogJson})");
+
     /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
     public void Status(string text) => Call($"status({HubView.Str(text)})");
 

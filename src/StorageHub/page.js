@@ -379,8 +379,15 @@
   var TIMES = '\u00d7';
   // Labels the list draws in warning colour: food that has turned, or will within the hour.
   var URGENT_LEFT = { 'spoiled': true, 'under 1h': true };
+  var MAX_KEEP = 9999;
+  // A run of +/- clicks is saved once, this long after the last one.
+  var KEEP_SAVE_DELAY_MS = 350;
+  var MAX_KEEP_RESULTS = 60;
 
-  var state = { data: { storages: [], items: [], rot: [] }, query: '', selected: null, isOpen: false, isRotView: false };
+  // view is 'items', 'rot' (Rotting soon) or 'keep' (Keep in bag).
+  var state = { data: { storages: [], items: [], rot: [], keep: { on: true, rows: [] } }, query: '', selected: null, isOpen: false, view: 'items', catalog: [], isCatalogAsked: false };
+  // Amounts the player has changed and the game has not yet answered, by item id: { amount, timer, isSent }.
+  var pendingKeep = {};
   var ui = null;
   var toastTimer = 0;
   var isBusy = false;
@@ -465,6 +472,24 @@
     '.sh-btn{font:inherit;font-size:13px;color:#dde2f0;padding:7px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(58,58,60,.9),rgba(38,38,40,.92));cursor:pointer;white-space:nowrap}',
     '.sh-btn:hover{background:linear-gradient(180deg,rgba(72,66,48,.92),rgba(50,46,32,.95));border-color:rgba(255,193,7,.75)}',
     '.sh-btn.sh-on{background:rgba(255,193,7,.24);border-color:rgba(255,193,7,.75);color:#EBA308}',
+    '.sh-btn,.sh-row{transition:background-color .12s,border-color .12s,color .12s,opacity .12s}',
+    '.sh-btn.sh-mini{font-size:12px;padding:3px 9px;opacity:.7}',
+    '.sh-row:hover .sh-btn.sh-mini,.sh-btn.sh-mini.sh-on{opacity:1}',
+    '.sh-row.sh-keep{cursor:default;padding:5px 8px}',
+    '.sh-kname{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
+    '.sh-held{font-size:12px;color:rgba(238,238,238,.6)}',
+    '.sh-held-short{color:#e0614f}',
+    '.sh-keep-zero .sh-name{color:rgba(238,238,238,.55)}',
+    '.sh-step{flex:none;display:flex;align-items:center;border:1px solid rgba(255,255,255,.14);border-radius:7px;overflow:hidden;background:rgba(10,10,12,.72)}',
+    '.sh-step .sh-btn{width:30px;padding:6px 0;border:none;border-radius:0;text-align:center;font-size:15px;line-height:18px}',
+    '.sh-amount{width:58px;height:30px;padding:0 4px;text-align:center;font:inherit;font-size:14px;font-weight:600;color:#EBA308;background:transparent;border:none;border-left:1px solid rgba(255,255,255,.14);border-right:1px solid rgba(255,255,255,.14);outline:none;user-select:text}',
+    '.sh-amount:focus{background:rgba(255,193,7,.14)}',
+    '.sh-amount::-webkit-outer-spin-button,.sh-amount::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}',
+    '.sh-btn.sh-del{flex:none;width:28px;height:28px;padding:0;font-size:16px;line-height:26px;text-align:center}',
+    '.sh-btn.sh-del:hover{border-color:#e0614f;color:#e0614f;background:rgba(224,97,79,.14)}',
+    '.sh-banner{margin:2px 2px 8px;padding:8px 10px;border-radius:7px;border:1px solid rgba(224,97,79,.6);background:rgba(224,97,79,.12);font-size:13px;color:#f0b5ab}',
+    '.sh-hint{font-size:13px;color:rgba(238,238,238,.6)}',
+    '.sh-pick:hover{background:rgba(255,255,255,.08)}',
     '.sh-foot{display:flex;font-size:13px;color:rgba(238,238,238,.7)}',
     '.sh-status{flex:1}',
     '#sh-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;padding:10px 18px;border-radius:8px;border:1px solid rgba(255,193,7,.75);background:linear-gradient(180deg,rgba(30,30,33,.94),rgba(18,18,20,.96));color:#eee;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
@@ -490,8 +515,11 @@
     search.placeholder = 'Search items...';
     var rotButton = button('Rotting soon', 'rotView');
     rotButton.title = 'Food in your bag, your storages and on the floor at home, soonest to spoil first';
+    var keepButton = button('Keep in bag', 'keepView');
+    keepButton.title = 'Items putting the bag away always leaves in your bag, and how many of each';
     bar.appendChild(search);
     bar.appendChild(rotButton);
+    bar.appendChild(keepButton);
     bar.appendChild(button('Put whole bag away by tag', 'putAwayBag'));
     bar.appendChild(button('Put floor items away by tag', 'putAwayFloor'));
 
@@ -523,7 +551,9 @@
     root.addEventListener('mousedown', function (e) { e.stopPropagation(); });
     search.addEventListener('input', function () {
       state.query = search.value;
-      renderList();
+
+      if (state.view === 'keep') renderDetail();
+      else renderList();
     });
     search.addEventListener('focus', function () { send('focus|1'); });
     search.addEventListener('blur', function () { send('focus|0'); });
@@ -538,7 +568,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sub: sub, search: search, rotButton: rotButton, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, sub: sub, search: search, rotButton: rotButton, keepButton: keepButton, list: list, detail: detail, status: status, toast: toast };
   }
 
   // The style outlives a lost panel root, so a rebuild must not stack another copy of it.
@@ -570,11 +600,15 @@
     var act = target.getAttribute('data-act');
     var args = target.getAttribute('data-args');
 
-    // Switching lists is the page's own business; the game is not asked.
-    if (act === 'rotView') {
-      state.isRotView = !state.isRotView;
-      ui.list.scrollTop = 0;
-      render();
+    // Switching lists is the page's own business; the game is only asked for the item catalog the keep view searches.
+    if (act === 'rotView' || act === 'keepView') {
+      showView(act === 'rotView' ? 'rot' : 'keep');
+
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(KEEP_ACTIONS, act)) {
+      KEEP_ACTIONS[act](args);
 
       return;
     }
@@ -586,6 +620,133 @@
     }
 
     sendAction(args ? act + '|' + args : act);
+  }
+
+  // A view's button opens it, and pressed again goes back to the item list.
+  function showView(view) {
+    state.view = state.view === view ? 'items' : view;
+    ui.list.scrollTop = 0;
+
+    if (state.view === 'keep') askForCatalog();
+
+    ui.search.placeholder = state.view === 'keep' ? 'Search every item to add it to the keep list...' : 'Search items...';
+    render();
+  }
+
+  function askForCatalog() {
+    if (state.isCatalogAsked) return;
+
+    state.isCatalogAsked = true;
+    send('catalog');
+  }
+
+  // Keep list edits are not moves, so they skip the one-move-at-a-time lock and a run of +/- clicks stays responsive.
+  var KEEP_ACTIONS = {
+    keepAdd: function (id) { setKeep(id, suggestedKeep(id)); },
+    keepStep: function (args) {
+      var parts = String(args).split('|');
+      var id = parts[0];
+
+      setKeep(id, keptAmount(id) + Number(parts[1]));
+    },
+    keepRemove: function (id) {
+      dropPendingKeep(id);
+      send('keepRemove|' + id);
+    },
+    // The Keep button on an item list row: adds the item, or once it is on the list, opens the list.
+    quickKeep: function (id) {
+      if (keepRow(id)) {
+        showView('keep');
+
+        return;
+      }
+
+      setKeep(id, suggestedKeep(id));
+    }
+  };
+
+  // Shown at once and saved once the clicks stop, so the game writes the file once per run of clicks.
+  function setKeep(id, amount) {
+    var clamped = Math.max(0, Math.min(MAX_KEEP, Math.floor(amount) || 0));
+
+    dropPendingKeep(id);
+    pendingKeep[id] = { amount: clamped, isSent: false, timer: setTimeout(function () { sendKeep(id); }, KEEP_SAVE_DELAY_MS) };
+    render();
+  }
+
+  function sendKeep(id) {
+    var pending = pendingKeep[id];
+
+    if (!pending) return;
+
+    pending.isSent = true;
+    send('keepSet|' + id + '|' + pending.amount);
+  }
+
+  function dropPendingKeep(id) {
+    if (pendingKeep[id]) clearTimeout(pendingKeep[id].timer);
+
+    delete pendingKeep[id];
+  }
+
+  // Every edit is answered by a status line and then the new view; once both are in, the view is the truth again,
+  // which also puts back an amount the game could not save.
+  function settleSentKeeps() {
+    setTimeout(function () {
+      var isChanged = false;
+
+      Object.keys(pendingKeep).forEach(function (id) {
+        if (!pendingKeep[id].isSent) return;
+
+        delete pendingKeep[id];
+        isChanged = true;
+      });
+
+      if (isChanged && state.isOpen) render();
+    }, 300);
+  }
+
+  function keepRows() {
+    return (state.data.keep && state.data.keep.rows) || [];
+  }
+
+  function keepRow(id) {
+    var rows = keepRows();
+
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i].id) === String(id)) return rows[i];
+    }
+
+    return null;
+  }
+
+  function keptAmount(id) {
+    if (pendingKeep[id]) return pendingKeep[id].amount;
+
+    var row = keepRow(id);
+
+    return row ? row.amount : 0;
+  }
+
+  function isKept(id) {
+    return keepRow(id) != null || pendingKeep[id] != null;
+  }
+
+  // What the bag holds now, which is what the player most likely wants to keep; 1 when the bag has none.
+  function suggestedKeep(id) {
+    return bagCount(id) || 1;
+  }
+
+  function bagCount(id) {
+    var row = keepRow(id);
+
+    if (row) return row.held;
+
+    var item = findItem(id);
+
+    if (!item) return 0;
+
+    return item.at.reduce(function (sum, at) { return storageOf(at[0]).kind === 'bag' ? sum + at[1] : sum; }, 0);
   }
 
   function matches(item, words) {
@@ -652,15 +813,25 @@
 
   function renderHeader() {
     var homes = state.data.storages.filter(function (s) { return s.kind !== 'bag'; }).length;
-    ui.sub.textContent = state.isRotView
-      ? 'Food that spoils, soonest first, across ' + homes + ' storages, your bag and the floor at home'
-      : state.data.items.length + ' kinds of item across ' + homes + ' storages and your bag';
-    ui.rotButton.className = 'sh-btn' + (state.isRotView ? ' sh-on' : '');
+    var subtitles = {
+      items: state.data.items.length + ' kinds of item across ' + homes + ' storages and your bag',
+      rot: 'Food that spoils, soonest first, across ' + homes + ' storages, your bag and the floor at home',
+      keep: 'Putting the bag away leaves these in your bag'
+    };
+    ui.sub.textContent = subtitles[state.view];
+    ui.rotButton.className = 'sh-btn' + (state.view === 'rot' ? ' sh-on' : '');
+    ui.keepButton.className = 'sh-btn' + (state.view === 'keep' ? ' sh-on' : '');
   }
 
   function renderList() {
-    if (state.isRotView) {
+    if (state.view === 'rot') {
       renderRot();
+
+      return;
+    }
+
+    if (state.view === 'keep') {
+      renderKeep();
 
       return;
     }
@@ -682,12 +853,177 @@
       row.setAttribute('data-item', String(item.id));
       row.appendChild(icon(item, 'sh-i38'));
       row.appendChild(el('div', 'sh-name', item.name));
+      row.appendChild(quickKeepButton(item.id));
       row.appendChild(el('div', 'sh-count', TIMES + item.total));
       fragment.appendChild(row);
     });
 
     ui.list.appendChild(fragment);
     ui.list.scrollTop = scroll;
+  }
+
+  function quickKeepButton(id) {
+    var isOnList = isKept(id);
+    var node = withArgs(button(isOnList ? 'Keep ' + keptAmount(id) : 'Keep', 'quickKeep', 'sh-mini' + (isOnList ? ' sh-on' : '')), id);
+    node.title = isOnList ? 'On the keep list: open it to change the amount' : 'Add to the keep list: putting the bag away leaves this many in your bag';
+
+    return node;
+  }
+
+  // The keep list, by name: how many to keep, with - and + and a number field, and how many the bag holds now.
+  // A field being typed into is left alone, so the refresh every second cannot wipe what the player is typing.
+  function renderKeep() {
+    if (isTypingAmount()) return;
+
+    var scroll = ui.list.scrollTop;
+    var keep = state.data.keep || { on: true, rows: [] };
+    ui.list.textContent = '';
+
+    if (!keep.on) ui.list.appendChild(el('div', 'sh-banner', 'The keep list is turned off in the config (Keep, Enabled), so putting the bag away moves everything.'));
+
+    if (keepRows().length === 0) {
+      ui.list.appendChild(el('div', 'sh-empty', 'Nothing on the keep list yet. Find an item on the right, or press Keep on an item in the main list.'));
+
+      return;
+    }
+
+    var fragment = document.createDocumentFragment();
+
+    keepRows().forEach(function (kept) { fragment.appendChild(keepRowNode(kept)); });
+
+    ui.list.appendChild(fragment);
+    ui.list.scrollTop = scroll;
+  }
+
+  function keepRowNode(kept) {
+    var amount = keptAmount(kept.id);
+    var row = el('div', 'sh-row sh-keep' + (amount === 0 ? ' sh-keep-zero' : ''));
+    var names = el('div', 'sh-kname');
+    names.appendChild(el('div', 'sh-name', kept.name));
+    names.appendChild(heldNode(kept.held, amount));
+    row.appendChild(icon(kept, 'sh-i38'));
+    row.appendChild(names);
+    row.appendChild(stepperNode(kept.id, amount));
+
+    var remove = withArgs(button(TIMES, 'keepRemove', 'sh-del'), kept.id);
+    remove.title = 'Take off the keep list';
+    row.appendChild(remove);
+
+    return row;
+  }
+
+  function heldNode(held, amount) {
+    if (amount === 0) return el('div', 'sh-held', held + ' in your bag, none kept');
+
+    var isShort = held < amount;
+
+    return el('div', 'sh-held' + (isShort ? ' sh-held-short' : ''), held + ' in your bag' + (isShort ? ', ' + (amount - held) + ' short' : ''));
+  }
+
+  function stepperNode(id, amount) {
+    var step = el('div', 'sh-step');
+    var less = withArgs(button('-', 'keepStep'), id + '|-1');
+    var more = withArgs(button('+', 'keepStep'), id + '|1');
+    less.title = 'Keep one fewer';
+    more.title = 'Keep one more';
+    step.appendChild(less);
+    step.appendChild(amountField(id, amount));
+    step.appendChild(more);
+
+    return step;
+  }
+
+  // Enter saves, Esc puts the shown amount back; either way the keyboard goes back to the game.
+  function amountField(id, amount) {
+    var field = el('input', 'sh-amount');
+    field.type = 'number';
+    field.min = '0';
+    field.max = String(MAX_KEEP);
+    field.value = String(amount);
+    field.title = 'How many to keep in your bag';
+    field.addEventListener('focus', function () {
+      send('focus|1');
+      field.select();
+    });
+    field.addEventListener('blur', function () {
+      send('focus|0');
+      // Saved here rather than on change, so a refresh held back while typing is drawn either way.
+      if (field.value !== String(amount) && field.value !== '') setKeep(id, Number(field.value));
+      else render();
+    });
+    field.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+
+      if (e.key === 'Enter') field.blur();
+
+      if (e.key === 'Escape') {
+        field.value = String(amount);
+        field.blur();
+      }
+    });
+
+    return field;
+  }
+
+  function isTypingAmount() {
+    var active = document.activeElement;
+
+    return !!active && active.className === 'sh-amount' && ui.list.contains(active);
+  }
+
+  // The right side of the keep view: the search box finds any item in the game; with no search, what the bag holds.
+  function renderKeepAdd() {
+    var scrollBox = ui.detail.querySelector('.sh-locs');
+    var scroll = scrollBox ? scrollBox.scrollTop : 0;
+    var words = searchWords();
+    var source = words.length > 0 && state.catalog.length > 0 ? state.catalog : state.data.items;
+    var found = source.filter(function (item) { return words.length > 0 ? matches(item, words) : bagCount(item.id) > 0; });
+    ui.detail.textContent = '';
+
+    var head = el('div');
+    head.appendChild(el('div', 'sh-dname', 'Add to the keep list'));
+    head.appendChild(el('div', 'sh-hint', keepAddHint(words.length > 0)));
+    ui.detail.appendChild(head);
+
+    if (found.length === 0) {
+      ui.detail.appendChild(el('div', 'sh-empty', words.length > 0 ? 'No item has that name.' : 'Your bag is empty. Type a name above to find any item.'));
+
+      return;
+    }
+
+    var picks = el('div', 'sh-locs');
+
+    found.slice(0, MAX_KEEP_RESULTS).forEach(function (item) { picks.appendChild(keepPickNode(item)); });
+
+    if (found.length > MAX_KEEP_RESULTS) picks.appendChild(el('div', 'sh-empty', (found.length - MAX_KEEP_RESULTS) + ' more. Type more of the name to narrow it down.'));
+
+    ui.detail.appendChild(picks);
+    picks.scrollTop = scroll;
+  }
+
+  function keepAddHint(isSearching) {
+    if (!isSearching) return 'In your bag now. Type a name above to search every item in the game.';
+
+    return state.catalog.length > 0 ? 'Every item in the game' : 'Items you own (the full item list is still loading)';
+  }
+
+  function keepPickNode(item) {
+    var pick = el('div', 'sh-loc sh-pick');
+    var held = bagCount(item.id);
+    pick.appendChild(icon(item, 'sh-i38'));
+    pick.appendChild(el('div', 'sh-name', item.name));
+
+    if (held > 0) pick.appendChild(el('span', 'sh-badge sh-badge-bag', held + ' in bag'));
+
+    if (isKept(item.id)) {
+      pick.appendChild(el('span', 'sh-badge', 'Keeping ' + keptAmount(item.id)));
+    } else {
+      var add = withArgs(button('+ Keep', 'keepAdd'), item.id);
+      add.title = 'Add to the keep list, keeping ' + suggestedKeep(item.id);
+      pick.appendChild(add);
+    }
+
+    return pick;
   }
 
   // One row per kind, place and hour left; clicking one shows that item's detail beside the list, as in the item list.
@@ -726,6 +1062,12 @@
   }
 
   function renderDetail() {
+    if (state.view === 'keep') {
+      renderKeepAdd();
+
+      return;
+    }
+
     var scrollBox = ui.detail.querySelector('.sh-locs');
     var scroll = scrollBox ? scrollBox.scrollTop : 0;
     var item = state.selected == null ? null : findItem(state.selected);
@@ -800,6 +1142,16 @@
     if (state.isOpen) render();
   }
 
+  // Every named item in the game, for the keep view's search. An empty answer means the game had not loaded its item
+  // table yet, so the next visit to the keep view asks again.
+  function catalog(items) {
+    state.catalog = items || [];
+
+    if (state.catalog.length === 0) state.isCatalogAsked = false;
+
+    if (state.isOpen && state.view === 'keep') renderDetail();
+  }
+
   function close() {
     state.isOpen = false;
 
@@ -813,6 +1165,7 @@
   function status(text) {
     build();
     clearBusy();
+    settleSentKeeps();
 
     if (state.isOpen) {
       ui.status.textContent = text;
@@ -904,6 +1257,6 @@
     } catch (e) {}
   }, 400);
 
-  window.__storagehub = { open: open, setData: setData, close: close, status: status };
+  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog };
   send('ready');
 })();

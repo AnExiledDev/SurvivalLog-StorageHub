@@ -53,6 +53,15 @@ public class PageCommandTests
         Assert.Equal(new PageCommand.Menu(false), PageCommand.Parse("slmod|storagehub|menu|0"));
     }
 
+    [Fact]
+    public void Keep_commands_name_the_item_and_the_amount_to_leave_in_the_bag()
+    {
+        Assert.Equal(new PageCommand.SetKeep(Apple, 6), PageCommand.Parse("slmod|storagehub|keepSet|1|6"));
+        Assert.Equal(new PageCommand.SetKeep(Apple, 0), PageCommand.Parse("slmod|storagehub|keepSet|1|0"));
+        Assert.Equal(new PageCommand.RemoveKeep(Apple), PageCommand.Parse("slmod|storagehub|keepRemove|1"));
+        Assert.Equal(new PageCommand.SendCatalog(), PageCommand.Parse("slmod|storagehub|catalog"));
+    }
+
     [Theory]
     [InlineData("slmod|storagehub|take|apple|200")]
     [InlineData("slmod|storagehub|take|1")]
@@ -60,6 +69,14 @@ public class PageCommandTests
     [InlineData("slmod|storagehub|")]
     [InlineData("slmod|storagehub|menu")]
     [InlineData("slmod|storagehub|menu|yes")]
+    [InlineData("slmod|storagehub|keepSet|1")]
+    [InlineData("slmod|storagehub|keepSet|1|-2")]
+    [InlineData("slmod|storagehub|keepSet|1|2.5")]
+    [InlineData("slmod|storagehub|keepSet|apple|2")]
+    [InlineData("slmod|storagehub|keepSet|1|99999999999")]
+    [InlineData("slmod|storagehub|keepRemove")]
+    [InlineData("slmod|storagehub|keepRemove|apple")]
+    [InlineData("slmod|storagehub|catalog|all")]
     public void A_malformed_command_is_never_acted_on(string message)
     {
         Assert.IsType<PageCommand.Unknown>(PageCommand.Parse(message));

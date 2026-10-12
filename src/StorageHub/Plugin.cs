@@ -13,20 +13,22 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.5.0";
+    private const string Version = "0.6.0";
 
     public override void Load()
     {
         var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8, "Key that opens and closes the storage panel.").Value;
         var isVerbose = Config.Bind("Diagnostics", "Verbose", false, "Also log every planned move and every storage's tag rank, for working out why an item went where it did.").Value;
+        var isKeepOn = Config.Bind("Keep", "Enabled", true, "Leave the amounts on the panel's Keep in bag list in your bag whenever you put the bag away, whole or one item at a time. Off: putting away ignores the list, which is kept for when you turn it back on.").Value;
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 
-        log.Write($"===== Storage Hub {Version} started, toggle key {toggleKey}, verbose {isVerbose}");
+        log.Write($"===== Storage Hub {Version} started, toggle key {toggleKey}, verbose {isVerbose}, keep list {isKeepOn}");
         InputGate.Apply(harmony, log.Write);
         PageMessages.Apply(harmony, log.Write);
         var page = new WebPage(log.Write);
-        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write);
+        var keepStore = new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json"), log.Write);
+        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keepStore, isKeepOn);
         StoragePanel.Log = log.Write;
         AddComponent<StoragePanel>();
         StartOrganizer(harmony, log);

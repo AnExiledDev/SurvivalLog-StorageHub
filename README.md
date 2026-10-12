@@ -14,6 +14,19 @@ A BepInEx 6 (IL2CPP) plugin for Survival Log: one searchable list of every item 
 
 Moves go through the game's own quick-move and floor pickup, so freshness and durability are kept.
 
+## Keep in bag
+
+New in 0.6.0. The keep list names items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest. That covers "Put whole bag away by tag", "Put away by tag" on one item, and "Put away by tag" in the Mods menu. Floor pickup and drone deliveries ignore the list.
+
+- "Keep in bag" (next to "Rotting soon") opens the list on the left. Each row shows the item's icon and name, how many to keep, and how many your bag holds now, in red when it holds fewer than that. Use `-` and `+` or type a number (Enter saves, Esc puts the old number back). The `x` button takes the item off the list. An amount of 0 keeps the item on the list but keeps none of it.
+- The right side adds items. With the search box empty it shows what is in your bag; type a name to search every item in the game. "+ Keep" adds the item, keeping as many as your bag holds now (or 1 if it holds none).
+- On the main item list, each row has a "Keep" button that adds the item the same way. Once the item is on the list the button reads "Keep 5" (the amount), and pressing it opens the list.
+- After a put-away the status line says what stayed, for example "Moved 4 stacks. Kept in your bag: 6 Red Apple."
+
+The game moves a stack whole and cannot split one, so the bag keeps whole stacks. It keeps at least the amount you set when it has that many, and often a few more: keeping 5 apples with stacks of 20 and 6 keeps the 6, and with one stack of 10 keeps all 10. When one stack is enough, the smallest stack that covers the amount stays. Otherwise the fullest stacks stay until the amount is covered. Between two stacks of the same size, the fresher one stays.
+
+The list is saved to `BepInEx/config/com.dev.survivallog.storagehub.keep.json` and is the same in every save. If that file cannot be read, it is copied to `com.dev.survivallog.storagehub.keep.json.broken`, the list starts empty, and the log says why.
+
 ## Drone deliveries
 
 When a drone comes home and the game drops its cargo into the drone hub (or into the drone itself when the hub is full), Storage Hub puts each delivered stack into the storage whose tags fit it, the same way "Put whole bag away by tag" does. What no storage takes stays where the game put it. Each delivery writes one line to the log and shows it as a toast (in the panel's status line while the panel is open), for example "Drone delivery: 12 Wood to Wooden Box, 3 Red Apple to Fridge. Stayed in Drone hub: 2 Rope."
@@ -56,6 +69,7 @@ Known limits:
 - `Organize/SmallItemMaxArea` (default `2`): items covering this many cells or fewer count as small.
 - `Organize/MergeStacks` (default `true`): top up partial stacks of one kind from each other when a storage is tidied. It rides on the tidies above, so it does nothing while both `OrganizeOnOpen` and `CompactSmallItems` are off.
 - `Delivery/AutoPutAway` (default `true`): put drone deliveries away into tagged storages when the drone lands.
+- `Keep/Enabled` (default `true`): leave the items on the keep list in your bag when you put it away. Off: putting away moves everything, and the list stays saved for when you turn it back on. The panel shows a note on the list while it is off.
 
 Log: `BepInEx/storage-hub.log`.
 

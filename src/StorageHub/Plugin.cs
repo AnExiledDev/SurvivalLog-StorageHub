@@ -1,8 +1,10 @@
+using System;
 using System.IO;
 using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using StorageHub.Adapters;
+using StorageHub.Core;
 using UnityEngine;
 
 namespace StorageHub;
@@ -11,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.3.3";
+    private const string Version = "0.4.0";
 
     public override void Load()
     {
@@ -26,5 +28,22 @@ public sealed class Plugin : BasePlugin
         StoragePanel.Session = new HubSession(new GameStorages(log.Write), new WebPage(log.Write), new WebKeyboard(), toggleKey, isVerbose, log.Write);
         StoragePanel.Log = log.Write;
         AddComponent<StoragePanel>();
+        StartOrganizer(harmony, log);
+    }
+
+    private void StartOrganizer(Harmony harmony, HubLog log)
+    {
+        var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", true, "Tidy a storage's items each time you open it. Your own bag is never tidied on open.").Value;
+        var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true, "Pack small items into a square in the top-left corner and big items from the bottom-right, so the free space stays in one piece for big items. Also applies to the game's Sort button. Off: storages are tidied the way the game's Sort does it, and Sort is left alone.").Value;
+        var smallItemMaxArea = Math.Max(0, Config.Bind("Organize", "SmallItemMaxArea", 2, "Items covering this many cells or fewer count as small.").Value);
+
+        log.Write($"organize on open {organizeOnOpen}, compact small items {compactSmallItems}, small means up to {smallItemMaxArea} cells");
+
+        if (!organizeOnOpen && !compactSmallItems) return;
+
+        OrganizeHooks.Apply(harmony, organizeOnOpen, compactSmallItems, log.Write);
+        OrganizeTicker.Bags = new BagOrganizer(OrganizeHooks.TakeDue, new PackOptions(smallItemMaxArea, compactSmallItems), log.Write);
+        OrganizeTicker.Log = log.Write;
+        AddComponent<OrganizeTicker>();
     }
 }

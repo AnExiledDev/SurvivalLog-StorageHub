@@ -12,12 +12,30 @@ A BepInEx 6 (IL2CPP) plugin for Survival Log: one searchable list of every item 
 
 Moves go through the game's own quick-move and floor pickup, so freshness and durability are kept.
 
+## Organize
+
+- Opening a storage tidies it a moment after the screen appears. Only the storage side is tidied; your own bag is never rearranged on open.
+- With `CompactSmallItems` on, big items are packed in from the bottom-right corner and small items (2 cells or fewer by default) go into the smallest square in the top-left corner that holds them. The free space stays in one piece, so a big item still fits later. If that layout cannot hold everything, the game's own Sort layout is used; if neither can, nothing moves.
+- The game's Sort button packs the same way while `CompactSmallItems` is on: the game sorts first, then the side you sorted is repacked on the next frame. That includes your own bag when you press Sort on it.
+- A storage that is already tidy is left alone, so reopening it writes nothing. A storage is tidied once per opening, so whatever you move by hand stays put until you close and reopen it.
+
+Known limits:
+
+- Material racks, cooking furniture, compost bins, hot pots, robot molds, synthetic and locked bags are never touched, because the game places items in them by its own rules.
+- A bag whose grid on screen differs from its real grid is left alone, with one line in the log.
+- After Sort, the game's own layout shows for one frame before the compact one replaces it.
+- If the game refuses a move, every item is put back where it was and one line goes to the log. Nothing is shown in game.
+- Items are never rotated; the game has no rotation.
+
 ## Config
 
 `BepInEx/config/com.dev.survivallog.storagehub.cfg`:
 
 - `Panel/ToggleKey` (default `F8`): key that opens and closes the panel.
 - `Diagnostics/Verbose` (default `false`): also log every planned move and every storage's tag ranking.
+- `Organize/OrganizeOnOpen` (default `true`): tidy a storage each time you open it.
+- `Organize/CompactSmallItems` (default `true`): pack small items into a square in the top-left corner and big ones from the bottom-right, both when a storage opens and when you press Sort. Off: opening a storage tidies it the way the game's Sort does, and the Sort button is left alone.
+- `Organize/SmallItemMaxArea` (default `2`): items covering this many cells or fewer count as small.
 
 Log: `BepInEx/storage-hub.log`.
 

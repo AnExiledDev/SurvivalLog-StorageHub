@@ -376,7 +376,11 @@
   var KIND_LABEL = { bag: 'Bag', storage: 'Storage', drawer: 'Drawer' };
   var BUSY_TIMEOUT_MS = 5000;
 
-  var state = { data: { storages: [], items: [] }, query: '', selected: null, isOpen: false };
+  var TIMES = '\u00d7';
+  // Labels the list draws in warning colour: food that has turned, or will within the hour.
+  var URGENT_LEFT = { 'spoiled': true, 'under 1h': true };
+
+  var state = { data: { storages: [], items: [], rot: [] }, query: '', selected: null, isOpen: false, isRotView: false };
   var ui = null;
   var toastTimer = 0;
   var isBusy = false;
@@ -452,9 +456,13 @@
     '.sh-loc{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.04)}',
     '.sh-badge{font-size:11px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.1);color:rgba(238,238,238,.8)}',
     '.sh-badge-bag{background:rgba(255,193,7,.24);color:#EBA308}',
+    '.sh-where{flex:none;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.sh-left{flex:none;min-width:58px;text-align:right;font-size:13px;color:rgba(238,238,238,.8)}',
+    '.sh-left-urgent{color:#e0614f;font-weight:600}',
     '.sh-empty{padding:20px;color:rgba(238,238,238,.55);font-size:14px;text-align:center}',
     '.sh-btn{font:inherit;font-size:13px;color:#dde2f0;padding:7px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(58,58,60,.9),rgba(38,38,40,.92));cursor:pointer;white-space:nowrap}',
     '.sh-btn:hover{background:linear-gradient(180deg,rgba(72,66,48,.92),rgba(50,46,32,.95));border-color:rgba(255,193,7,.75)}',
+    '.sh-btn.sh-on{background:rgba(255,193,7,.24);border-color:rgba(255,193,7,.75);color:#EBA308}',
     '.sh-foot{display:flex;font-size:13px;color:rgba(238,238,238,.7)}',
     '.sh-status{flex:1}',
     '#sh-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;padding:10px 18px;border-radius:8px;border:1px solid rgba(255,193,7,.75);background:linear-gradient(180deg,rgba(30,30,33,.94),rgba(18,18,20,.96));color:#eee;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
@@ -472,13 +480,16 @@
     var sub = el('div', 'sh-sub');
     head.appendChild(el('div', 'sh-title', 'Storage Hub'));
     head.appendChild(sub);
-    head.appendChild(button('×', 'close', 'sh-x'));
+    head.appendChild(button(TIMES, 'close', 'sh-x'));
 
     var bar = el('div', 'sh-bar');
     var search = el('input', 'sh-search');
     search.type = 'text';
     search.placeholder = 'Search items...';
+    var rotButton = button('Rotting soon', 'rotView');
+    rotButton.title = 'Food in your bag, your storages and on the floor at home, soonest to spoil first';
     bar.appendChild(search);
+    bar.appendChild(rotButton);
     bar.appendChild(button('Put whole bag away by tag', 'putAwayBag'));
     bar.appendChild(button('Put floor items away by tag', 'putAwayFloor'));
 
@@ -525,7 +536,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sub: sub, search: search, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, sub: sub, search: search, rotButton: rotButton, list: list, detail: detail, status: status, toast: toast };
   }
 
   // The style outlives a lost panel root, so a rebuild must not stack another copy of it.
@@ -557,6 +568,15 @@
     var act = target.getAttribute('data-act');
     var args = target.getAttribute('data-args');
 
+    // Switching lists is the page's own business; the game is not asked.
+    if (act === 'rotView') {
+      state.isRotView = !state.isRotView;
+      ui.list.scrollTop = 0;
+      render();
+
+      return;
+    }
+
     if (act === 'close') {
       send(act);
 
@@ -576,10 +596,20 @@
     return true;
   }
 
+  function searchWords() {
+    return state.query.toLowerCase().split(/\s+/).filter(Boolean);
+  }
+
   function visibleItems() {
-    var words = state.query.toLowerCase().split(/\s+/).filter(Boolean);
+    var words = searchWords();
 
     return state.data.items.filter(function (item) { return matches(item, words); });
+  }
+
+  function visibleRot() {
+    var words = searchWords();
+
+    return (state.data.rot || []).filter(function (row) { return matches(row, words); });
   }
 
   function icon(item, sizeClass) {
@@ -620,10 +650,19 @@
 
   function renderHeader() {
     var homes = state.data.storages.filter(function (s) { return s.kind !== 'bag'; }).length;
-    ui.sub.textContent = state.data.items.length + ' kinds of item across ' + homes + ' storages and your bag';
+    ui.sub.textContent = state.isRotView
+      ? 'Food that spoils, soonest first, across ' + homes + ' storages, your bag and the floor at home'
+      : state.data.items.length + ' kinds of item across ' + homes + ' storages and your bag';
+    ui.rotButton.className = 'sh-btn' + (state.isRotView ? ' sh-on' : '');
   }
 
   function renderList() {
+    if (state.isRotView) {
+      renderRot();
+
+      return;
+    }
+
     var scroll = ui.list.scrollTop;
     var items = visibleItems();
     ui.list.textContent = '';
@@ -641,7 +680,36 @@
       row.setAttribute('data-item', String(item.id));
       row.appendChild(icon(item, 'sh-i38'));
       row.appendChild(el('div', 'sh-name', item.name));
-      row.appendChild(el('div', 'sh-count', '×' + item.total));
+      row.appendChild(el('div', 'sh-count', TIMES + item.total));
+      fragment.appendChild(row);
+    });
+
+    ui.list.appendChild(fragment);
+    ui.list.scrollTop = scroll;
+  }
+
+  // One row per kind, place and hour left; clicking one shows that item's detail beside the list, as in the item list.
+  function renderRot() {
+    var scroll = ui.list.scrollTop;
+    var rows = visibleRot();
+    ui.list.textContent = '';
+
+    if (rows.length === 0) {
+      ui.list.appendChild(el('div', 'sh-empty', state.query ? 'Nothing matches that search.' : 'Nothing here spoils.'));
+
+      return;
+    }
+
+    var fragment = document.createDocumentFragment();
+
+    rows.forEach(function (rot) {
+      var row = el('div', 'sh-row' + (String(rot.id) === state.selected ? ' sh-active' : ''));
+      row.setAttribute('data-item', String(rot.id));
+      row.appendChild(icon(rot, 'sh-i38'));
+      row.appendChild(el('div', 'sh-name', rot.name));
+      row.appendChild(el('span', 'sh-badge sh-where', rot.where));
+      row.appendChild(el('div', 'sh-count', TIMES + rot.count));
+      row.appendChild(el('div', 'sh-left' + (URGENT_LEFT[rot.left] ? ' sh-left-urgent' : ''), rot.left));
       fragment.appendChild(row);
     });
 
@@ -686,7 +754,7 @@
       var loc = el('div', 'sh-loc');
       loc.appendChild(el('span', 'sh-badge' + (isBag ? ' sh-badge-bag' : ''), KIND_LABEL[storage.kind] || storage.kind));
       loc.appendChild(el('div', 'sh-name', storage.name));
-      loc.appendChild(el('div', 'sh-count', '×' + at[1]));
+      loc.appendChild(el('div', 'sh-count', TIMES + at[1]));
       loc.appendChild(isBag ? withArgs(button('Put away', 'putAway'), item.id) : withArgs(button('Take', 'take'), item.id + '|' + storage.id));
       locs.appendChild(loc);
     });

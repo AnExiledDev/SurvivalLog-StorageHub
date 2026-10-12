@@ -192,10 +192,29 @@ internal sealed class HubSession
         _nextRefreshAt = Time.unscaledTime + RefreshSeconds;
         notReady = RefreshInventory(out var reason) ? null : "Not available right now: " + reason;
 
-        var view = HubView.Build(_inventory, IconPath);
+        var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
+        var view = HubView.Build(_inventory, IconPath, rot);
         LogIconsOnce();
 
         return view;
+    }
+
+    /// <summary>The "Rotting soon" list, floor included; floor kinds no storage holds get their names added first.</summary>
+    private IReadOnlyList<RotRow> ReadRottingSoon()
+    {
+        var floor = _game.ReadFloor();
+        AddNames(floor);
+
+        return RottingSoon.Rows(_inventory, floor, _game.DaysLeft);
+    }
+
+    private void AddNames(IEnumerable<ItemStack> stacks)
+    {
+        var names = _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
+
+        foreach (var stack in stacks) names.TryAdd(stack.ConfigId, _game.NameOf(stack.ConfigId));
+
+        _inventory = _inventory with { ItemNames = names };
     }
 
     private bool RefreshInventory(out string reason)
@@ -339,11 +358,7 @@ internal sealed class HubSession
 
         if (floor.Count == 0) return "Nothing on the floor at home.";
 
-        var names = _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
-
-        foreach (var stack in floor) names.TryAdd(stack.ConfigId, _game.NameOf(stack.ConfigId));
-
-        _inventory = _inventory with { ItemNames = names };
+        AddNames(floor);
 
         return Execute(StoragePlan.PutAwayFloor(_inventory, floor, RankAndLog), PickUpAndLog);
     }

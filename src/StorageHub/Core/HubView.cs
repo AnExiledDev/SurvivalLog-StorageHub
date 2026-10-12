@@ -15,13 +15,15 @@ public static class HubView
     private const char LineSeparator = (char)0x2028;
     private const char ParagraphSeparator = (char)0x2029;
 
-    public static string Build(Inventory inventory, Func<int, string?> iconOf)
+    /// <summary>The view; rot is the "Rotting soon" list, soonest first, and is sent empty when not given.</summary>
+    public static string Build(Inventory inventory, Func<int, string?> iconOf, IReadOnlyList<RotRow>? rot = null)
     {
         var json = new StringBuilder(4096);
         var storages = inventory.Storages.Select(storage => $"{{\"id\":{Id(storage.OwnerId)},\"name\":{Str(storage.Name)},\"kind\":{Str(KindName(storage.Kind))}}}");
         var items = ItemSearch.Find(inventory, "").Select(row => ItemJson(row, iconOf(row.ConfigId)));
+        var rotting = (rot ?? Array.Empty<RotRow>()).Select(row => RotJson(row, iconOf(row.ConfigId)));
 
-        json.Append("{\"storages\":[").AppendJoin(',', storages).Append("],\"items\":[").AppendJoin(',', items).Append("]}");
+        json.Append("{\"storages\":[").AppendJoin(',', storages).Append("],\"items\":[").AppendJoin(',', items).Append("],\"rot\":[").AppendJoin(',', rotting).Append("]}");
 
         return json.ToString();
     }
@@ -60,6 +62,9 @@ public static class HubView
 
         return $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"total\":{row.Total.ToString(CultureInfo.InvariantCulture)},\"at\":[{string.Join(",", at)}]}}";
     }
+
+    private static string RotJson(RotRow row, string? icon) =>
+        $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"count\":{row.Count.ToString(CultureInfo.InvariantCulture)},\"at\":{Id(row.OwnerId)},\"where\":{Str(row.Where)},\"left\":{Str(row.Label)}}}";
 
     private static string Id(long ownerId) => Str(ownerId.ToString(CultureInfo.InvariantCulture));
 

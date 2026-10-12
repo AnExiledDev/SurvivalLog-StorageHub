@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using StorageHub.Core;
 using UnityEngine;
 using PollutedCells = Il2CppSystem.Collections.Generic.HashSet<UnityEngine.Vector2Int>;
@@ -20,15 +22,19 @@ internal sealed class BagOrganizer
     /// <summary>An item as the game holds it, next to how the planner sees it.</summary>
     private readonly record struct Held(ItemData Data, BagItem Placed);
 
+    private const float SecondsPerHour = 3600f;
+
     private readonly Func<OrganizeRequest?> _takeDue;
     private readonly PackOptions _options;
+    private readonly bool _mergeStacks;
     private readonly Action<string> _log;
     private readonly HashSet<string> _reported = new();
 
-    public BagOrganizer(Func<OrganizeRequest?> takeDue, PackOptions options, Action<string> log)
+    public BagOrganizer(Func<OrganizeRequest?> takeDue, PackOptions options, bool mergeStacks, Action<string> log)
     {
         _takeDue = takeDue;
         _options = options;
+        _mergeStacks = mergeStacks;
         _log = log;
     }
 
@@ -55,7 +61,18 @@ internal sealed class BagOrganizer
 
     private void Organize(BattleLogicWorld world, ItemManager items, ConfigManager config, OrganizeRequest request)
     {
-        if (ReadMold(world, request) is not { } mold || ReadBag(items, config, request.OwnerId) is not { } bag) return;
+        if (ReadMold(world, request) is not { } mold) return;
+
+        var merged = _mergeStacks && MergeStacks(world, items, config, request, mold);
+        var redrawn = Rearrange(items, config, request, mold);
+
+        if (merged && !redrawn) Redraw(items, request);
+    }
+
+    /// <summary>Lays the bag out again; true when it wrote anything, which also redraws the screen.</summary>
+    private bool Rearrange(ItemManager items, ConfigManager config, OrganizeRequest request, IReadOnlyCollection<Cell> mold)
+    {
+        if (ReadBag(items, config, request.OwnerId) is not { } bag) return false;
 
         var space = new BagSpace(request.ShownGrid, mold);
 
@@ -63,13 +80,116 @@ internal sealed class BagOrganizer
         {
             case OrganizePlan.Move move:
                 Apply(items, request, space, bag, move);
-                break;
+                return true;
             case OrganizePlan.NoRoom:
                 ReportOnce(request.OwnerId, "left as it is: no layout holds every item");
-                break;
-            case OrganizePlan.AlreadyTidy:
-                break;
+                return false;
+            default:
+                return false;
         }
+    }
+
+    /// <summary>
+    /// Tops up partial stacks of one kind from each other before the layout is planned, so the layout sees the fewer
+    /// stacks. Only stacks wholly on the grid and clear of mold take part. True when anything was written, even if it
+    /// was then undone.
+    /// </summary>
+    private bool MergeStacks(BattleLogicWorld world, ItemManager items, ConfigManager config, OrganizeRequest request, IReadOnlyCollection<Cell> mold)
+    {
+        if (!GamePhase.IsPastPrologue(world)) return false;
+
+        try
+        {
+            if (ReadStacks(items, config, request, mold) is not { } stacks) return false;
+
+            var steps = StackMerge.Plan(stacks, NowHours(world));
+
+            if (steps.Count == 0) return false;
+
+            var report = StackMerge.Run(steps, new GameStackCounts(items, request.OwnerId));
+
+            if (report.Failure == null) _log($"organize, bag {request.OwnerId}: {StackMerge.Describe(report)}");
+            else ReportOnce(request.OwnerId, StackMerge.Describe(report));
+
+            return report.WroteAnything;
+        }
+        catch (Exception ex)
+        {
+            ReportOnce(request.OwnerId, $"merging stacks failed: {ex.Message}");
+
+            return true;
+        }
+    }
+
+    private static List<MergeStack>? ReadStacks(ItemManager items, ConfigManager config, OrganizeRequest request, IReadOnlyCollection<Cell> mold)
+    {
+        var inBag = items.GetItemDataList(request.OwnerId);
+
+        if (inBag == null) return null;
+
+        var moldy = new HashSet<Cell>(mold);
+        var stacks = new List<MergeStack>();
+
+        for (var i = 0; i < inBag.Count; i++)
+        {
+            var data = inBag[i];
+
+            if (data == null) return null;
+
+            var row = config.Get_Config_Item(data.ItemConfigId);
+            var size = data.ItemSize;
+            var at = new Cell(data.BagPos.x, data.BagPos.y);
+
+            if (row == null || !request.ShownGrid.Holds(at, size.x, size.y)) continue;
+
+            var freshness = new StackFreshness(data.StartTime, data.TimeLeft, data.TimeLeftFrac, data.TimeScale, data.UseTimes, data.MaxUseTimes);
+            var neverSpoils = MergeRule.IsNeverSpoiling(row.Category, row.Life);
+
+            stacks.Add(new MergeStack(data.InstanceId, data.ItemConfigId, data.ItemCount, row.StackLimit, freshness, Traits(data), neverSpoils, Covers(moldy, at, size.x, size.y)));
+        }
+
+        return stacks;
+    }
+
+    /// <summary>
+    /// Everything else an item carries that a merge would flatten: mold, the map-preset and packaging flags, burn value,
+    /// weight, the shelf factor it came with and its per-item value arrays. Stacks merge only when all of it matches.
+    /// </summary>
+    private static string Traits(ItemData data) =>
+        string.Join("|",
+            data.Polluted, data.IsMapPreset, data.NoPackage, data.InstanceBurnValue, data.InstanceWeight,
+            data.PresetShelfScale.ToString("R", CultureInfo.InvariantCulture), Floats(data.InstanceVD), Floats(data.InstanceEffectEnd));
+
+    private static string Floats(Il2CppStructArray<float>? values)
+    {
+        if (values == null) return "-";
+
+        var text = new string[values.Length];
+
+        for (var i = 0; i < values.Length; i++) text[i] = values[i].ToString("R", CultureInfo.InvariantCulture);
+
+        return string.Join(",", text);
+    }
+
+    private static bool Covers(HashSet<Cell> moldy, Cell at, int w, int h)
+    {
+        for (var y = at.Y; y < at.Y + h; y++)
+        {
+            for (var x = at.X; x < at.X + w; x++)
+            {
+                if (moldy.Contains(new Cell(x, y))) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>The game clock in hours, as Stacking reads it; null when it cannot be read, which keeps food apart.</summary>
+    private static float? NowHours(BattleLogicWorld world)
+    {
+        var time = world._GameTimeManager;
+
+        return time == null ? null : time.GetTotalSeconds() / SecondsPerHour;
     }
 
     /// <summary>

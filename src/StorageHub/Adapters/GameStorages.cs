@@ -23,6 +23,11 @@ internal abstract record InventoryRead
 /// </summary>
 internal sealed class GameStorages
 {
+    private const float SecondsPerHour = 3600f;
+
+    /// <summary>What the game's shelf life read answers for an item that never spoils.</summary>
+    private const float NeverSpoilsByGame = -1f;
+
     /// <summary>What an item's spoil clock reads, for the fridge tag rules.</summary>
     private readonly record struct ShelfClock(float StartTime, float TimeLeft, float PresetShelfScale);
 
@@ -30,14 +35,22 @@ internal sealed class GameStorages
     private readonly Dictionary<long, Furniture> _furnitures = new();
     private readonly Dictionary<long, ShelfClock> _clocks = new();
     private readonly Dictionary<int, string> _itemNames = new();
+    private readonly Dictionary<long, float> _daysLeft = new();
     private IntPtr _namedWorld;
     private bool _hasReportedRankFailure;
     private bool _hasReportedUnpickableDrop;
+    private bool _hasReportedShelfLifeFailure;
 
     public GameStorages(Action<string> log)
     {
         _log = log;
     }
+
+    /// <summary>
+    /// Days until each stack read since the last Forget spoils, by item id, as the game's own backpack shows it: -1 for
+    /// an item that never spoils or has stopped spoiling.
+    /// </summary>
+    public IReadOnlyDictionary<long, float> DaysLeft => _daysLeft;
 
     public InventoryRead Read()
     {
@@ -57,7 +70,7 @@ internal sealed class GameStorages
         var storages = new List<Storage> { new(player.InstanceId, "Bag", StorageKind.Bag) };
         storages.AddRange(HomeStorages(agents, config));
         storages.Add(new Storage(WorkbenchDrawerConfig.DrawerOwnerId, "Workbench drawer", StorageKind.Drawer));
-        var stacks = ReadStacks(cache, storages);
+        var stacks = ReadStacks(cache, storages, config, NowHours(world));
         var names = stacks.Select(stack => stack.ConfigId).Distinct().ToDictionary(id => id, id => ItemName(config, id));
 
         return new InventoryRead.Ready(new Inventory(storages, stacks, names));
@@ -71,6 +84,49 @@ internal sealed class GameStorages
     {
         _furnitures.Clear();
         _clocks.Clear();
+        _daysLeft.Clear();
+    }
+
+    /// <summary>
+    /// The stacks one bag holds right now, straight from the game's item manager rather than the UI's cache, which can
+    /// lag a frame behind. Their spoil clocks are kept, so Rank can judge them; call after Read, which clears them.
+    /// </summary>
+    public IReadOnlyList<ItemStack> ReadOwner(long ownerId)
+    {
+        var world = GameSingleton.Existing<BattleLogicWorld>();
+        var items = world?._ItemManager;
+        var config = GameSingleton.Existing<ConfigManager>();
+
+        if (world == null || items == null) return Array.Empty<ItemStack>();
+
+        var nowHours = NowHours(world);
+        var stacks = new List<ItemStack>();
+
+        foreach (var item in Held(items, ownerId))
+        {
+            _clocks[item.InstanceId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
+            _daysLeft[item.InstanceId] = FallbackDaysLeft(config, item.ItemConfigId, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
+            stacks.Add(new ItemStack(item.InstanceId, item.ItemConfigId, item.ItemCount, ownerId));
+        }
+
+        return stacks;
+    }
+
+    /// <summary>The stacks one bag holds, read only: safe to call from a hook, since it keeps nothing and changes nothing.</summary>
+    public static IReadOnlyList<ItemStack> ReadHeld(ItemManager items, long ownerId) =>
+        Held(items, ownerId).Select(item => new ItemStack(item.InstanceId, item.ItemConfigId, item.ItemCount, ownerId)).ToList();
+
+    private static IEnumerable<ItemData> Held(ItemManager items, long ownerId)
+    {
+        var held = items.GetItemDataList(ownerId);
+
+        for (var i = 0; held != null && i < held.Count; i++)
+        {
+            var item = held[i];
+
+            // A pooled item can sit in a list it no longer belongs to, the same ghost the UI cache keeps.
+            if (item != null && item.OwnerId == ownerId && item.ItemCount > 0) yield return item;
+        }
     }
 
     /// <summary>What the storage's tag rule thinks of the stack, or null when the rule does not want it.</summary>
@@ -121,6 +177,8 @@ internal sealed class GameStorages
         var found = new Il2CppSystem.Collections.Generic.List<DropItem>();
         drops.GetDropItemsInHome(found);
         var stacks = new List<ItemStack>();
+        var config = GameSingleton.Existing<ConfigManager>();
+        var nowHours = NowHours(GameSingleton.Existing<BattleLogicWorld>());
 
         for (var i = 0; i < found.Count; i++)
         {
@@ -133,6 +191,7 @@ internal sealed class GameStorages
             if (PickupId(drops, drop) is not { } pickupId) continue;
 
             _clocks[pickupId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
+            _daysLeft[pickupId] = FallbackDaysLeft(config, item.ItemConfigId, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
             stacks.Add(new ItemStack(pickupId, item.ItemConfigId, item.ItemCount, Inventory.FloorOwnerId));
         }
 
@@ -221,7 +280,7 @@ internal sealed class GameStorages
         }
     }
 
-    private List<ItemStack> ReadStacks(Il2CppItems cache, IEnumerable<Storage> storages)
+    private List<ItemStack> ReadStacks(Il2CppItems cache, IEnumerable<Storage> storages, ConfigManager config, float nowHours)
     {
         var stacks = new List<ItemStack>();
 
@@ -235,11 +294,55 @@ internal sealed class GameStorages
                 if (item == null || item.OwnerId != storage.OwnerId) continue;
 
                 _clocks[item.LogicId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
+                _daysLeft[item.LogicId] = ShelfLifeDays(config, item, nowHours);
                 stacks.Add(new ItemStack(item.LogicId, item.ItemConfigId, item.ItemCount, storage.OwnerId));
             }
         }
 
         return stacks;
+    }
+
+    /// <summary>
+    /// The game clock in hours, as the spoil clocks count it. The compressor's whole hours stand in when the time
+    /// manager is missing, which only costs the list its minutes.
+    /// </summary>
+    private static float NowHours(BattleLogicWorld? world)
+    {
+        var time = world?._GameTimeManager;
+
+        return time != null ? time.GetTotalSeconds() / SecondsPerHour : Furniture.GetCompressorNowHours();
+    }
+
+    /// <summary>
+    /// The backpack's own shelf life (Reducer_Web_BackpackUI.GetShelfLifeDaysRaw, RVA 0x2880900), so the list agrees
+    /// with the game's tooltip, compost freezing and storage shelf factors included. Failing that, the fridge rules' formula.
+    /// </summary>
+    private float ShelfLifeDays(ConfigManager config, Data_Item item, float nowHours)
+    {
+        var row = config.Get_Config_Item(item.ItemConfigId);
+
+        if (row == null) return NeverSpoilsByGame;
+
+        try
+        {
+            return Reducer_Web_BackpackUI.GetShelfLifeDaysRaw(row, item, nowHours);
+        }
+        catch (Exception ex)
+        {
+            if (!_hasReportedShelfLifeFailure) _log("reading shelf life from the game failed, working it out instead (reported once): " + ex.Message);
+
+            _hasReportedShelfLifeFailure = true;
+
+            return Freshness.DaysLeft(row.Life, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
+        }
+    }
+
+    /// <summary>For items the backpack has no entry for yet (the floor, a bag read straight from the item manager).</summary>
+    private static float FallbackDaysLeft(ConfigManager? config, int configId, float startTime, float timeLeft, float presetShelfScale, float nowHours)
+    {
+        var row = config?.Get_Config_Item(configId);
+
+        return row == null ? NeverSpoilsByGame : Freshness.DaysLeft(row.Life, startTime, timeLeft, presetShelfScale, nowHours);
     }
 
     /// <summary>Resolved once per item per world: the view is rebuilt every second and the names do not change in between.</summary>

@@ -14,6 +14,7 @@ internal sealed class HubSession
 {
     private const float RefreshSeconds = 1f;
     private const string FailedStatus = "That failed, see BepInEx/storage-hub.log.";
+    private const string KeepNotReadStatus = "Could not read the keep list, see BepInEx/storage-hub.log.";
 
     private readonly GameStorages _game;
     private readonly WebPage _page;
@@ -21,20 +22,19 @@ internal sealed class HubSession
     private readonly KeyCode _toggleKey;
     private readonly bool _isVerbose;
     private readonly Action<string> _log;
-    private readonly IKeepListStore _keepStore;
+    private readonly KeepListKeeper _keep;
     private readonly bool _isKeepOn;
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
 
     private IconIndex? _icons;
     private Inventory _inventory = Inventory.Empty;
-    private KeepList _keep;
     private string _shownView = "";
     private float _nextRefreshAt;
     private bool _isOpen;
     private bool _hasLoggedIcons;
 
-    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, IKeepListStore keepStore, bool isKeepOn)
+    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, KeepListKeeper keep, bool isKeepOn)
     {
         _game = game;
         _page = page;
@@ -42,9 +42,8 @@ internal sealed class HubSession
         _toggleKey = toggleKey;
         _isVerbose = isVerbose;
         _log = log;
-        _keepStore = keepStore;
+        _keep = keep;
         _isKeepOn = isKeepOn;
-        _keep = keepStore.Load();
     }
 
     public void Update()
@@ -73,7 +72,8 @@ internal sealed class HubSession
 
         if (!_isOpen) return;
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // While a page field holds the keyboard, Esc is the page's: it puts a typed amount back before it closes.
+        if (!_keyboard.IsClaimed && Input.GetKeyDown(KeyCode.Escape))
         {
             Close();
 
@@ -108,6 +108,8 @@ internal sealed class HubSession
     /// <summary>The view is read before anything is captured, so a failed read leaves the game's input alone.</summary>
     private void Open()
     {
+        _keep.TryRead();
+
         if (!TryReadView("open", out var view, out var notReady))
         {
             GiveUpOnFailedRead();
@@ -199,8 +201,8 @@ internal sealed class HubSession
         notReady = RefreshInventory(out var reason) ? null : "Not available right now: " + reason;
 
         var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
-        AddNames(_keep.Amounts.Keys);
-        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep)));
+        AddNames(_keep.List.Amounts.Keys);
+        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep.List)));
         LogIconsOnce();
 
         return view;
@@ -264,10 +266,10 @@ internal sealed class HubSession
                 Act("put away floor items", PutAwayFloor);
                 break;
             case PageCommand.SetKeep setKeep:
-                Act($"keep {setKeep.Amount} of item {setKeep.ConfigId}", () => ChangeKeep(_keep.With(setKeep.ConfigId, setKeep.Amount), setKeep.ConfigId));
+                Act($"keep {setKeep.Amount} of item {setKeep.ConfigId}", () => ChangeKeep(list => list.With(setKeep.ConfigId, setKeep.Amount), setKeep.ConfigId));
                 break;
             case PageCommand.RemoveKeep removeKeep:
-                Act($"stop keeping item {removeKeep.ConfigId}", () => ChangeKeep(_keep.Without(removeKeep.ConfigId), removeKeep.ConfigId));
+                Act($"stop keeping item {removeKeep.ConfigId}", () => ChangeKeep(list => list.Without(removeKeep.ConfigId), removeKeep.ConfigId));
                 break;
             case PageCommand.SendCatalog:
                 SendCatalog();
@@ -291,6 +293,8 @@ internal sealed class HubSession
                 _log("page script ready");
                 // A reloaded page has no menu, and one left marked open would hold the game's hotkeys for good.
                 InputGate.MenuClosed();
+                // Nor does it have a focused field, and a claim left behind would keep Esc from closing the panel.
+                _keyboard.Release();
                 ReopenAfterReload();
                 break;
             case PageCommand.NoScript:
@@ -355,16 +359,21 @@ internal sealed class HubSession
         return Execute(StoragePlan.Take(_inventory, _inventory.Stacks.Where(wanted)), MoveAndLog);
     }
 
-    /// <summary>The keep list holds back its stacks first; what it kept is named after the result of the moves.</summary>
+    /// <summary>
+    /// The keep list holds back its stacks first; what it kept is named after the result of the moves. A keep list that
+    /// is there but unread puts nothing away, or the stacks it keeps would go to storage.
+    /// </summary>
     private string PutAway(Func<ItemStack, bool> wanted)
     {
+        if (_isKeepOn && !_keep.TryRead()) return KeepNotReadStatus + " Nothing was put away.";
+
         if (!RefreshInventory(out var reason)) return "Not available right now: " + reason;
 
         var bag = _inventory.Bag;
 
         if (bag == null) return "No bag found.";
 
-        var split = BagKeep.Split(_inventory.Stacks.Where(stack => stack.OwnerId == bag.OwnerId && wanted(stack)), _isKeepOn ? _keep : KeepList.Empty, _game.DaysLeft);
+        var split = BagKeep.Split(_inventory.Stacks.Where(stack => stack.OwnerId == bag.OwnerId && wanted(stack)), _isKeepOn ? _keep.List : KeepList.Empty, _game.DaysLeft);
         var kept = BagKeep.Describe(split, _inventory);
 
         if (_isVerbose) LogKept(split.Kept);
@@ -379,26 +388,46 @@ internal sealed class HubSession
         foreach (var stack in kept) _log($"  keep {Describe(stack)}");
     }
 
-    /// <summary>The list in memory only changes once it is saved, so the panel never shows a list the file does not hold.</summary>
-    private string ChangeKeep(KeepList changed, int configId)
+    private string ChangeKeep(Func<KeepList, KeepList> edit, int configId)
     {
-        if (!_keepStore.Save(changed)) return "Could not save the keep list, see BepInEx/storage-hub.log.";
+        switch (_keep.Change(edit))
+        {
+            case KeepEdit.Saved:
+                return KeptStatus(configId);
+            case KeepEdit.NotRead:
+                return KeepNotReadStatus;
+            case KeepEdit.NotSaved:
+                return "Could not save the keep list, see BepInEx/storage-hub.log.";
+            default:
+                throw new InvalidOperationException("unknown keep edit");
+        }
+    }
 
-        _keep = changed;
+    private string KeptStatus(int configId)
+    {
         var name = _game.NameOf(configId);
 
-        if (!changed.Has(configId)) return $"{name} is off the keep list.";
+        if (!_keep.List.Has(configId)) return $"{name} is off the keep list.";
 
-        var amount = changed.AmountOf(configId);
+        var amount = _keep.List.AmountOf(configId);
 
         return amount == 0 ? $"Keeping no {name} in your bag for now." : $"Keeping {amount} {name} in your bag.";
     }
 
+    /// <summary>A failed catalog is answered with an empty one, which the page takes as "ask again later".</summary>
     private void SendCatalog()
     {
-        var catalog = _game.Catalog();
-        _page.Catalog(HubView.Catalog(catalog, IconPath));
-        _log($"keep list catalog sent: {catalog.Count} items");
+        try
+        {
+            var catalog = _game.Catalog();
+            _page.Catalog(HubView.Catalog(catalog, IconPath));
+            _log($"keep list catalog sent: {catalog.Count} items");
+        }
+        catch (Exception ex)
+        {
+            _log($"reading the item catalog failed, the page will ask again: {ex}");
+            _page.Catalog("[]");
+        }
     }
 
     /// <summary>Floor items are not in the storage read, so their names are added before anything is logged.</summary>

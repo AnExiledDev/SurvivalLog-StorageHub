@@ -43,15 +43,35 @@ public sealed class KeepList
 }
 
 /// <summary>
-/// Where the keep list lives between sessions. Today that is one list for every save; a per-save list or a Settings Hub
-/// profile would be another store behind this same port.
+/// Where the keep list's text lives between sessions. Today that is one file for every save; a per-save list or a
+/// Settings Hub profile would be another store behind this same port. What to do when a read fails is KeepListKeeper's.
 /// </summary>
 public interface IKeepListStore
 {
-    KeepList Load();
+    /// <summary>Where the list is kept, for the log.</summary>
+    string Name { get; }
 
-    /// <summary>False when the list could not be written; the store logs why.</summary>
-    bool Save(KeepList list);
+    StoredText Read();
+
+    /// <summary>Copies the saved text to Name + suffix, never over a copy already there.</summary>
+    bool TryCopyAside(string suffix, out string why);
+
+    /// <summary>Replaces the saved text whole, so a failed write leaves the old text as it was.</summary>
+    bool TryWrite(string text, out string why);
+}
+
+/// <summary>What reading the store found. Failed is not Missing: a list that is there but unread must not be overwritten.</summary>
+public abstract record StoredText
+{
+    private StoredText()
+    {
+    }
+
+    public sealed record Missing : StoredText;
+
+    public sealed record Found(string Text) : StoredText;
+
+    public sealed record Failed(string Why) : StoredText;
 }
 
 /// <summary>What reading a saved keep list found.</summary>
@@ -68,8 +88,9 @@ public abstract record KeepListRead
 }
 
 /// <summary>
-/// The keep list file: {"version": 1, "keep": [{"item": config id, "amount": n}]}. One bad entry makes the whole file
-/// unreadable rather than quietly dropping that item, so the next save cannot lose it without the log saying so.
+/// The keep list file: {"version": 1, "keep": [{"item": config id, "amount": n}]}. One bad entry, or an item listed
+/// twice, makes the whole file unreadable rather than quietly dropping or picking an amount, so the next save cannot
+/// lose one without the log saying so.
 /// </summary>
 public static class KeepListJson
 {
@@ -127,6 +148,8 @@ public static class KeepListJson
         foreach (var entry in entries.EnumerateArray())
         {
             if (!TryEntry(entry, out var configId, out var amount)) return new KeepListRead.Unreadable($"an entry is not {{\"item\": id, \"amount\": n}}: {entry.GetRawText()}");
+
+            if (list.Has(configId)) return new KeepListRead.Unreadable($"item {configId} is listed twice");
 
             list = list.With(configId, amount);
         }

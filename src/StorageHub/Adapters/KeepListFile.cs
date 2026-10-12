@@ -5,75 +5,71 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// The keep list as one JSON file beside the mod's config, shared by every save. A file this version cannot read is
-/// set aside as .broken and the list starts empty, so the player's next change does not silently overwrite it.
+/// The keep list as one JSON file beside the mod's config, shared by every save. Only the file work lives here; what
+/// to do when it cannot be read is KeepListKeeper's.
 /// </summary>
 internal sealed class KeepListFile : IKeepListStore
 {
     private readonly string _path;
-    private readonly Action<string> _log;
 
-    public KeepListFile(string path, Action<string> log)
+    public KeepListFile(string path)
     {
         _path = path;
-        _log = log;
     }
 
-    public KeepList Load()
+    public string Name => _path;
+
+    /// <summary>Missing only when the file is really not there; File.Exists would also say false for a file it may not read.</summary>
+    public StoredText Read()
     {
         try
         {
-            return File.Exists(_path) ? FromText(File.ReadAllText(_path)) : KeepList.Empty;
+            return new StoredText.Found(File.ReadAllText(_path));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return new StoredText.Missing();
         }
         catch (Exception ex)
         {
-            _log($"reading the keep list {_path} failed, starting with an empty one: {ex.Message}");
-
-            return KeepList.Empty;
+            return new StoredText.Failed(ex.Message);
         }
     }
 
-    public bool Save(KeepList list)
+    public bool TryCopyAside(string suffix, out string why)
     {
-        var temporary = _path + ".tmp";
-
         try
         {
-            File.WriteAllText(temporary, KeepListJson.Write(list));
-            File.Move(temporary, _path, true);
+            File.Copy(_path, _path + suffix, false);
+            why = "";
 
             return true;
         }
         catch (Exception ex)
         {
-            _log($"saving the keep list {_path} failed: {ex.Message}");
+            why = ex.Message;
 
             return false;
         }
     }
 
-    private KeepList FromText(string text)
+    public bool TryWrite(string text, out string why)
     {
-        switch (KeepListJson.Read(text))
+        var temporary = _path + ".tmp";
+
+        try
         {
-            case KeepListRead.Loaded loaded:
-                _log($"keep list: {loaded.List.Amounts.Count} item(s) from {_path}");
+            File.WriteAllText(temporary, text);
+            File.Move(temporary, _path, true);
+            why = "";
 
-                return loaded.List;
-            case KeepListRead.Unreadable unreadable:
-                SetAside(unreadable.Why);
-
-                return KeepList.Empty;
-            default:
-                throw new InvalidOperationException("unknown keep list read");
+            return true;
         }
-    }
+        catch (Exception ex)
+        {
+            why = ex.Message;
 
-    private void SetAside(string why)
-    {
-        var broken = _path + ".broken";
-
-        File.Copy(_path, broken, true);
-        _log($"the keep list {_path} could not be read ({why}); it was copied to {broken} and the list starts empty");
+            return false;
+        }
     }
 }

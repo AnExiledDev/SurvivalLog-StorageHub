@@ -228,7 +228,10 @@ internal sealed class GameStorages
 
     /// <summary>
     /// Every item in the game's item table (ConfigManager._Config_Item_Dict, which GetAll_Config_Item reads, RVA
-    /// 0x2c9f860) that has a name, for the keep list's search. Empty until the game has loaded its tables.
+    /// 0x2c9f860) that has a real name, for the keep list's search: a name that is still the raw ItemName key has no
+    /// translation and is left out. Config_Item.InCodex is not used: CodexManager::IsInCodex (RVA 0x2fe3050) reads it
+    /// for the Food and Prey codex pages only, so it says nothing about tools or materials. Empty until the game has
+    /// loaded its tables.
     /// </summary>
     public IReadOnlyList<CatalogItem> Catalog()
     {
@@ -244,7 +247,7 @@ internal sealed class GameStorages
 
             var name = ItemName(config, item.ID);
 
-            if (name != $"Item {item.ID}") catalog.Add(new CatalogItem(item.ID, name));
+            if (name != $"Item {item.ID}" && name != item.ItemName) catalog.Add(new CatalogItem(item.ID, name));
         }
 
         return catalog;

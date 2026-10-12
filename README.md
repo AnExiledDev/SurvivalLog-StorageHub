@@ -18,14 +18,14 @@ Moves go through the game's own quick-move and floor pickup, so freshness and du
 
 New in 0.6.0. The keep list names items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest. That covers "Put whole bag away by tag", "Put away by tag" on one item, and "Put away by tag" in the Mods menu. Floor pickup and drone deliveries ignore the list.
 
-- "Keep in bag" (next to "Rotting soon") opens the list on the left. Each row shows the item's icon and name, how many to keep, and how many your bag holds now, in red when it holds fewer than that. Use `-` and `+` or type a number (Enter saves, Esc puts the old number back). The `x` button takes the item off the list. An amount of 0 keeps the item on the list but keeps none of it.
+- "Keep in bag" (next to "Rotting soon") opens the list on the left. Each row shows the item's icon and name, how many to keep, and how many your bag holds now, in red when it holds fewer than that. Use `-` and `+` or type a number (Enter saves it; Esc puts the old number back and closes the panel). The `x` button takes the item off the list. An amount of 0 keeps the item on the list but keeps none of it.
 - The right side adds items. With the search box empty it shows what is in your bag; type a name to search every item in the game. "+ Keep" adds the item, keeping as many as your bag holds now (or 1 if it holds none).
 - On the main item list, each row has a "Keep" button that adds the item the same way. Once the item is on the list the button reads "Keep 5" (the amount), and pressing it opens the list.
 - After a put-away the status line says what stayed, for example "Moved 4 stacks. Kept in your bag: 6 Red Apple."
 
 The game moves a stack whole and cannot split one, so the bag keeps whole stacks. It keeps at least the amount you set when it has that many, and often a few more: keeping 5 apples with stacks of 20 and 6 keeps the 6, and with one stack of 10 keeps all 10. When one stack is enough, the smallest stack that covers the amount stays. Otherwise the fullest stacks stay until the amount is covered. Between two stacks of the same size, the fresher one stays.
 
-The list is saved to `BepInEx/config/com.dev.survivallog.storagehub.keep.json` and is the same in every save. If that file cannot be read, it is copied to `com.dev.survivallog.storagehub.keep.json.broken`, the list starts empty, and the log says why.
+The list is saved to `BepInEx/config/com.dev.survivallog.storagehub.keep.json` and is the same in every save. If that file is not a keep list this version can read, it is copied to a name like `com.dev.survivallog.storagehub.keep.json.broken-20261012-091400` (the date and time), the list starts empty, and the log says why. If the file is there but cannot be opened at all (another program has it locked, say), it is left alone: changes to the list and bag put-aways say so on the status line until the file can be read, which is tried again each time you open the panel or change the list.
 
 ## Drone deliveries
 

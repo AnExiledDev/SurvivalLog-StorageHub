@@ -183,6 +183,7 @@ public class KeepListTests
     [InlineData("{\"version\":1}")]
     [InlineData("{\"version\":1,\"keep\":[{\"item\":1,\"amount\":5},{\"item\":\"rope\",\"amount\":2}]}")]
     [InlineData("{\"version\":1,\"keep\":[{\"item\":1}]}")]
+    [InlineData("{\"version\":1,\"keep\":[{\"item\":1,\"amount\":5},{\"item\":1,\"amount\":2}]}")]
     public void A_file_this_version_cannot_fully_read_is_refused_whole_rather_than_half_used(string text)
     {
         Assert.IsType<KeepListRead.Unreadable>(KeepListJson.Read(text));

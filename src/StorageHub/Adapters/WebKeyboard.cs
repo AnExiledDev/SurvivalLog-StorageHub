@@ -4,12 +4,15 @@ using GameCore.HotUpdate.ReduxUI;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// Sends the keyboard to the web UI while the panel's search box has focus, the way the game's own crafting search
-/// does, and gives it back as it was found.
+/// Sends the keyboard to the web UI while one of the panel's text fields has focus, the way the game's own crafting
+/// search does, and gives it back as it was found.
 /// </summary>
 internal sealed class WebKeyboard
 {
     private bool? _wasEnabled;
+
+    /// <summary>True while a page field holds the keyboard, so its keys, Esc included, are the page's to handle.</summary>
+    public bool IsClaimed => _wasEnabled != null;
 
     public void Claim()
     {

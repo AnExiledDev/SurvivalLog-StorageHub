@@ -377,6 +377,7 @@
   var BUSY_TIMEOUT_MS = 5000;
 
   var TIMES = '\u00d7';
+  var MINUS = '\u2212';
   // Labels the list draws in warning colour: food that has turned, or will within the hour.
   var URGENT_LEFT = { 'spoiled': true, 'under 1h': true };
   var MAX_KEEP = 9999;
@@ -392,6 +393,10 @@
   var toastTimer = 0;
   var isBusy = false;
   var busyTimer = 0;
+  // A redraw between a mouse press and its click would take the pressed button away and lose the click, so redraws
+  // asked for in between wait for the mouse to come up.
+  var isPointerDown = false;
+  var isRedrawHeld = false;
 
   function send(message) {
     try {
@@ -548,7 +553,12 @@
 
     root.addEventListener('click', onClick);
     // Clicks inside the plate must not reach the game pages underneath; the mask itself closes nothing on purpose.
-    root.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    root.addEventListener('mousedown', function (e) {
+      isPointerDown = true;
+      e.stopPropagation();
+    });
+    // The same function every build, so a rebuilt panel does not add a second listener.
+    document.addEventListener('mouseup', releasePointer, true);
     search.addEventListener('input', function () {
       state.query = search.value;
 
@@ -569,6 +579,22 @@
     }, true);
 
     ui = { root: root, sub: sub, search: search, rotButton: rotButton, keepButton: keepButton, list: list, detail: detail, status: status, toast: toast };
+  }
+
+  // The click comes straight after mouseup, so the held redraw runs once it is through.
+  function releasePointer() {
+    if (!isPointerDown) return;
+
+    isPointerDown = false;
+    setTimeout(redrawHeld, 0);
+  }
+
+  function redrawHeld() {
+    if (!isRedrawHeld) return;
+
+    isRedrawHeld = false;
+
+    if (state.isOpen) render();
   }
 
   // The style outlives a lost panel root, so a rebuild must not stack another copy of it.
@@ -665,13 +691,17 @@
     }
   };
 
-  // Shown at once and saved once the clicks stop, so the game writes the file once per run of clicks.
   function setKeep(id, amount) {
+    recordKeep(id, amount);
+    render();
+  }
+
+  // Shown at once and saved once the clicks stop, so the game writes the file once per run of clicks.
+  function recordKeep(id, amount) {
     var clamped = Math.max(0, Math.min(MAX_KEEP, Math.floor(amount) || 0));
 
     dropPendingKeep(id);
     pendingKeep[id] = { amount: clamped, isSent: false, timer: setTimeout(function () { sendKeep(id); }, KEEP_SAVE_DELAY_MS) };
-    render();
   }
 
   function sendKeep(id) {
@@ -922,7 +952,7 @@
 
   function stepperNode(id, amount) {
     var step = el('div', 'sh-step');
-    var less = withArgs(button('-', 'keepStep'), id + '|-1');
+    var less = withArgs(button(MINUS, 'keepStep'), id + '|-1');
     var more = withArgs(button('+', 'keepStep'), id + '|1');
     less.title = 'Keep one fewer';
     more.title = 'Keep one more';
@@ -933,13 +963,15 @@
     return step;
   }
 
-  // Enter saves, Esc puts the shown amount back; either way the keyboard goes back to the game.
+  // Enter saves; Esc puts the shown amount back and closes the panel, as Esc in the search box does. The arrow keys
+  // step the typed number on purpose, like - and +; the mouse wheel does not, so scrolling the list cannot change it.
   function amountField(id, amount) {
     var field = el('input', 'sh-amount');
     field.type = 'number';
     field.min = '0';
     field.max = String(MAX_KEEP);
     field.value = String(amount);
+    field.setAttribute('data-shown', String(amount));
     field.title = 'How many to keep in your bag';
     field.addEventListener('focus', function () {
       send('focus|1');
@@ -947,9 +979,11 @@
     });
     field.addEventListener('blur', function () {
       send('focus|0');
-      // Saved here rather than on change, so a refresh held back while typing is drawn either way.
-      if (field.value !== String(amount) && field.value !== '') setKeep(id, Number(field.value));
-      else render();
+      // Saved here rather than on change, so a refresh held back while typing is drawn either way. A button clicked to
+      // leave the field acts on top of the typed amount, since render waits for that click.
+      if (field.value !== String(amount) && field.value !== '') recordKeep(id, Number(field.value));
+
+      render();
     });
     field.addEventListener('keydown', function (e) {
       e.stopPropagation();
@@ -959,8 +993,12 @@
       if (e.key === 'Escape') {
         field.value = String(amount);
         field.blur();
+        send('close');
       }
     });
+    field.addEventListener('wheel', function (e) {
+      if (document.activeElement === field) e.preventDefault();
+    }, { passive: false });
 
     return field;
   }
@@ -1120,6 +1158,12 @@
   }
 
   function render() {
+    if (isPointerDown) {
+      isRedrawHeld = true;
+
+      return;
+    }
+
     renderHeader();
     renderList();
     renderDetail();
@@ -1129,6 +1173,7 @@
     build();
     state.data = data || state.data;
     state.isOpen = true;
+    isPointerDown = false;
     ui.status.textContent = '';
     ui.root.style.display = 'flex';
     render();
@@ -1149,17 +1194,29 @@
 
     if (state.catalog.length === 0) state.isCatalogAsked = false;
 
-    if (state.isOpen && state.view === 'keep') renderDetail();
+    if (state.isOpen && state.view === 'keep') render();
   }
 
   function close() {
     state.isOpen = false;
+    isPointerDown = false;
 
     if (!ui) return;
 
+    putBackTypedAmount();
     ui.root.style.display = 'none';
 
     if (document.activeElement === ui.search) ui.search.blur();
+  }
+
+  // Closing is a cancel: a number half typed into an amount field is put back before the blur would save it.
+  function putBackTypedAmount() {
+    var active = document.activeElement;
+
+    if (!active || active.className !== 'sh-amount') return;
+
+    active.value = active.getAttribute('data-shown');
+    active.blur();
   }
 
   function status(text) {

@@ -27,8 +27,8 @@ public sealed class Plugin : BasePlugin
         InputGate.Apply(harmony, log.Write);
         PageMessages.Apply(harmony, log.Write);
         var page = new WebPage(log.Write);
-        var keepStore = new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json"), log.Write);
-        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keepStore, isKeepOn);
+        var keep = new KeepListKeeper(new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json")), () => DateTime.Now, log.Write);
+        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keep, isKeepOn);
         StoragePanel.Log = log.Write;
         AddComponent<StoragePanel>();
         StartOrganizer(harmony, log);

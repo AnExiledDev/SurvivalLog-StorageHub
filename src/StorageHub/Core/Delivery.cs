@@ -131,6 +131,18 @@ public static class Delivery
     }
 
     /// <summary>
+    /// The drones whose retrieve the put-away has done for them: still waiting for the player to retrieve their cargo,
+    /// yet with nothing left in their bag. A drone that still holds anything, because no storage took part of the
+    /// cargo or it had items from before, keeps its retrieve, and one whose cargo went to the hub was finished by the game.
+    /// </summary>
+    public static IReadOnlyList<long> RetrievesToFinish(LandingGroup group, IReadOnlyList<ItemStack> heldNow, Func<long, bool> isAwaitingRetrieve) =>
+        group.Landings
+            .Select(landing => landing.DroneId)
+            .Distinct()
+            .Where(drone => heldNow.All(stack => stack.OwnerId != drone) && isAwaitingRetrieve(drone))
+            .ToList();
+
+    /// <summary>
     /// One line saying what went where and what stayed, items of one kind going to one place counted together, e.g.
     /// "Drone delivery: 12 Wood to Wooden Box, 3 Red Apple to Fridge. Stayed in Drone Hub: 2 Rope." A stack the
     /// delivery topped up is counted whole, since it moves whole.

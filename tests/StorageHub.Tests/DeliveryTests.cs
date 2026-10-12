@@ -20,6 +20,8 @@ public class DeliveryTests
 
     private static Landing LandingOf(Storage drone, Storage hub, params ItemStack[] before) => new(drone.OwnerId, hub.OwnerId, 2, before);
 
+    private static Func<long, bool> AwaitingRetrieve(params Storage[] drones) => droneId => drones.Any(drone => drone.OwnerId == droneId);
+
     [Fact]
     public void A_returning_drone_with_cargo_hands_it_over()
     {
@@ -178,6 +180,55 @@ public class DeliveryTests
         var placements = Delivery.Place(steps, (stack, target) => target == Box.OwnerId && stack == berries);
 
         Assert.Equal(new[] { new Placement(berries, Box.OwnerId), new Placement(rope, null) }, placements);
+    }
+
+    [Fact]
+    public void A_drone_the_put_away_emptied_has_its_retrieve_finished()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesToFinish(group, Array.Empty<ItemStack>(), AwaitingRetrieve(Drone)));
+    }
+
+    [Fact]
+    public void A_drone_still_holding_what_no_storage_took_keeps_its_retrieve()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
+
+        Assert.Empty(Delivery.RetrievesToFinish(group, new[] { Stack(1, Rope, 2, Drone) }, AwaitingRetrieve(Drone)));
+    }
+
+    [Fact]
+    public void A_drone_whose_cargo_went_to_the_hub_is_left_to_the_game()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
+
+        Assert.Empty(Delivery.RetrievesToFinish(group, Array.Empty<ItemStack>(), AwaitingRetrieve()));
+    }
+
+    [Fact]
+    public void What_stayed_in_the_hub_or_another_drone_does_not_keep_an_emptied_drone_s_retrieve()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
+        var heldElsewhere = new[] { Stack(1, Rope, 2, Hub), Stack(2, Apple, 1, OtherDrone) };
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesToFinish(group, heldElsewhere, AwaitingRetrieve(Drone, OtherDrone)));
+    }
+
+    [Fact]
+    public void Of_two_drones_on_one_hub_only_the_emptied_one_has_its_retrieve_finished()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(OtherDrone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesToFinish(group, new[] { Stack(2, Apple, 1, OtherDrone) }, AwaitingRetrieve(Drone, OtherDrone)));
+    }
+
+    [Fact]
+    public void A_drone_that_landed_twice_in_one_delivery_has_its_retrieve_finished_once()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(Drone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesToFinish(group, Array.Empty<ItemStack>(), AwaitingRetrieve(Drone)));
     }
 
     [Fact]

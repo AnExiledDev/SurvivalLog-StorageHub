@@ -13,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.6.0";
+    private const string Version = "0.6.1";
 
     public override void Load()
     {
@@ -44,7 +44,7 @@ public sealed class Plugin : BasePlugin
         if (!autoPutAway) return;
 
         DeliveryHooks.Apply(harmony, log.Write);
-        DeliveryTicker.Deliveries = new DeliveryPutAway(DeliveryHooks.TakeNext, new GameStorages(log.Write), page, log.Write);
+        DeliveryTicker.Deliveries = new DeliveryPutAway(DeliveryHooks.TakeNext, new GameStorages(log.Write), new DroneRetrieves(log.Write), page, log.Write);
         DeliveryTicker.Log = log.Write;
         AddComponent<DeliveryTicker>();
     }

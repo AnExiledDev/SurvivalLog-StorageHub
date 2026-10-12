@@ -103,6 +103,7 @@ When a drone comes home and the game drops its cargo into the drone hub (or into
 - It works for every drone trip that brings cargo home.
 - No drone and no drone hub is ever a target for a delivery, not even one that already holds the item.
 - Two drones landing on one hub at once are put away together, as one delivery with one line.
+- When the cargo landed in the drone and all of it was put away, the drone is done: it no longer offers "Retrieve supplies" and its marker goes away, the same as if you had retrieved it yourself. If anything is left in the drone, it still offers "Retrieve supplies" so you can take the rest.
 - Nothing happens before the prologue is over.
 
 ## Tidying storages
@@ -166,7 +167,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.6.0 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.6.1 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

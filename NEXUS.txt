@@ -10,7 +10,7 @@ Survival Log makes you open storage after storage to find something, and again t
 [*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen.[/*]
 [*][b]Keep in bag[/b] (new in 0.6.0): pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
-[*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages.[/*]
+[*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies.[/*]
 [*][b]Tidy storages[/b]: opening a storage packs small items into the top-left corner and big ones from the bottom-right, and tops up partial stacks of the same item. The Sort button packs the same way.[/*]
 [/list]
 The keep list, deliveries, tidying and stack merging can each be turned off in the config.

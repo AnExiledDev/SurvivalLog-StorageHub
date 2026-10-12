@@ -10,7 +10,8 @@ namespace StorageHub.Adapters;
 /// <summary>
 /// Puts a drone's delivery away into the tagged storages, the same way the bag's put-away does, a few frames after the
 /// drone settles: the hook only records the landing, and the cargo is moved here, outside the game's own settle. What
-/// no storage takes stays where the game put it. One line per delivery goes to the log and the toast.
+/// no storage takes stays where the game put it, and a drone left empty has its retrieve finished for it. One line per
+/// delivery goes to the log and the toast.
 /// </summary>
 internal sealed class DeliveryPutAway
 {
@@ -19,6 +20,7 @@ internal sealed class DeliveryPutAway
 
     private readonly Func<Landing?> _takeNext;
     private readonly GameStorages _game;
+    private readonly DroneRetrieves _retrieves;
     private readonly WebPage _page;
     private readonly Action<string> _log;
 
@@ -27,10 +29,11 @@ internal sealed class DeliveryPutAway
     private float _startedAt;
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
 
-    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, WebPage page, Action<string> log)
+    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log)
     {
         _takeNext = takeNext;
         _game = game;
+        _retrieves = retrieves;
         _page = page;
         _log = log;
     }
@@ -131,8 +134,32 @@ internal sealed class DeliveryPutAway
         var delivered = Delivery.Delivered(group.Before, landed);
         var inventory = Named(ready.Inventory, group, delivered);
         var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Rank);
+        var placements = Delivery.Place(steps, _game.Move);
 
-        return Delivery.Describe(Delivery.Place(steps, _game.Move), inventory);
+        FinishEmptiedRetrieves(group);
+
+        return Delivery.Describe(placements, inventory);
+    }
+
+    /// <summary>
+    /// The game only offers a retrieve while the drone holds its cargo in its own bag, so once the put-away has moved all
+    /// of it out, the retrieve is finished for it. The moves are done by now, so the drones' bags read as they are left.
+    /// A failure here leaves the retrieve offered and does not lose the line about what was put away.
+    /// </summary>
+    private void FinishEmptiedRetrieves(LandingGroup group)
+    {
+        try
+        {
+            if (GameSingleton.Existing<BattleLogicWorld>()?._ItemManager is not { } items) return;
+
+            var dronesHold = group.Landings.SelectMany(landing => GameStorages.ReadHeld(items, landing.DroneId)).ToList();
+
+            foreach (var drone in Delivery.RetrievesToFinish(group, dronesHold, _retrieves.IsAwaiting)) _retrieves.Finish(drone);
+        }
+        catch (Exception ex)
+        {
+            _log($"could not check whether {Drones(group)} were left empty, their retrieve stays: {ex}");
+        }
     }
 
     /// <summary>The landing bags and delivered kinds get names, so the line can say what stayed where.</summary>

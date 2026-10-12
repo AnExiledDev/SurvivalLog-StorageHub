@@ -442,6 +442,8 @@
     '.sh-row{display:flex;align-items:center;gap:10px;padding:4px 8px;border-radius:7px;border:1px solid transparent;cursor:pointer}',
     '.sh-row:hover{background:rgba(255,255,255,.06)}',
     '.sh-row.sh-active{background:rgba(255,193,7,.24);border-color:rgba(255,193,7,.75)}',
+    '.sh-row.sh-still{cursor:default}',
+    '.sh-row.sh-still:hover{background:none}',
     '.sh-name{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.sh-count{font-size:14px;font-weight:600;color:#EBA308}',
     '.sh-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden;color:rgba(238,238,238,.7);font-weight:600}',
@@ -689,6 +691,7 @@
   }
 
   // One row per kind, place and hour left; clicking one shows that item's detail beside the list, as in the item list.
+  // A kind that lies only on the floor has no detail (the item list holds bags and storages only), so its rows do not click.
   function renderRot() {
     var scroll = ui.list.scrollTop;
     var rows = visibleRot();
@@ -703,8 +706,13 @@
     var fragment = document.createDocumentFragment();
 
     rows.forEach(function (rot) {
-      var row = el('div', 'sh-row' + (String(rot.id) === state.selected ? ' sh-active' : ''));
-      row.setAttribute('data-item', String(rot.id));
+      var hasDetail = findItem(rot.id) != null;
+      var isSelected = hasDetail && String(rot.id) === state.selected;
+      var row = el('div', 'sh-row' + (hasDetail ? '' : ' sh-still') + (isSelected ? ' sh-active' : ''));
+
+      if (hasDetail) row.setAttribute('data-item', String(rot.id));
+      else row.title = 'Only on the floor: "Put floor items away by tag" picks it up';
+
       row.appendChild(icon(rot, 'sh-i38'));
       row.appendChild(el('div', 'sh-name', rot.name));
       row.appendChild(el('span', 'sh-badge sh-where', rot.where));

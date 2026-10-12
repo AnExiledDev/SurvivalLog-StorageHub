@@ -20,12 +20,59 @@ public abstract record DeliveryCheck
     public sealed record NothingLanded : DeliveryCheck;
 }
 
+/// <summary>A drone's trip as it reads just before the game settles the drone's return.</summary>
+public sealed record TripAtSettle(bool IsSettleLocked, bool IsBusy, bool IsCharity, bool HasCargo);
+
+/// <summary>A drone about to hand over its cargo: the bags it can land in, and what they held just before.</summary>
+public sealed record Landing(long DroneId, long? HubId, int TripType, IReadOnlyList<ItemStack> Before)
+{
+    /// <summary>The dock hub when it has room, otherwise the drone's own bag.</summary>
+    public IReadOnlyList<long> Owners => HubId is { } hub ? new[] { hub, DroneId } : new[] { DroneId };
+}
+
+/// <summary>Landings watched as one delivery because they share a bag, such as two drones docked on one hub.</summary>
+public sealed record LandingGroup(IReadOnlyList<Landing> Landings)
+{
+    public IReadOnlyList<long> Owners => Landings.SelectMany(landing => landing.Owners).Distinct().ToList();
+
+    /// <summary>Each bag as it was before the first of these landings touched it.</summary>
+    public IReadOnlyList<ItemStack> Before =>
+        Owners.SelectMany(owner => Landings.First(landing => landing.Owners.Contains(owner)).Before.Where(stack => stack.OwnerId == owner)).ToList();
+}
+
 /// <summary>
 /// A drone delivery's put-away. The game drops the cargo into the drone's dock hub, or into the drone's own bag when
 /// the hub cannot fit it; comparing those two bags before and after the drone settles finds what was delivered.
 /// </summary>
 public static class Delivery
 {
+    /// <summary>
+    /// Whether the game's settle hands cargo over. It does nothing while locked or when the trip is not under way, a
+    /// charity trip brings nothing home, and a trip whose cargo was already handed over has none left; the game settles
+    /// such trips again, and a landing recorded for them would only watch the bags for nothing.
+    /// </summary>
+    public static bool HandsOverCargo(TripAtSettle trip) => !trip.IsSettleLocked && trip.IsBusy && !trip.IsCharity && trip.HasCargo;
+
+    /// <summary>
+    /// Adds to the group every waiting landing that shares a bag with it, so one hub is watched by one delivery: a second
+    /// watch would find the first one had already put its cargo away. The rest keep waiting, in order.
+    /// </summary>
+    public static (LandingGroup Group, IReadOnlyList<Landing> Waiting) Absorb(LandingGroup group, IReadOnlyList<Landing> waiting)
+    {
+        var landings = group.Landings.ToList();
+        var rest = waiting.ToList();
+        var joiner = rest.FindIndex(landing => SharesABag(landing, landings));
+
+        while (joiner >= 0)
+        {
+            landings.Add(rest[joiner]);
+            rest.RemoveAt(joiner);
+            joiner = rest.FindIndex(landing => SharesABag(landing, landings));
+        }
+
+        return (new LandingGroup(landings), rest);
+    }
+
     /// <summary>Stacks that are new since the first read or hold more than they did.</summary>
     public static IReadOnlyList<ItemStack> Delivered(IEnumerable<ItemStack> before, IEnumerable<ItemStack> after)
     {
@@ -50,12 +97,12 @@ public static class Delivery
     }
 
     /// <summary>
-    /// The put-away plan for a delivery: the same tag rules as the bag's put-away, but the hub and the drone the cargo
-    /// landed in are never targets, so a stack nothing wants stays where the game put it.
+    /// The put-away plan for a delivery: the same tag rules as the bag's put-away, but no drone and no drone hub is ever
+    /// a target, the ones the cargo landed in or any other, so a stack nothing wants stays where the game put it.
     /// </summary>
     public static IReadOnlyList<MoveStep> Plan(Inventory inventory, IReadOnlyList<ItemStack> delivered, IReadOnlyCollection<long> landingOwners, Func<ItemStack, Storage, PutRank?> rankOf)
     {
-        var targets = inventory with { Storages = inventory.Storages.Where(storage => !landingOwners.Contains(storage.OwnerId)).ToList() };
+        var targets = inventory with { Storages = inventory.Storages.Where(storage => !storage.IsDroneBay && !landingOwners.Contains(storage.OwnerId)).ToList() };
 
         return StoragePlan.PutAway(targets, delivered, rankOf);
     }
@@ -102,6 +149,9 @@ public static class Delivery
 
         return stayedPlaces.Count == 1 ? $"{line} Stayed in {stayedPlaces[0]}: {Listing(stayed, null)}." : $"{line} Stayed: {Listing(stayed, "in")}.";
     }
+
+    private static bool SharesABag(Landing landing, IReadOnlyList<Landing> group) =>
+        landing.Owners.Any(owner => group.Any(member => member.Owners.Contains(owner)));
 
     private static bool IsSame(IReadOnlyList<ItemStack> a, IReadOnlyList<ItemStack> b) =>
         a.Count == b.Count && a.OrderBy(stack => stack.ItemId).SequenceEqual(b.OrderBy(stack => stack.ItemId));

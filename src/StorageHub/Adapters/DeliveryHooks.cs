@@ -7,17 +7,12 @@ using StorageHub.Core;
 
 namespace StorageHub.Adapters;
 
-/// <summary>A drone that is about to hand over its cargo: where the cargo can land, and what was there before it did.</summary>
-internal sealed record Landing(long DroneId, long? HubId, int TripType, IReadOnlyList<ItemStack> Before)
-{
-    /// <summary>The bags the cargo can land in: the dock hub when it has room, otherwise the drone's own bag.</summary>
-    public IReadOnlyList<long> Owners => HubId is { } hub ? new[] { hub, DroneId } : new[] { DroneId };
-}
-
 /// <summary>
 /// Notices a drone settling its return trip and only records it. The game hands the cargo over inside
 /// StrangerTradeActiveManager.SettleDroneReturn (RVA 0x2fc2310), so the hook reads the landing bags just before and
-/// DeliveryPutAway does the moving on later frames. Static because a Harmony patch has nowhere else to look.
+/// DeliveryPutAway does the moving on later frames. The game also settles trips that bring nothing, so a landing is
+/// recorded only when Delivery.HandsOverCargo says cargo is coming. Static because a Harmony patch has nowhere else to
+/// look.
 /// </summary>
 internal static class DeliveryHooks
 {
@@ -48,16 +43,17 @@ internal static class DeliveryHooks
     }
 
     /// <summary>Reads only, and an exception never escapes into the game's settle: a failing hook logs once and records nothing.</summary>
-    private static void BeforeSettle(Furniture drone, DroneTripComponent trip)
+    private static void BeforeSettle(StrangerTradeActiveManager __instance, Furniture drone, DroneTripComponent trip)
     {
         try
         {
             var items = GameSingleton.Existing<BattleLogicWorld>()?._ItemManager;
 
-            if (drone == null || items == null) return;
+            if (__instance == null || drone == null || trip == null || items == null) return;
+            if (!Delivery.HandsOverCargo(new TripAtSettle(__instance.IsLocked, trip.IsBusy(), trip.IsCharity, !string.IsNullOrEmpty(trip.CargoJson)))) return;
 
             var hub = StrangerTradeActiveManager.GetDockHub(drone);
-            var landing = new Landing(drone.InstanceId, hub?.InstanceId, trip?.TripType ?? -1, Array.Empty<ItemStack>());
+            var landing = new Landing(drone.InstanceId, hub?.InstanceId, trip.TripType, Array.Empty<ItemStack>());
             landing = landing with { Before = landing.Owners.SelectMany(owner => GameStorages.ReadHeld(items, owner)).ToList() };
 
             lock (Gate) Landings.Enqueue(landing);

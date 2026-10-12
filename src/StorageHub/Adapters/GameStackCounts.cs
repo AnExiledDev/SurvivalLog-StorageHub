@@ -7,7 +7,8 @@ namespace StorageHub.Adapters;
 /// <summary>
 /// The item counts of one bag, through the game's own count calls. A stack is looked up in the bag's item list on
 /// every read, never kept: the game pools a removed item's object, so a kept reference could still answer with the
-/// count it had before it was removed. A stack that has left the bag reads as gone.
+/// count it had before it was removed. A stack that has left the bag reads as gone, and a read that throws as
+/// unreadable, never as gone.
 /// </summary>
 internal sealed class GameStackCounts : IStackCounts
 {
@@ -20,15 +21,15 @@ internal sealed class GameStackCounts : IStackCounts
         _ownerId = ownerId;
     }
 
-    public int? CountOf(long stackId)
+    public StackRead CountOf(long stackId)
     {
         try
         {
-            return InBag(stackId)?.ItemCount;
+            return InBag(stackId) is { } item ? new StackRead.Count(item.ItemCount) : new StackRead.Gone();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return null;
+            return new StackRead.Unreadable(ex.Message);
         }
     }
 

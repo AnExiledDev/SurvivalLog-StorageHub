@@ -10,8 +10,11 @@ public enum StorageKind
     Drawer,
 }
 
-/// <summary>A place items live: the player's bag, a home storage, or the workbench drawer.</summary>
-public sealed record Storage(long OwnerId, string Name, StorageKind Kind);
+/// <summary>
+/// A place items live: the player's bag, a home storage, or the workbench drawer. A drone bay is a drone or a drone
+/// hub, which a drone delivery never puts anything into.
+/// </summary>
+public sealed record Storage(long OwnerId, string Name, StorageKind Kind, bool IsDroneBay = false);
 
 /// <summary>One stack, which is one item instance in the game, and the storage holding it.</summary>
 public sealed record ItemStack(long ItemId, int ConfigId, int Count, long OwnerId);

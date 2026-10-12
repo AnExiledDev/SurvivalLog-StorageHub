@@ -21,7 +21,9 @@ Known limits:
 
 - It runs for every drone trip that ends through the game's return settlement, trade, foraging and loot trips alike.
 - A delivered stack that topped up a stack already in the hub moves whole, including what was there before.
-- Items the game's own auto-unload has already moved out of the hub before the put-away runs are not touched.
+- When the hub is full the game leaves the cargo in the drone, and its own auto-unload later moves the drone's whole bag into the hub once it all fits, then ends the trip. Whatever the put-away left in the drone goes along, and that later move is not put away.
+- No drone and no drone hub is ever a put-away target, not even one that already holds the item.
+- Two drones landing on one hub at once are put away together, as one delivery with one log line.
 - Nothing runs before the prologue is over.
 
 ## Organize
@@ -30,7 +32,7 @@ Known limits:
 - With `CompactSmallItems` on, big items are packed in from the bottom-right corner and small items (2 cells or fewer by default) go into the smallest square in the top-left corner that holds them. The free space stays in one piece, so a big item still fits later. If that layout cannot hold everything, the game's own Sort layout is used; if neither can, nothing moves.
 - The game's Sort button packs the same way while `CompactSmallItems` is on: the game sorts first, then the side you sorted is repacked on the next frame. That includes your own bag when you press Sort on it.
 - A storage that is already tidy is left alone, so reopening it writes nothing. A storage is tidied once per opening, so whatever you move by hand stays put until you close and reopen it.
-- With `MergeStacks` on, every tidy first tops up partial stacks of one kind from each other, so a storage holding 7, 5 and 4 berries with a stack limit of 10 ends up with 10 and 6. Food merges only when the two stacks spoil within the same hour, the rule the Stacking mod uses, so merging never makes food older or fresher; items that never spoil merge when their uses left match. Stacks also have to agree on everything else the item carries (mold, packaging, burn value, weight). The stack limit is the game's own, so a limit raised by Stacking is used. Works with or without Stacking installed. After the prologue only.
+- With `MergeStacks` on, every tidy first tops up partial stacks of one kind from each other, so a storage holding 7, 5 and 4 berries with a stack limit of 10 ends up with 10 and 6. Food merges only when the two stacks spoil within an hour of each other, the rule the Stacking mod uses. The units poured in take the spoil time of the stack they join, so they can end up as much as an hour older or fresher than they were. Items that never spoil merge when their uses left match. Stacks also have to agree on everything else the item carries (mold, packaging, burn value, weight). The stack limit is the game's own, so a limit raised by Stacking is used. Works with or without Stacking installed. After the prologue only.
 
 Known limits:
 

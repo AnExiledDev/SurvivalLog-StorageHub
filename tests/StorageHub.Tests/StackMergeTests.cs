@@ -179,8 +179,8 @@ public class StackMergeRunTests
         if (report.Failure is not { } failed) return;
 
         Assert.Same(failed, report.Outcomes[^1]);
-        Assert.Equal(failed.Step.SourceBefore, bag.CountOf(failed.Step.SourceId));
-        Assert.Equal(failed.Step.TargetBefore, bag.CountOf(failed.Step.TargetId));
+        Assert.Equal(new StackRead.Count(failed.Step.SourceBefore), bag.CountOf(failed.Step.SourceId));
+        Assert.Equal(new StackRead.Count(failed.Step.TargetBefore), bag.CountOf(failed.Step.TargetId));
     }
 
     [Fact]
@@ -203,6 +203,19 @@ public class StackMergeRunTests
 
         Assert.Null(report.Failure);
         Assert.Equal(new Dictionary<long, int> { [1] = 9 }, bag.Counts);
+    }
+
+    [Fact]
+    public void A_whole_source_that_cannot_be_read_after_its_removal_is_never_counted_as_merged_so_no_unit_is_doubled()
+    {
+        var bag = new FakeBag(StackMergePlanTests.Food(1, Apple, 7), StackMergePlanTests.Food(2, Apple, 2));
+        var before = bag.TotalsByKind();
+
+        var report = StackMerge.Run(StackMerge.Plan(bag.Stacks, Now), bag.FailingAt(2, Fault.Refuses).UnreadableFrom(2, stackId: 2));
+
+        Assert.Equal(0, report.Merged);
+        Assert.IsType<MergeOutcome.Broken>(report.Failure);
+        Assert.Equal(before, bag.TotalsByKind());
     }
 
     [Fact]
@@ -282,7 +295,8 @@ public enum Fault
 
 /// <summary>
 /// A bag's counts the way the game keeps them: a count that falls to 0 removes the stack. Writes can be made to fail at
-/// one numbered write, or at every write from one on.
+/// one numbered write, or at every write from one on, and one stack's count can be made unreadable from a numbered
+/// write on, while the stack itself stays in the bag.
 /// </summary>
 internal sealed class FakeBag : IStackCounts
 {
@@ -291,6 +305,8 @@ internal sealed class FakeBag : IStackCounts
     private int _failAt = int.MaxValue;
     private bool _staysBroken;
     private Fault _fault;
+    private int _unreadableFrom = int.MaxValue;
+    private long? _unreadableStack;
 
     public FakeBag(params MergeStack[] stacks)
     {
@@ -321,12 +337,25 @@ internal sealed class FakeBag : IStackCounts
         return FailingAt(write, fault);
     }
 
+    public FakeBag UnreadableFrom(int write, long stackId)
+    {
+        _unreadableFrom = write;
+        _unreadableStack = stackId;
+
+        return this;
+    }
+
     public int CapOf(long stackId) => _caps[stackId];
 
     public Dictionary<int, int> TotalsByKind() =>
         Counts.GroupBy(stack => _kinds[stack.Key]).ToDictionary(kind => kind.Key, kind => kind.Sum(stack => stack.Value));
 
-    public int? CountOf(long stackId) => Counts.TryGetValue(stackId, out var count) ? count : null;
+    public StackRead CountOf(long stackId)
+    {
+        if (stackId == _unreadableStack && Writes >= _unreadableFrom) return new StackRead.Unreadable("the read threw");
+
+        return Counts.TryGetValue(stackId, out var count) ? new StackRead.Count(count) : new StackRead.Gone();
+    }
 
     public bool TryIncrease(long stackId, int units) => Write(stackId, () => Counts[stackId] += units);
 

@@ -276,9 +276,13 @@ internal sealed class GameStorages
         {
             _furnitures[homes[i].InstanceId] = homes[i];
 
-            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture);
+            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, IsDroneBay(homes[i]));
         }
     }
+
+    /// <summary>A drone hub by its config, or a drone by the trip component every drone carries.</summary>
+    private static bool IsDroneBay(Furniture furniture) =>
+        StrangerTradeActiveManager.IsDroneHub(furniture.AgentConfigId) || StrangerTradeActiveManager.TripOf(furniture) != null;
 
     private List<ItemStack> ReadStacks(Il2CppItems cache, IEnumerable<Storage> storages, ConfigManager config, float nowHours)
     {
@@ -338,6 +342,7 @@ internal sealed class GameStorages
     }
 
     /// <summary>For items the backpack has no entry for yet (the floor, a bag read straight from the item manager).</summary>
+    // TimeScale is left out on purpose: the game's own shelf life read leaves it out too, so this matches its tooltip.
     private static float FallbackDaysLeft(ConfigManager? config, int configId, float startTime, float timeLeft, float presetShelfScale, float nowHours)
     {
         var row = config?.Get_Config_Item(configId);

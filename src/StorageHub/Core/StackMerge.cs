@@ -94,11 +94,25 @@ public sealed record MergeStep(long SourceId, long TargetId, int ConfigId, int U
     public bool EmptiesSource => Units == SourceBefore;
 }
 
+/// <summary>
+/// What reading one stack's count found. Gone and Unreadable must stay apart: a stack that is gone has given up its
+/// units, while one that could not be read may still hold them.
+/// </summary>
+public abstract record StackRead
+{
+    public sealed record Count(int Units) : StackRead;
+
+    /// <summary>The stack is no longer in the bag.</summary>
+    public sealed record Gone : StackRead;
+
+    /// <summary>The read itself failed, so the stack may or may not still be there.</summary>
+    public sealed record Unreadable(string Why) : StackRead;
+}
+
 /// <summary>The game's item counts in one bag. Every write reports false when it threw; the runner reads every count back regardless.</summary>
 public interface IStackCounts
 {
-    /// <summary>The stack's count, or null when it is gone, has left the bag, or cannot be read.</summary>
-    int? CountOf(long stackId);
+    StackRead CountOf(long stackId);
 
     bool TryIncrease(long stackId, int units);
 
@@ -227,7 +241,7 @@ public static class StackMerge
 
         var raised = counts.TryIncrease(step.TargetId, step.Units);
 
-        if (!raised || counts.CountOf(step.TargetId) != step.TargetBefore + step.Units)
+        if (!raised || !Holds(counts, step.TargetId, step.TargetBefore + step.Units))
         {
             return Undo(step, counts, $"raising stack {step.TargetId} by {step.Units} did not land");
         }
@@ -240,19 +254,22 @@ public static class StackMerge
         var source = counts.CountOf(step.SourceId);
         var target = counts.CountOf(step.TargetId);
 
-        if (source != step.SourceBefore || target != step.TargetBefore) return $"stack {step.SourceId} holds {Show(source)} and {step.TargetId} holds {Show(target)}, the plan expected {step.SourceBefore} and {step.TargetBefore}";
+        if (!IsCount(source, step.SourceBefore) || !IsCount(target, step.TargetBefore)) return $"stack {step.SourceId} holds {Show(source)} and {step.TargetId} holds {Show(target)}, the plan expected {step.SourceBefore} and {step.TargetBefore}";
 
         if (step.Units <= 0 || step.Units > step.SourceBefore || step.TargetBefore + step.Units > step.Cap) return $"pouring {step.Units} would break a stack limit of {step.Cap}";
 
         return null;
     }
 
-    /// <summary>Removing a whole source: once it is gone its units are in the target, whatever the call reported.</summary>
+    /// <summary>
+    /// Removing a whole source: once it is gone its units are in the target, whatever the call reported. A source that
+    /// cannot be read may still hold its units, so that is undone like any other failure.
+    /// </summary>
     private static MergeOutcome RemoveSource(MergeStep step, IStackCounts counts)
     {
         counts.TryRemove(step.SourceId);
 
-        return counts.CountOf(step.SourceId) is null
+        return counts.CountOf(step.SourceId) is StackRead.Gone
             ? new MergeOutcome.Merged(step)
             : Undo(step, counts, $"removing stack {step.SourceId} did not land");
     }
@@ -261,7 +278,7 @@ public static class StackMerge
     {
         var lowered = counts.TryDecrease(step.SourceId, step.Units);
 
-        return lowered && counts.CountOf(step.SourceId) == step.SourceBefore - step.Units
+        return lowered && Holds(counts, step.SourceId, step.SourceBefore - step.Units)
             ? new MergeOutcome.Merged(step)
             : Undo(step, counts, $"lowering stack {step.SourceId} by {step.Units} did not land");
     }
@@ -279,13 +296,23 @@ public static class StackMerge
 
     private static bool RestoreTo(long stackId, int wanted, IStackCounts counts)
     {
-        if (counts.CountOf(stackId) is not { } now) return false;
+        if (counts.CountOf(stackId) is not StackRead.Count { Units: var now }) return false;
 
         if (now < wanted) counts.TryIncrease(stackId, wanted - now);
         else if (now > wanted) counts.TryDecrease(stackId, now - wanted);
 
-        return counts.CountOf(stackId) == wanted;
+        return Holds(counts, stackId, wanted);
     }
 
-    private static string Show(int? count) => count?.ToString(CultureInfo.InvariantCulture) ?? "nothing";
+    private static bool Holds(IStackCounts counts, long stackId, int units) => IsCount(counts.CountOf(stackId), units);
+
+    private static bool IsCount(StackRead read, int units) => read is StackRead.Count count && count.Units == units;
+
+    private static string Show(StackRead read) => read switch
+    {
+        StackRead.Count count => count.Units.ToString(CultureInfo.InvariantCulture),
+        StackRead.Gone => "nothing",
+        StackRead.Unreadable unreadable => $"unreadable ({unreadable.Why})",
+        _ => throw new InvalidOperationException("unknown stack read"),
+    };
 }

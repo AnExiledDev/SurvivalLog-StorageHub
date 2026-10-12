@@ -6,11 +6,77 @@ namespace StorageHub.Tests;
 
 public class DeliveryTests
 {
-    private static readonly Storage Hub = new(500, "Drone Hub", StorageKind.Furniture);
-    private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture);
+    private static readonly Storage Hub = new(500, "Drone Hub", StorageKind.Furniture, IsDroneBay: true);
+    private static readonly Storage OtherHub = new(501, "Drone Hub", StorageKind.Furniture, IsDroneBay: true);
+    private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture, IsDroneBay: true);
+    private static readonly Storage OtherDrone = new(601, "Drone", StorageKind.Furniture, IsDroneBay: true);
+    private static readonly TripAtSettle Returning = new(IsSettleLocked: false, IsBusy: true, IsCharity: false, HasCargo: true);
 
     private static Inventory HomeWithHub(params ItemStack[] stacks) =>
         Home(stacks) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, Drone } };
+
+    private static Inventory HomeWithTwoHubs(params ItemStack[] stacks) =>
+        Home(stacks) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, OtherHub, Drone, OtherDrone } };
+
+    private static Landing LandingOf(Storage drone, Storage hub, params ItemStack[] before) => new(drone.OwnerId, hub.OwnerId, 2, before);
+
+    [Fact]
+    public void A_returning_drone_with_cargo_hands_it_over()
+    {
+        Assert.True(Delivery.HandsOverCargo(Returning));
+    }
+
+    public static TheoryData<string, TripAtSettle> SettlesThatBringNothing => new()
+    {
+        { "the trip is not under way", Returning with { IsBusy = false } },
+        { "the cargo was already handed over", Returning with { HasCargo = false } },
+        { "a charity trip brings nothing home", Returning with { IsCharity = true } },
+        { "the game skips the settle while locked", Returning with { IsSettleLocked = true } },
+    };
+
+    [Theory]
+    [MemberData(nameof(SettlesThatBringNothing))]
+    public void A_settle_that_brings_nothing_records_no_landing(string why, TripAtSettle trip)
+    {
+        Assert.False(Delivery.HandsOverCargo(trip), why);
+    }
+
+    [Fact]
+    public void Two_drones_settling_on_one_hub_in_one_tick_are_put_away_in_one_window()
+    {
+        var hubBefore = Stack(1, Rope, 2, Hub);
+        var first = LandingOf(Drone, Hub, hubBefore);
+        var second = LandingOf(OtherDrone, Hub, hubBefore, Stack(2, Apple, 3, Hub));
+
+        var (group, waiting) = Delivery.Absorb(new LandingGroup(new[] { first }), new[] { second });
+        var landed = Delivery.Delivered(group.Before, new[] { hubBefore, Stack(2, Apple, 3, Hub), Stack(3, RedBerry, 4, Hub) });
+
+        Assert.Empty(waiting);
+        Assert.Equal(new[] { first, second }, group.Landings);
+        Assert.Equal(new[] { Stack(2, Apple, 3, Hub), Stack(3, RedBerry, 4, Hub) }, landed);
+    }
+
+    [Fact]
+    public void A_drone_on_another_hub_keeps_its_own_window()
+    {
+        var onOtherHub = LandingOf(OtherDrone, OtherHub);
+
+        var (group, waiting) = Delivery.Absorb(new LandingGroup(new[] { LandingOf(Drone, Hub) }), new[] { onOtherHub });
+
+        Assert.Single(group.Landings);
+        Assert.Equal(new[] { onOtherHub }, waiting);
+    }
+
+    [Fact]
+    public void A_joined_drone_s_own_bag_is_watched_from_before_it_settled()
+    {
+        var second = LandingOf(OtherDrone, Hub, Stack(5, Rope, 1, OtherDrone));
+
+        var (group, _) = Delivery.Absorb(new LandingGroup(new[] { LandingOf(Drone, Hub) }), new[] { second });
+
+        Assert.Equal(new[] { Hub.OwnerId, Drone.OwnerId, OtherDrone.OwnerId }, group.Owners);
+        Assert.Equal(new[] { Stack(5, Rope, 1, OtherDrone) }, group.Before);
+    }
 
     [Fact]
     public void Only_stacks_that_are_new_or_grew_count_as_delivered()
@@ -67,6 +133,39 @@ public class DeliveryTests
         var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
 
         Assert.Empty(Assert.Single(steps).Targets);
+    }
+
+    [Fact]
+    public void Another_drone_already_holding_the_item_is_never_a_target()
+    {
+        var rope = Stack(1, Rope, 2, Hub);
+        var home = HomeWithTwoHubs(rope, Stack(9, Rope, 5, OtherDrone));
+
+        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
+
+        Assert.Empty(Assert.Single(steps).Targets);
+    }
+
+    [Fact]
+    public void Another_drone_hub_already_holding_the_item_is_never_a_target()
+    {
+        var rope = Stack(1, Rope, 2, Hub);
+        var home = HomeWithTwoHubs(rope, Stack(9, Rope, 5, OtherHub));
+
+        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
+
+        Assert.Empty(Assert.Single(steps).Targets);
+    }
+
+    [Fact]
+    public void A_drone_bay_whose_tags_fit_is_still_never_a_target()
+    {
+        var berries = Stack(3, RedBerry, 4, Hub);
+        var home = HomeWithTwoHubs(berries);
+
+        var steps = Delivery.Plan(home, new[] { berries }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, storage) => storage == Fridge || storage.IsDroneBay ? new PutRank(1, 1) : null);
+
+        Assert.Equal(new[] { Fridge.OwnerId }, Assert.Single(steps).Targets);
     }
 
     [Fact]

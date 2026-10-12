@@ -410,7 +410,7 @@ internal sealed class HubSession
 
         if (floor.Count == 0) return "Nothing on the floor at home.";
 
-        AddNames(floor);
+        AddNames(floor.Select(stack => stack.ConfigId));
 
         return Execute(StoragePlan.PutAwayFloor(_inventory, floor, RankAndLog), PickUpAndLog);
     }

@@ -35,6 +35,9 @@ public abstract record PageCommand
     /// <summary>The search box gained or lost focus, so the game should send keys to the page or stop.</summary>
     public sealed record Focus(bool IsFocused) : PageCommand;
 
+    /// <summary>The inventory toolbar's Mods menu opened or closed; the page gets no keys, so Esc has to close it from here.</summary>
+    public sealed record Menu(bool IsOpen) : PageCommand;
+
     /// <summary>The page script just installed itself.</summary>
     public sealed record Ready : PageCommand;
 
@@ -61,6 +64,7 @@ public abstract record PageCommand
             ("putAwayFloor", 1) => new PutAwayFloor(),
             ("close", 1) => new Close(),
             ("focus", 2) when parts[1] is "0" or "1" => new Focus(parts[1] == "1"),
+            ("menu", 2) when parts[1] is "0" or "1" => new Menu(parts[1] == "1"),
             ("ready", 1) => new Ready(),
             ("noscript", 1) => new NoScript(),
             _ => new Unknown(message),

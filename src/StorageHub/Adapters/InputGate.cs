@@ -9,11 +9,13 @@ namespace StorageHub.Adapters;
 /// <summary>
 /// While the panel is open: stops the game's hotkeys, so typing "e" in the search box does not also open a menu, and
 /// sends every click to the web UI. The game only passes a click to the web UI where one of its own pages reported a
-/// button, which the panel is not. Static because a Harmony patch has nowhere else to look.
+/// button, which the panel is not. While the inventory's Mods menu is open it stops the hotkeys too, so the Esc that
+/// closes the menu does not also close the inventory. Static because a Harmony patch has nowhere else to look.
 /// </summary>
 internal static class InputGate
 {
     private static bool _isPanelOpen;
+    private static bool _isMenuOpen;
     private static int _blockedThroughFrame = -1;
     private static bool _hasRoutedAClick;
     private static Action<string> _log = _ => { };
@@ -34,6 +36,19 @@ internal static class InputGate
         _blockedThroughFrame = Time.frameCount + 1;
     }
 
+    public static bool IsMenuOpen => _isMenuOpen;
+
+    public static void MenuOpened() => _isMenuOpen = true;
+
+    /// <summary>Like <see cref="PanelClosed"/>, for the Esc that closed the menu; a menu that was already shut changes nothing.</summary>
+    public static void MenuClosed()
+    {
+        if (!_isMenuOpen) return;
+
+        _isMenuOpen = false;
+        _blockedThroughFrame = Time.frameCount + 1;
+    }
+
     private static void Patch(Harmony harmony, Type type, string method, string? prefix = null, string? postfix = null, string done = "", string consequence = "")
     {
         try
@@ -50,7 +65,7 @@ internal static class InputGate
         }
     }
 
-    private static bool SkipWhileBlocked() => !(_isPanelOpen || Time.frameCount <= _blockedThroughFrame);
+    private static bool SkipWhileBlocked() => !(_isPanelOpen || _isMenuOpen || Time.frameCount <= _blockedThroughFrame);
 
     private static void RouteClicksToPanel(ref bool __result)
     {

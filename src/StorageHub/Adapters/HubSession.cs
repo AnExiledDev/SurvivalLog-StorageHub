@@ -56,6 +56,15 @@ internal sealed class HubSession
             return;
         }
 
+        // The menu is the inventory's top layer, so Esc closes it before the panel or the inventory.
+        if (InputGate.IsMenuOpen && Input.GetKeyDown(KeyCode.Escape))
+        {
+            _page.CloseMenu();
+            InputGate.MenuClosed();
+
+            return;
+        }
+
         if (!_isOpen) return;
 
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -236,11 +245,20 @@ internal sealed class HubSession
             case PageCommand.Focus:
                 _keyboard.Release();
                 break;
+            case PageCommand.Menu { IsOpen: true }:
+                InputGate.MenuOpened();
+                break;
+            case PageCommand.Menu:
+                InputGate.MenuClosed();
+                break;
             case PageCommand.Ready:
                 _log("page script ready");
+                // A reloaded page has no menu, and one left marked open would hold the game's hotkeys for good.
+                InputGate.MenuClosed();
                 ReopenAfterReload();
                 break;
             case PageCommand.NoScript:
+                InputGate.MenuClosed();
                 _page.Install();
                 break;
             case PageCommand.Unknown unknown:

@@ -8,7 +8,7 @@ A BepInEx 6 (IL2CPP) plugin for Survival Log: one searchable list of every item 
 - Per item: take it from a storage into your bag, take all of it into your bag, or put it away by tag.
 - "Put whole bag away by tag" sends each item in your bag to the best-matching tagged storage.
 - "Put floor items away by tag" picks up items lying on the floor inside the house and stores them the same way; anything with no matching storage goes into your bag.
-- The put-away buttons also appear on the game's inventory screen.
+- Both put-away actions are also in the Mods menu on the game's inventory screen, the button next to the game's Sort button on your bag's item tab. Other mods that use the same menu (Unpack All does) list their actions there too. Esc or a click elsewhere closes it.
 
 Moves go through the game's own quick-move and floor pickup, so freshness and durability are kept.
 

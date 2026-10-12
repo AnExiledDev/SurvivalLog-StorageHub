@@ -13,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.4.0";
+    private const string Version = "0.4.1";
 
     public override void Load()
     {

@@ -46,11 +46,20 @@ public class PageCommandTests
         Assert.Equal(new PageCommand.Focus(false), PageCommand.Parse("slmod|storagehub|focus|0"));
     }
 
+    [Fact]
+    public void Menu_tells_whether_the_mods_menu_is_open_so_esc_closes_it_and_not_the_inventory()
+    {
+        Assert.Equal(new PageCommand.Menu(true), PageCommand.Parse("slmod|storagehub|menu|1"));
+        Assert.Equal(new PageCommand.Menu(false), PageCommand.Parse("slmod|storagehub|menu|0"));
+    }
+
     [Theory]
     [InlineData("slmod|storagehub|take|apple|200")]
     [InlineData("slmod|storagehub|take|1")]
     [InlineData("slmod|storagehub|explode")]
     [InlineData("slmod|storagehub|")]
+    [InlineData("slmod|storagehub|menu")]
+    [InlineData("slmod|storagehub|menu|yes")]
     public void A_malformed_command_is_never_acted_on(string message)
     {
         Assert.IsType<PageCommand.Unknown>(PageCommand.Parse(message));

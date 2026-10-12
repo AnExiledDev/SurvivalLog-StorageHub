@@ -2,14 +2,18 @@ using System;
 
 namespace StorageHub.Core;
 
-/// <summary>Which cells of a bag are taken while a layout is built.</summary>
+/// <summary>Which cells of a bag are taken while a layout is built. A blocked cell starts out taken and stays so.</summary>
 internal sealed class Occupancy
 {
     private readonly GridSize _grid;
     private readonly bool[,] _taken;
 
-    public Occupancy(GridSize grid) : this(grid, new bool[Math.Max(0, grid.Cols), Math.Max(0, grid.Rows)])
+    public Occupancy(BagSpace space) : this(space.Grid, new bool[Math.Max(0, space.Grid.Cols), Math.Max(0, space.Grid.Rows)])
     {
+        foreach (var cell in space.Blocked)
+        {
+            if (_grid.Holds(cell, 1, 1)) _taken[cell.X, cell.Y] = true;
+        }
     }
 
     private Occupancy(GridSize grid, bool[,] taken)
@@ -23,7 +27,7 @@ internal sealed class Occupancy
     /// <summary>True when a w by h item at this cell lies inside the bag and covers no taken cell.</summary>
     public bool IsFree(Cell at, int w, int h)
     {
-        if (w <= 0 || h <= 0 || at.X < 0 || at.Y < 0 || at.X + w > _grid.Cols || at.Y + h > _grid.Rows) return false;
+        if (!_grid.Holds(at, w, h)) return false;
 
         for (var x = at.X; x < at.X + w; x++)
         {

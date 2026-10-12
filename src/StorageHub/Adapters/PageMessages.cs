@@ -13,9 +13,13 @@ namespace StorageHub.Adapters;
 internal static class PageMessages
 {
     private static readonly ConcurrentQueue<PageCommand> Queue = new();
+    private static Action<string> _log = _ => { };
+    private static bool _hasReportedFailure;
 
     public static void Apply(Harmony harmony, Action<string> log)
     {
+        _log = log;
+
         try
         {
             harmony.Patch(AccessTools.Method(typeof(BaseWebView), "HandleMessageEmitted"), prefix: new HarmonyMethod(typeof(PageMessages), nameof(TakeOurs)));
@@ -41,12 +45,31 @@ internal static class PageMessages
         return false;
     }
 
+    /// <summary>A throw here would break every web message in the game, so any failure lets the game handle the message.</summary>
     private static bool TakeOurs(string serializedMessage)
     {
-        if (!PageCommand.IsOurs(serializedMessage)) return true;
+        try
+        {
+            if (!PageCommand.IsOurs(serializedMessage)) return true;
 
-        Queue.Enqueue(PageCommand.Parse(serializedMessage));
+            Queue.Enqueue(PageCommand.Parse(serializedMessage));
 
-        return false;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            ReportFailureOnce(ex);
+
+            return true;
+        }
+    }
+
+    private static void ReportFailureOnce(Exception ex)
+    {
+        if (_hasReportedFailure) return;
+
+        _hasReportedFailure = true;
+
+        _log("reading a panel message failed, the game handles it instead: " + ex.Message);
     }
 }

@@ -21,10 +21,11 @@ Moves go through the game's own quick-move and floor pickup, so freshness and du
 
 Known limits:
 
-- Material racks, cooking furniture, compost bins, hot pots, robot molds, synthetic and locked bags are never touched, because the game places items in them by its own rules.
+- Material racks, cooking furniture, compost bins, hot pots, locked bags and the game's synthetic bags (the vehicle trunk and boxes, the workbench drawer, the shredder and compressor trays, the trap store) are never touched, because the game places items in them by its own rules. Furniture with item slots and baskets are tidied: the game only checks their total load or which items they take, never which cell an item sits on.
+- Mold cells are kept clear. No layout puts an item on one, an item already on one is moved off it, and a storage that would only fit by using a moldy cell is left as it is. If the mold cannot be read, the storage is left alone, with one line in the log.
 - A bag whose grid on screen differs from its real grid is left alone, with one line in the log.
 - After Sort, the game's own layout shows for one frame before the compact one replaces it.
-- If the game refuses a move, every item is put back where it was and one line goes to the log. Nothing is shown in game.
+- If the game refuses a move, every item is put back where it was and one line goes to the log. Nothing is shown in game. The exception is an item the game had saved off the grid (a load repair can leave one at -1,y): writing that cell back would hand it to the game's repair again, which may move or store it elsewhere, so it stays where it is, or takes the first free cell if it is in another item's way. Each such item gets its own log line.
 - Items are never rotated; the game has no rotation.
 
 ## Config

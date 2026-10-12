@@ -8,7 +8,21 @@ namespace StorageHub.Core;
 public readonly record struct Cell(int X, int Y);
 
 /// <summary>A bag's size in cells.</summary>
-public readonly record struct GridSize(int Cols, int Rows);
+public readonly record struct GridSize(int Cols, int Rows)
+{
+    /// <summary>True when a w by h item at this cell lies wholly inside the grid.</summary>
+    public bool Holds(Cell at, int w, int h) => w > 0 && h > 0 && at.X >= 0 && at.Y >= 0 && at.X + w <= Cols && at.Y + h <= Rows;
+}
+
+/// <summary>
+/// The room a layout may use: the bag's grid less its Blocked cells. Blocked cells are the bag's mold. The game's own
+/// PackNewItemAvoidingMold packs around them too, and food left on one is infected at the next spread round, so no
+/// layout ever places an item on one.
+/// </summary>
+public sealed record BagSpace(GridSize Grid, IReadOnlyCollection<Cell> Blocked)
+{
+    public static BagSpace Unblocked(GridSize grid) => new(grid, Array.Empty<Cell>());
+}
 
 /// <summary>
 /// One item as a layout sees it: its footprint in cells and the keys the game's Sort orders by. The game never turns
@@ -37,13 +51,14 @@ public static class Packing
     /// then fill the smallest square in the top-left corner that holds them all, so the space left over stays in one
     /// piece for the next big item. The square grows a cell at a time until it is the whole bag.
     /// </summary>
-    public static PackResult Pack(GridSize grid, IReadOnlyList<PackItem> items, PackOptions options)
+    public static PackResult Pack(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options)
     {
         if (items.Any(item => item.W <= 0 || item.H <= 0)) return new PackResult.DoesNotFit();
 
+        var grid = space.Grid;
         var large = GameOrder(items.Where(item => item.Area > options.SmallMaxArea));
         var small = GameOrder(items.Where(item => item.Area <= options.SmallMaxArea));
-        var taken = new Occupancy(grid);
+        var taken = new Occupancy(space);
         var positions = new Dictionary<long, Cell>();
 
         foreach (var item in large)
@@ -71,20 +86,21 @@ public static class Packing
     /// The game's own Sort (BagPacker.PackItems): biggest first, then by category and item type, each into the first
     /// free spot reading row by row from the top-left.
     /// </summary>
-    public static PackResult PackLikeGame(GridSize grid, IReadOnlyList<PackItem> items) =>
-        FillFromTopLeft(GameOrder(items), new Occupancy(grid), grid.Cols, grid.Rows) is { } positions
+    public static PackResult PackLikeGame(BagSpace space, IReadOnlyList<PackItem> items) =>
+        FillFromTopLeft(GameOrder(items), new Occupancy(space), space.Grid.Cols, space.Grid.Rows) is { } positions
             ? new PackResult.Fits(positions)
             : new PackResult.DoesNotFit();
 
     /// <summary>
-    /// A layout the game can be given: every item placed exactly once, inside the bag, on no other item. Checked
-    /// before anything moves, so a packing mistake can never put two items on one cell or push one off the grid.
+    /// A layout the game can be given: every item placed exactly once, inside the bag, on no other item and no blocked
+    /// cell. Checked before anything moves, so a packing mistake can never put two items on one cell, push one off the
+    /// grid or set one on mold.
     /// </summary>
-    public static bool IsValid(GridSize grid, IReadOnlyList<PackItem> items, IReadOnlyDictionary<long, Cell> positions)
+    public static bool IsValid(BagSpace space, IReadOnlyList<PackItem> items, IReadOnlyDictionary<long, Cell> positions)
     {
         if (positions.Count != items.Count) return false;
 
-        var taken = new Occupancy(grid);
+        var taken = new Occupancy(space);
 
         foreach (var item in items)
         {

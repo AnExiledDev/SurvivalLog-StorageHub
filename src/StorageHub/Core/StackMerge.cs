@@ -283,16 +283,25 @@ public static class StackMerge
             : Undo(step, counts, $"lowering stack {step.SourceId} by {step.Units} did not land");
     }
 
-    /// <summary>Puts both stacks back to their counts before the step, then reads them to say whether that worked.</summary>
+    /// <summary>
+    /// Puts both stacks back to their counts before the step, then reads them to say whether that worked. A source that
+    /// cannot be read may already have given its units to the target, so nothing is written then: lowering the target
+    /// could lose those units, and a duplicate is the lesser harm.
+    /// </summary>
     private static MergeOutcome Undo(MergeStep step, IStackCounts counts, string why)
     {
+        if (counts.CountOf(step.SourceId) is StackRead.Unreadable) return Broken(step, counts, $"{why}, and stack {step.SourceId} could not be read so nothing was put back");
+
         var sourceBack = RestoreTo(step.SourceId, step.SourceBefore, counts);
         var targetBack = RestoreTo(step.TargetId, step.TargetBefore, counts);
 
         if (sourceBack && targetBack) return new MergeOutcome.RolledBack(step, why);
 
-        return new MergeOutcome.Broken(step, $"{why}; stack {step.SourceId} now holds {Show(counts.CountOf(step.SourceId))} (was {step.SourceBefore}), stack {step.TargetId} holds {Show(counts.CountOf(step.TargetId))} (was {step.TargetBefore})");
+        return Broken(step, counts, why);
     }
+
+    private static MergeOutcome.Broken Broken(MergeStep step, IStackCounts counts, string why) =>
+        new(step, $"{why}; stack {step.SourceId} now holds {Show(counts.CountOf(step.SourceId))} (was {step.SourceBefore}), stack {step.TargetId} holds {Show(counts.CountOf(step.TargetId))} (was {step.TargetBefore})");
 
     private static bool RestoreTo(long stackId, int wanted, IStackCounts counts)
     {

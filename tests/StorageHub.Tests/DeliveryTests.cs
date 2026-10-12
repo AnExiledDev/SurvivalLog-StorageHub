@@ -6,10 +6,10 @@ namespace StorageHub.Tests;
 
 public class DeliveryTests
 {
-    private static readonly Storage Hub = new(500, "Drone Hub", StorageKind.Furniture, IsDroneBay: true);
-    private static readonly Storage OtherHub = new(501, "Drone Hub", StorageKind.Furniture, IsDroneBay: true);
-    private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture, IsDroneBay: true);
-    private static readonly Storage OtherDrone = new(601, "Drone", StorageKind.Furniture, IsDroneBay: true);
+    private static readonly Storage Hub = new(500, "Drone Hub", StorageKind.Furniture, DroneBay.Hub);
+    private static readonly Storage OtherHub = new(501, "Drone Hub", StorageKind.Furniture, DroneBay.Hub);
+    private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture, DroneBay.Drone);
+    private static readonly Storage OtherDrone = new(601, "Drone", StorageKind.Furniture, DroneBay.Drone);
     private static readonly TripAtSettle Returning = new(IsSettleLocked: false, IsBusy: true, IsCharity: false, HasCargo: true);
 
     private static Inventory HomeWithHub(params ItemStack[] stacks) =>

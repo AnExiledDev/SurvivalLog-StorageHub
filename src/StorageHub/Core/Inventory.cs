@@ -11,10 +11,22 @@ public enum StorageKind
 }
 
 /// <summary>
-/// A place items live: the player's bag, a home storage, or the workbench drawer. A drone bay is a drone or a drone
-/// hub, which a drone delivery never puts anything into.
+/// Which part of the drone setup a storage is, if any. A drone delivery puts nothing into either. No put-away ever
+/// fills a drone, whose bag can hold goods it is about to trade away; a hub takes the player's put-aways like any
+/// other storage.
 /// </summary>
-public sealed record Storage(long OwnerId, string Name, StorageKind Kind, bool IsDroneBay = false);
+public enum DroneBay
+{
+    None,
+    Drone,
+    Hub,
+}
+
+/// <summary>A place items live: the player's bag, a home storage, or the workbench drawer.</summary>
+public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneBay Bay = DroneBay.None)
+{
+    public bool IsDroneBay => Bay != DroneBay.None;
+}
 
 /// <summary>One stack, which is one item instance in the game, and the storage holding it.</summary>
 public sealed record ItemStack(long ItemId, int ConfigId, int Count, long OwnerId);

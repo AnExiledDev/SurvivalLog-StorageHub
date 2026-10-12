@@ -276,13 +276,17 @@ internal sealed class GameStorages
         {
             _furnitures[homes[i].InstanceId] = homes[i];
 
-            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, IsDroneBay(homes[i]));
+            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]));
         }
     }
 
     /// <summary>A drone hub by its config, or a drone by the trip component every drone carries.</summary>
-    private static bool IsDroneBay(Furniture furniture) =>
-        StrangerTradeActiveManager.IsDroneHub(furniture.AgentConfigId) || StrangerTradeActiveManager.TripOf(furniture) != null;
+    private static DroneBay DroneBayOf(Furniture furniture)
+    {
+        if (StrangerTradeActiveManager.IsDroneHub(furniture.AgentConfigId)) return DroneBay.Hub;
+
+        return StrangerTradeActiveManager.TripOf(furniture) != null ? DroneBay.Drone : DroneBay.None;
+    }
 
     private List<ItemStack> ReadStacks(Il2CppItems cache, IEnumerable<Storage> storages, ConfigManager config, float nowHours)
     {

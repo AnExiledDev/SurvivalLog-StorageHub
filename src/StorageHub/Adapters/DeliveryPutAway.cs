@@ -143,8 +143,8 @@ internal sealed class DeliveryPutAway
 
         foreach (var landing in group.Landings)
         {
-            if (landing.HubId is { } hub && storages.All(storage => storage.OwnerId != hub)) storages.Add(new Storage(hub, "Drone hub", StorageKind.Furniture, IsDroneBay: true));
-            if (storages.All(storage => storage.OwnerId != landing.DroneId)) storages.Add(new Storage(landing.DroneId, "Drone", StorageKind.Furniture, IsDroneBay: true));
+            if (landing.HubId is { } hub && storages.All(storage => storage.OwnerId != hub)) storages.Add(new Storage(hub, "Drone hub", StorageKind.Furniture, DroneBay.Hub));
+            if (storages.All(storage => storage.OwnerId != landing.DroneId)) storages.Add(new Storage(landing.DroneId, "Drone", StorageKind.Furniture, DroneBay.Drone));
         }
 
         foreach (var stack in delivered) names.TryAdd(stack.ConfigId, _game.NameOf(stack.ConfigId));

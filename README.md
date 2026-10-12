@@ -8,6 +8,7 @@ A BepInEx 6 (IL2CPP) plugin for Survival Log: one searchable list of every item 
 - Per item: take it from a storage into your bag, take all of it into your bag, or put it away by tag.
 - "Put whole bag away by tag" sends each item in your bag to the best-matching tagged storage.
 - "Put floor items away by tag" picks up items lying on the floor inside the house and stores them the same way; anything with no matching storage goes into your bag.
+- No put-away ever fills a drone, since a drone's bag can hold goods it is about to trade away. A drone hub takes put-aways like any other storage.
 - Both put-away actions are also in the Mods menu on the game's inventory screen, the button next to the game's Sort button on your bag's item tab. Other mods that use the same menu (Unpack All does) list their actions there too. Esc or a click elsewhere closes it.
 - "Rotting soon" (a button next to the search box) switches the list to food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left ("spoiled", "under 1h", "5h", "2d 3h"). Items that never spoil, and food the game has stopped spoiling, are left out. The search box filters it too, and clicking a row shows that item on the right. Press the button again for the full item list. The time left is the game's own figure, the one its inventory tooltip shows.
 

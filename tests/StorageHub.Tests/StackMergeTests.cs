@@ -206,16 +206,29 @@ public class StackMergeRunTests
     }
 
     [Fact]
-    public void A_whole_source_that_cannot_be_read_after_its_removal_is_never_counted_as_merged_so_no_unit_is_doubled()
+    public void A_whole_source_that_cannot_be_read_after_its_removal_is_never_counted_as_merged()
     {
         var bag = new FakeBag(StackMergePlanTests.Food(1, Apple, 7), StackMergePlanTests.Food(2, Apple, 2));
-        var before = bag.TotalsByKind();
 
         var report = StackMerge.Run(StackMerge.Plan(bag.Stacks, Now), bag.FailingAt(2, Fault.Refuses).UnreadableFrom(2, stackId: 2));
 
         Assert.Equal(0, report.Merged);
         Assert.IsType<MergeOutcome.Broken>(report.Failure);
-        Assert.Equal(before, bag.TotalsByKind());
+    }
+
+    /// <summary>A source of 2 is emptied by its step, one of 5 is only lowered by 3: both write paths end in the same unreadable source.</summary>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(5)]
+    public void A_source_that_cannot_be_read_after_giving_its_units_keeps_the_target_raised_so_no_unit_is_lost(int sourceUnits)
+    {
+        var bag = new FakeBag(StackMergePlanTests.Food(1, Apple, 7), StackMergePlanTests.Food(2, Apple, sourceUnits));
+
+        var report = StackMerge.Run(StackMerge.Plan(bag.Stacks, Now), bag.UnreadableFrom(2, stackId: 2));
+
+        var broken = Assert.IsType<MergeOutcome.Broken>(report.Failure);
+        Assert.True(bag.TotalsByKind()[Apple] >= 7 + sourceUnits, $"{bag.TotalsByKind()[Apple]} apples left of {7 + sourceUnits}");
+        Assert.Contains("could not be read so nothing was put back", broken.Why);
     }
 
     [Fact]

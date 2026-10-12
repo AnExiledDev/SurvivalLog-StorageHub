@@ -9,10 +9,10 @@ public sealed record MoveStep(ItemStack Stack, IReadOnlyList<long> Targets);
 
 public static class StoragePlan
 {
-    /// <summary>Send each stack to the best home storage for it. Only furniture storages are ever targets.</summary>
+    /// <summary>Send each stack to the best home storage for it. Only furniture storages are ever targets, and never a drone.</summary>
     public static IReadOnlyList<MoveStep> PutAway(Inventory inventory, IEnumerable<ItemStack> stacks, Func<ItemStack, Storage, PutRank?> rankOf)
     {
-        var homes = inventory.Storages.Where(storage => storage.Kind == StorageKind.Furniture).ToList();
+        var homes = inventory.Storages.Where(storage => storage.Kind == StorageKind.Furniture && storage.Bay != DroneBay.Drone).ToList();
         var held = inventory.Stacks.Select(stack => (stack.OwnerId, stack.ConfigId)).ToHashSet();
 
         return stacks

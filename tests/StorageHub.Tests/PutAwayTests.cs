@@ -6,6 +6,9 @@ namespace StorageHub.Tests;
 
 public class PutAwayTests
 {
+    private static readonly Storage DroneHub = new(500, "Drone Hub", StorageKind.Furniture, DroneBay.Hub);
+    private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture, DroneBay.Drone);
+
     [Fact]
     public void A_storage_tagged_for_the_item_beats_one_that_only_already_holds_it()
     {
@@ -56,6 +59,28 @@ public class PutAwayTests
         var step = StoragePlan.PutAway(home, new[] { apple }, (_, _) => new PutRank(0, 0)).Single();
 
         Assert.Equal(new[] { Box.OwnerId }, step.Targets);
+    }
+
+    [Fact]
+    public void Putting_the_bag_away_never_fills_a_drone_even_one_tagged_for_the_item_that_already_holds_it()
+    {
+        var apple = Stack(1, Apple, 2, Bag);
+        var withDrone = Home(apple, Stack(2, Apple, 1, Drone)) with { Storages = new[] { Bag, Fridge, Drone } };
+
+        var step = StoragePlan.PutAway(withDrone, new[] { apple }, (_, storage) => storage == Drone ? new PutRank(0, 1) : null).Single();
+
+        Assert.Empty(step.Targets);
+    }
+
+    [Fact]
+    public void Putting_the_bag_away_still_fills_a_drone_hub_tagged_for_the_item()
+    {
+        var apple = Stack(1, Apple, 2, Bag);
+        var withHub = Home(apple) with { Storages = new[] { Bag, Fridge, DroneHub } };
+
+        var step = StoragePlan.PutAway(withHub, new[] { apple }, (_, storage) => storage == DroneHub ? new PutRank(0, 1) : null).Single();
+
+        Assert.Equal(new[] { DroneHub.OwnerId }, step.Targets);
     }
 
     [Fact]

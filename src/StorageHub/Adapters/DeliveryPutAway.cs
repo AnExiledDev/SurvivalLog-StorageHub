@@ -121,6 +121,7 @@ internal sealed class DeliveryPutAway
         }
         finally
         {
+            FinishEmptiedRetrieves(group);
             _game.Forget();
         }
     }
@@ -134,17 +135,14 @@ internal sealed class DeliveryPutAway
         var delivered = Delivery.Delivered(group.Before, landed);
         var inventory = Named(ready.Inventory, group, delivered);
         var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Rank);
-        var placements = Delivery.Place(steps, _game.Move);
 
-        FinishEmptiedRetrieves(group);
-
-        return Delivery.Describe(placements, inventory);
+        return Delivery.Describe(Delivery.Place(steps, _game.Move), inventory);
     }
 
     /// <summary>
     /// The game only offers a retrieve while the drone holds its cargo in its own bag, so once the put-away has moved all
-    /// of it out, the retrieve is finished for it. The moves are done by now, so the drones' bags read as they are left.
-    /// A failure here leaves the retrieve offered and does not lose the line about what was put away.
+    /// of it out, the retrieve is finished for it. Runs after the put-away even when it failed partway, since what it did
+    /// move stays moved, and reads the drones' bags as the moves left them. A failure here leaves the retrieve offered.
     /// </summary>
     private void FinishEmptiedRetrieves(LandingGroup group)
     {

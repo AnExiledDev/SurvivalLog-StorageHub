@@ -8,11 +8,14 @@ namespace StorageHub.Adapters;
 /// Finishes a drone's retrieve once a delivery put-away has emptied its bag, so the drone stops offering to retrieve
 /// nothing and drops its marker. The steps are the game's own Retrieve supplies (RetrieveDroneCargo) without opening
 /// the drone's bag, plus the hub panel refresh its automatic unload sends. Never throws into the game: a failure is
-/// logged and the drone is left offering its retrieve, as the game left it.
+/// logged and the drone is left as it was.
 /// </summary>
 internal sealed class DroneRetrieves
 {
-    /// <summary>The tag the game's retrieve sets, which stops the hub's button from asking for a retrieve.</summary>
+    /// <summary>
+    /// The tag the game's retrieve sets. Its only reader drops the highlight from the drone button on furniture other than
+    /// the hub (Furniture.BuildSingleBtnData); the hub's own buttons follow the trip, which ResetTrip clears.
+    /// </summary>
     private const string CargoRetrievedTag = "StrangerTradeCargoRetrieved";
 
     private readonly Action<string> _log;
@@ -37,6 +40,7 @@ internal sealed class DroneRetrieves
         }
     }
 
+    /// <summary>Finishes the retrieve of a drone that is back and waiting for one; any other drone is left alone.</summary>
     public void Finish(long droneId)
     {
         try
@@ -49,14 +53,14 @@ internal sealed class DroneRetrieves
         }
     }
 
-    private static bool TryFinish(long droneId)
+    private bool TryFinish(long droneId)
     {
         var world = GameSingleton.Existing<BattleLogicWorld>();
         var trade = world?._StrangerTradeActiveManager;
         var drone = StrangerTradeActiveManager.GetDroneById(droneId);
         var trip = drone == null ? null : StrangerTradeActiveManager.TripOf(drone);
 
-        if (world == null || trade == null || trade.IsLocked || drone == null || trip == null) return false;
+        if (world == null || trade == null || trade.IsLocked || drone == null || trip == null || !trade.IsDroneReturned(droneId)) return false;
 
         trade.RecordHubUnloaded(trip.HubLogId, true);
         trip.ResetTrip();
@@ -64,10 +68,26 @@ internal sealed class DroneRetrieves
 
         if (world._TagManager is { } tags) StrangerTradeActiveManager.SetTag(tags, CargoRetrievedTag, true);
 
-        EventDispatcherTools.NotifyInstance<string>(drone.ShowInstanceId, EnumNotify_Furniture.FurnitureHideDirectCue, GameKey.StrangerTrade_DroneCue);
+        HideDroneCue(drone, droneId);
         world._PhoneSMSManager?.TryRestoreRosterCue(drone);
         trade.PushDroneHubUpdate();
 
         return true;
+    }
+
+    /// <summary>
+    /// Kept in the game's order, before the roster cue comes back, since that cue goes to the same drone, but caught on its
+    /// own so a failure here cannot skip the roster cue or the hub refresh.
+    /// </summary>
+    private void HideDroneCue(Furniture drone, long droneId)
+    {
+        try
+        {
+            EventDispatcherTools.NotifyInstance<string>(drone.ShowInstanceId, EnumNotify_Furniture.FurnitureHideDirectCue, GameKey.StrangerTrade_DroneCue);
+        }
+        catch (Exception ex)
+        {
+            _log($"hiding the cue over drone {droneId} failed, it may stay shown:{ex.Message}");
+        }
     }
 }

@@ -12,7 +12,7 @@ Survival Log makes you open storage after storage to find something, and again t
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
 - **Drone deliveries**: when a drone comes home, what it brought is put away into the storages tagged for it.
-- **Tidy storages**: opening a storage tidies it. Small items are packed into the top-left corner and big ones from the bottom-right, so the free space stays in one piece. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
+- **Tidy storages**: opening a storage tidies it. Big items go toward the bottom-right and small ones toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
 - **A log file**: what the mod did and anything that went wrong is written to `BepInEx\storage-hub.log`.
 
 The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)).
@@ -112,7 +112,8 @@ When a drone comes home and the game drops its cargo into the drone hub (or into
 This is how tidying works with the default settings. You can turn off the tidy on open, the compact layout or stack merging on their own (see [CONFIG.md](CONFIG.md)).
 
 - Opening a storage tidies it a moment after the screen appears. Only the storage side is tidied; your own bag is never rearranged when you open a storage.
-- Big items are packed in from the bottom-right corner, and small items (2 cells or fewer by default) go into the smallest square in the top-left corner that holds them. The free space stays in one piece, so a big item still fits later. If that layout cannot hold everything, the game's own Sort layout is used; if neither can, nothing moves.
+- Big items are packed toward the bottom-right corner and small items (2 cells or fewer by default) toward the top-left. Several layouts are built, each setting items where they touch the most walls and other items, and the one whose free space is best is kept. Best means, in order: the fewest empty cells that only a small item could fill, the most room for big items, the biggest free block, and the fewest separate free areas. On a tie, the layout with more items of the same kind side by side wins. The same storage always packs the same way.
+- If no compact layout can hold everything, the game's own Sort layout is used; if neither can, nothing moves.
 - The game's Sort button packs the same way: the game sorts first, then the side you sorted is repacked. That includes your own bag when you press Sort on it.
 - A storage that is already tidy is left alone. A storage is tidied once per opening, so whatever you move by hand stays put until you close and reopen it.
 - Items are never rotated; the game has no rotation.
@@ -168,7 +169,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.6.3 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.0 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

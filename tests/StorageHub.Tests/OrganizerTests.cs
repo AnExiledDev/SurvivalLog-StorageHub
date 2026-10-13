@@ -42,13 +42,13 @@ public class OrganizerTests
     [Fact]
     public void A_bag_the_compact_layout_cannot_hold_falls_back_to_the_games_own_layout()
     {
-        var grid = Space(4, 3);
-        var bag = Scattered(CrowdedBag());
+        var space = GameOnlySpace();
+        var bag = Scattered(GameOnlyBag());
 
-        var move = Assert.IsType<OrganizePlan.Move>(Organizer.Plan(grid, bag, new PackOptions()));
+        var move = Assert.IsType<OrganizePlan.Move>(Organizer.Plan(space, bag, new PackOptions()));
 
         Assert.Equal(PackStyle.GameOrder, move.Style);
-        Assert.Equal(Fits(Packing.PackLikeGame(grid, CrowdedBag())), move.Positions);
+        Assert.Equal(Fits(Packing.PackLikeGame(space, GameOnlyBag())), move.Positions);
     }
 
     [Fact]

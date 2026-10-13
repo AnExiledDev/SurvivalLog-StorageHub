@@ -47,14 +47,33 @@ public abstract record PackResult
 public static class Packing
 {
     /// <summary>
-    /// The compact layout. Big items go in first, each into the free spot nearest the bottom-right corner. Small items
-    /// then fill the smallest square in the top-left corner that holds them all, so the space left over stays in one
-    /// piece for the next big item. The square grows a cell at a time until it is the whole bag.
+    /// The compact layout: the tidiest of several layouts built for the bag. They are the corner layout and the
+    /// contact-point layouts (see ContactPacking). The one whose free space scores best wins (see LayoutScore), the
+    /// earlier one on a tie, so the same bag always packs the same way.
     /// </summary>
     public static PackResult Pack(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options)
     {
         if (items.Any(item => item.W <= 0 || item.H <= 0)) return new PackResult.DoesNotFit();
 
+        return Best(space, items, options, Candidates(space, items, options)) is { } best
+            ? new PackResult.Fits(best)
+            : new PackResult.DoesNotFit();
+    }
+
+    /// <summary>
+    /// How good the free space a layout leaves is, for comparing layouts of one bag. Pure, and total: an item with no
+    /// position or one off the grid simply takes no cells.
+    /// </summary>
+    public static LayoutScore Score(BagSpace space, IReadOnlyList<PackItem> items, IReadOnlyDictionary<long, Cell> positions, PackOptions options) =>
+        LayoutScoring.Score(space, items, positions, options);
+
+    /// <summary>
+    /// The corner layout. Big items go in first, each into the free spot nearest the bottom-right corner. Small items
+    /// then fill the smallest square in the top-left corner that holds them all, so the space left over stays in one
+    /// piece for the next big item. The square grows a cell at a time until it is the whole bag.
+    /// </summary>
+    internal static PackResult PackCorners(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options)
+    {
         var grid = space.Grid;
         var large = GameOrder(items.Where(item => item.Area > options.SmallMaxArea));
         var small = GameOrder(items.Where(item => item.Area <= options.SmallMaxArea));
@@ -112,8 +131,35 @@ public static class Packing
         return true;
     }
 
+    /// <summary>The corner layout first, then every contact-point layout that holds all the items.</summary>
+    private static IEnumerable<IReadOnlyDictionary<long, Cell>> Candidates(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options)
+    {
+        if (PackCorners(space, items, options) is PackResult.Fits corners) yield return corners.Positions;
+
+        foreach (var layout in ContactPacking.Layouts(space, items, options)) yield return layout;
+    }
+
+    /// <summary>The layout with the best score, the earliest on a tie; null when there is none.</summary>
+    private static IReadOnlyDictionary<long, Cell>? Best(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options, IEnumerable<IReadOnlyDictionary<long, Cell>> layouts)
+    {
+        IReadOnlyDictionary<long, Cell>? best = null;
+        var bestScore = default(LayoutScore);
+
+        foreach (var layout in layouts)
+        {
+            var score = Score(space, items, layout, options);
+
+            if (best is not null && score.CompareTo(bestScore) <= 0) continue;
+
+            best = layout;
+            bestScore = score;
+        }
+
+        return best;
+    }
+
     /// <summary>The order the game's Sort uses, with the item id last so the same bag always packs the same way.</summary>
-    private static List<PackItem> GameOrder(IEnumerable<PackItem> items) =>
+    internal static List<PackItem> GameOrder(IEnumerable<PackItem> items) =>
         items
             .OrderByDescending(item => item.Area)
             .ThenBy(item => item.Category)

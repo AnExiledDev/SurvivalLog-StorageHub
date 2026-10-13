@@ -8,23 +8,39 @@ public class PackingTests
     private static readonly PackOptions Compact = new();
 
     [Fact]
-    public void Small_items_form_a_square_in_the_top_left_instead_of_a_strip_along_the_top()
+    public void The_corner_layout_puts_small_items_in_a_square_in_the_top_left_instead_of_a_strip_along_the_top()
     {
         var grid = Space(10, 10);
         var smalls = Smalls(5, 1, 1);
 
-        var compact = Fits(Packing.Pack(grid, smalls, Compact));
+        var corners = Fits(Packing.PackCorners(grid, smalls, Compact));
         var game = Fits(Packing.PackLikeGame(grid, smalls));
 
-        Assert.All(compact.Values, at => Assert.True(at.X < 3 && at.Y < 3, $"{at} is outside the 3 by 3 square"));
+        Assert.All(corners.Values, at => Assert.True(at.X < 3 && at.Y < 3, $"{at} is outside the 3 by 3 square"));
         Assert.Equal(new Cell(4, 0), game[5]);
     }
 
     [Fact]
-    public void The_square_grows_a_cell_at_a_time_when_the_items_do_not_fit_its_shape()
+    public void Small_items_keep_to_the_top_left_and_leave_the_rest_of_the_bag_as_one_free_rectangle()
+    {
+        // Five 1 by 1 items along one edge of a 10 by 10 bag cost one row or column, so 90 cells stay in one rectangle.
+        var grid = Space(10, 10);
+        var smalls = Smalls(5, 1, 1);
+
+        var compact = Fits(Packing.Pack(grid, smalls, Compact));
+        var score = Packing.Score(grid, smalls, compact, Compact);
+
+        Assert.Contains(new Cell(0, 0), compact.Values);
+        Assert.Equal(90, score.LargestFreeRectangle);
+        Assert.Equal(1, score.FreeRegions);
+        Assert.Equal(0, score.StrandedCells);
+    }
+
+    [Fact]
+    public void The_corner_layouts_square_grows_a_cell_at_a_time_when_the_items_do_not_fit_its_shape()
     {
         // Four 2 by 1 items cover 8 cells, so a 3 by 3 square has the area but not the shape: only one fits per row.
-        var positions = Fits(Packing.Pack(Space(10, 10), Smalls(4, 2, 1), Compact));
+        var positions = Fits(Packing.PackCorners(Space(10, 10), Smalls(4, 2, 1), Compact));
 
         Assert.Equal(new Cell(0, 0), positions[1]);
         Assert.Equal(new Cell(2, 0), positions[2]);
@@ -33,14 +49,16 @@ public class PackingTests
     }
 
     [Fact]
-    public void Big_items_keep_to_the_bottom_right_and_small_ones_to_the_top_left()
+    public void Big_items_keep_to_the_bottom_right_and_small_ones_leave_room_for_more_big_items()
     {
+        var grid = Space(6, 4);
         var items = new[] { Item(1, 3, 2), Item(2, 1, 1) };
 
-        var positions = Fits(Packing.Pack(Space(6, 4), items, Compact));
+        var positions = Fits(Packing.Pack(grid, items, Compact));
 
         Assert.Equal(new Cell(3, 2), positions[1]);
-        Assert.Equal(new Cell(0, 0), positions[2]);
+        Assert.True(FitsAnywhere(grid, items, positions, Item(99, 3, 3)));
+        Assert.True(FitsAnywhere(grid, items, positions, Item(99, 4, 2)));
     }
 
     [Fact]
@@ -55,13 +73,35 @@ public class PackingTests
     }
 
     [Fact]
-    public void Compact_packing_gives_up_rather_than_squeeze_when_the_small_items_cannot_all_fit()
+    public void A_bag_the_corner_layout_cannot_hold_still_gets_a_compact_layout_from_another_candidate()
     {
-        Assert.IsType<PackResult.DoesNotFit>(Packing.Pack(Space(4, 3), CrowdedBag(), Compact));
+        var grid = Space(4, 3);
+        var items = CrowdedBag();
+
+        var compact = Fits(Packing.Pack(grid, items, Compact));
+
+        Assert.IsType<PackResult.DoesNotFit>(Packing.PackCorners(grid, items, Compact));
+        Assert.True(Packing.IsValid(grid, items, compact));
     }
 
     [Fact]
-    public void The_games_layout_still_fits_a_bag_the_compact_one_cannot()
+    public void Compact_packing_gives_up_rather_than_squeeze_when_no_layout_it_tries_holds_every_item()
+    {
+        Assert.IsType<PackResult.DoesNotFit>(Packing.Pack(GameOnlySpace(), GameOnlyBag(), Compact));
+    }
+
+    [Fact]
+    public void The_games_layout_fits_a_bag_no_compact_layout_can_hold()
+    {
+        var positions = Fits(Packing.PackLikeGame(GameOnlySpace(), GameOnlyBag()));
+
+        Assert.Equal(new Cell(0, 0), positions[1]);
+        Assert.Equal(new Cell(3, 0), positions[2]);
+        Assert.Equal(new Cell(1, 1), positions[3]);
+    }
+
+    [Fact]
+    public void The_games_layout_fills_every_cell_of_a_bag_the_corner_layout_cannot_hold()
     {
         var positions = Fits(Packing.PackLikeGame(Space(4, 3), CrowdedBag()));
 
@@ -122,10 +162,8 @@ public class PackingTests
     [InlineData(5)]
     public void No_layout_ever_sets_an_item_on_mold(int seed)
     {
-        // The top-left cell is always moldy because both layouts fill it first in a clean bag.
         var grid = new GridSize(8, 6);
-        var random = new Random(seed);
-        var mold = new[] { new Cell(0, 0), new Cell(random.Next(grid.Cols), random.Next(grid.Rows)), new Cell(random.Next(grid.Cols), random.Next(grid.Rows)) };
+        var mold = RandomMold(seed, grid);
         var space = new BagSpace(grid, mold);
         var items = RandomBag(seed, grid);
 
@@ -138,23 +176,90 @@ public class PackingTests
     }
 
     [Fact]
-    public void Small_items_step_around_mold_in_the_top_left_square()
+    public void Small_items_step_around_mold_in_the_top_left_corner()
     {
-        var mold = new Cell(0, 0);
+        var space = Space(10, 10, new Cell(0, 0));
+        var smalls = Smalls(4, 1, 1);
 
-        var compact = Fits(Packing.Pack(Space(10, 10, mold), Smalls(4, 1, 1), Compact));
-        var game = Fits(Packing.PackLikeGame(Space(10, 10, mold), Smalls(4, 1, 1)));
+        var compact = Fits(Packing.Pack(space, smalls, Compact));
+        var game = Fits(Packing.PackLikeGame(space, smalls));
 
-        Assert.Equal(new[] { new Cell(1, 0), new Cell(2, 0), new Cell(0, 1), new Cell(1, 1) }, Enumerable.Range(1, 4).Select(id => compact[id]));
+        Assert.True(Packing.IsValid(space, smalls, compact));
+        Assert.All(compact.Values, at => Assert.True(at.X == 0 || at.Y == 0, $"{at} touches neither the top nor the left side"));
         Assert.Equal(new[] { new Cell(1, 0), new Cell(2, 0), new Cell(3, 0), new Cell(4, 0) }, Enumerable.Range(1, 4).Select(id => game[id]));
     }
 
     [Fact]
-    public void A_big_item_keeps_to_the_bottom_right_but_off_mold_in_the_corner()
+    public void A_big_item_keeps_to_the_bottom_but_off_mold_and_strands_no_cell_beside_it()
     {
-        var positions = Fits(Packing.Pack(Space(6, 4, new Cell(5, 3)), new[] { Item(1, 3, 2) }, Compact));
+        // The corner layout puts the 3 by 2 item at 2,2, which leaves 5,2 a single free cell between it and the mold.
+        var mold = new Cell(5, 3);
+        var space = Space(6, 4, mold);
+        var items = new[] { Item(1, 3, 2) };
 
-        Assert.Equal(new Cell(2, 2), positions[1]);
+        var positions = Fits(Packing.Pack(space, items, Compact));
+
+        Assert.Equal(2, positions[1].Y);
+        Assert.False(Covers(items[0], positions[1], mold));
+        Assert.Equal(0, Packing.Score(space, items, positions, Compact).StrandedCells);
+        Assert.True(FitsAnywhere(space, items, positions, Item(99, 3, 3)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_compact_layout_never_scores_worse_than_the_corner_layout(bool moldy)
+    {
+        foreach (var grid in new[] { new GridSize(8, 6), new GridSize(12, 10), new GridSize(6, 8) })
+        {
+            for (var seed = 1; seed <= 10; seed++)
+            {
+                var space = moldy ? new BagSpace(grid, RandomMold(seed, grid)) : BagSpace.Unblocked(grid);
+                var items = RandomBag(seed, grid);
+
+                if (Packing.PackCorners(space, items, Compact) is not PackResult.Fits corners) continue;
+
+                var compact = Fits(Packing.Pack(space, items, Compact));
+
+                Assert.True(Packing.IsValid(space, items, compact), $"seed {seed}, {grid}: the compact layout is not valid");
+                Assert.True(
+                    Packing.Score(space, items, compact, Compact).CompareTo(Packing.Score(space, items, corners.Positions, Compact)) >= 0,
+                    $"seed {seed}, {grid}: the compact layout scores worse than the corner layout");
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void The_same_bag_packs_the_same_way_whatever_order_its_items_come_in(int seed)
+    {
+        var space = new BagSpace(new GridSize(12, 10), RandomMold(seed, new GridSize(12, 10)));
+        var items = RandomBag(seed, space.Grid);
+        var random = new Random(seed);
+        var shuffled = items.OrderBy(_ => random.Next()).ToArray();
+        var reversed = Enumerable.Reverse(items).ToArray();
+
+        var expected = InIdOrder(Packing.Pack(space, items, Compact));
+
+        Assert.Equal(expected, InIdOrder(Packing.Pack(space, shuffled, Compact)));
+        Assert.Equal(expected, InIdOrder(Packing.Pack(space, reversed, Compact)));
+    }
+
+    [Fact]
+    public void Items_of_one_kind_end_up_side_by_side_when_it_costs_no_room()
+    {
+        // The corner layout fills a 2 by 2 square in the game's order, which sets the two kind-2 items on a diagonal.
+        var grid = Space(4, 2);
+        var items = new[] { Item(1, 1, 1, configId: 1), Item(2, 1, 1, configId: 2), Item(3, 1, 1, configId: 2), Item(4, 1, 1, configId: 3) };
+
+        var corners = Fits(Packing.PackCorners(grid, items, Compact));
+        var compact = Fits(Packing.Pack(grid, items, Compact));
+
+        Assert.False(AreSideBySide(corners[2], corners[3]));
+        Assert.True(AreSideBySide(compact[2], compact[3]), $"{compact[2]} and {compact[3]} do not share a side");
+        Assert.Equal(4, Packing.Score(grid, items, compact, Compact).LargestFreeRectangle);
     }
 
     [Fact]
@@ -235,11 +340,19 @@ public class PackingTests
     }
 
     /// <summary>
-    /// A 4 by 3 bag the compact layout cannot hold: the two big items split the free cells so the 1 by 2 item has no
-    /// column, while the game's order fills every cell.
+    /// A 4 by 3 bag the corner layout cannot hold: its two big items split the free cells so the 1 by 2 item has no
+    /// column, while the game's order and the contact-point layouts fill every cell.
     /// </summary>
     internal static PackItem[] CrowdedBag() =>
         new[] { Item(1, 2, 2, configId: 10), Item(2, 3, 1, configId: 11), Item(3, 2, 1, configId: 20), Item(4, 1, 2, configId: 21), Item(5, 1, 1, configId: 22) };
+
+    /// <summary>
+    /// A 4 by 2 bag, moldy at 0,1, that only the game's order can fill: every compact layout sets the 3 by 1 item on the
+    /// bottom row, which leaves the 1 by 2 item no column.
+    /// </summary>
+    internal static BagSpace GameOnlySpace() => Space(4, 2, new Cell(0, 1));
+
+    internal static PackItem[] GameOnlyBag() => new[] { Item(1, 3, 1, configId: 10), Item(2, 1, 2, configId: 11), Item(3, 2, 1, configId: 12) };
 
     internal static PackItem Item(long id, int w, int h, int configId = 0, int category = 0) => new(id, w, h, configId, category);
 
@@ -272,6 +385,23 @@ public class PackingTests
         }
 
         return false;
+    }
+
+    private static bool AreSideBySide(Cell a, Cell b) => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y) == 1;
+
+    /// <summary>A layout's positions sorted by item id, so two layouts compare cell by cell; empty when the bag does not fit.</summary>
+    private static List<KeyValuePair<long, Cell>> InIdOrder(PackResult result) =>
+        result is PackResult.Fits fits ? fits.Positions.OrderBy(pair => pair.Key).ToList() : new List<KeyValuePair<long, Cell>>();
+
+    /// <summary>
+    /// Three moldy cells, the same for the same seed. The top-left cell is always one because the game's and the corner
+    /// layouts fill it first in a clean bag.
+    /// </summary>
+    private static Cell[] RandomMold(int seed, GridSize grid)
+    {
+        var random = new Random(seed);
+
+        return new[] { new Cell(0, 0), new Cell(random.Next(grid.Cols), random.Next(grid.Rows)), new Cell(random.Next(grid.Cols), random.Next(grid.Rows)) };
     }
 
     /// <summary>A mixed bag that covers at most two thirds of the grid, the same for the same seed.</summary>

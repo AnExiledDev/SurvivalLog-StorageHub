@@ -104,7 +104,7 @@ When a drone comes home and the game drops its cargo into the drone hub (or into
 - No drone and no drone hub is ever a target for a delivery, not even one that already holds the item.
 - Two drones landing on one hub at once are put away together, as one delivery with one line.
 - When the cargo landed in the drone and all of it was put away, the drone is done: it no longer offers "Retrieve supplies" and its marker goes away, the same as if you had retrieved it yourself. If anything is left in the drone, it still offers "Retrieve supplies" so you can take the rest.
-- A delivery that ends up out of the drone, whether the game unloaded it into the hub or Storage Hub emptied the drone, counts as retrieving the supplies, so events like "Conduct Drone trade and retrieve supplies" can finish. A drone that still waits for you to retrieve it counts when you do.
+- A delivery that ends up out of the drone, whether the game unloaded it into the hub or Storage Hub emptied the drone, counts as retrieving the supplies for events like "Conduct Drone trade and retrieve supplies". Such an event also needs a completed trade, and an event already stuck clears on the next trade trip home. A drone that still waits for you to retrieve it counts when you do. With `AutoPutAway` off nothing is counted.
 - Nothing happens before the prologue is over.
 
 ## Tidying storages

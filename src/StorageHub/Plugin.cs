@@ -44,8 +44,8 @@ public sealed class Plugin : BasePlugin
     private void StartDeliveryPutAway(Harmony harmony, WebPage page, HubLog log)
     {
         var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true,
-            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. Default: on.\n" +
-            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「Put whole bag away by tag」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。默认开启。").Value;
+            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also counts each delivery as retrieving the supplies, so events that ask for a drone trade and a retrieve can finish; with this off, those events stay open when the drone hub unloads the drone for you. Default: on.\n" +
+            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「Put whole bag away by tag」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时会把每次送货算作「取回物资」，让要求无人机交易并取回物资的事件可以完成；关闭后，如果无人机站替你卸货，这类事件会一直无法完成。默认开启。").Value;
 
         log.Write($"auto put-away of drone deliveries {autoPutAway}");
 

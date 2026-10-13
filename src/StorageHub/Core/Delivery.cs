@@ -145,14 +145,14 @@ public static class Delivery
     /// <summary>
     /// The drones whose cargo is out of their bag once the delivery is over, whether the game unloaded it into the hub or
     /// the put-away emptied the drone. Neither way passes through the game's Retrieve supplies, so an event that asks for
-    /// a retrieve would never count them. A drone still waiting for the player to retrieve is left out: the game counts
-    /// that retrieve itself when the player does it.
+    /// a retrieve would never count them. A drone that may still wait for the player to retrieve is left out: the game
+    /// counts that retrieve itself when the player does it.
     /// </summary>
-    public static IReadOnlyList<long> RetrievesDone(LandingGroup group, Func<long, bool> isAwaitingRetrieve) =>
+    public static IReadOnlyList<long> RetrievesDone(LandingGroup group, Func<long, bool> isSurelyRetrieved) =>
         group.Landings
             .Select(landing => landing.DroneId)
             .Distinct()
-            .Where(drone => !isAwaitingRetrieve(drone))
+            .Where(isSurelyRetrieved)
             .ToList();
 
     /// <summary>

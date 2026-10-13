@@ -21,6 +21,7 @@ public class DeliveryTests
     private static Landing LandingOf(Storage drone, Storage hub, params ItemStack[] before) => new(drone.OwnerId, hub.OwnerId, 2, before);
 
     private static Func<long, bool> AwaitingRetrieve(params Storage[] drones) => droneId => drones.Any(drone => drone.OwnerId == droneId);
+    private static Func<long, bool> SurelyRetrieved(params Storage[] drones) => droneId => drones.Any(drone => drone.OwnerId == droneId);
 
     [Fact]
     public void A_returning_drone_with_cargo_hands_it_over()
@@ -236,15 +237,15 @@ public class DeliveryTests
     {
         var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
 
-        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve()));
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, SurelyRetrieved(Drone)));
     }
 
     [Fact]
-    public void A_drone_still_waiting_for_the_player_to_retrieve_is_left_for_the_game_to_count()
+    public void A_drone_that_may_still_wait_for_the_player_to_retrieve_is_left_for_the_game_to_count()
     {
         var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(OtherDrone, Hub) });
 
-        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve(OtherDrone)));
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, SurelyRetrieved(Drone)));
     }
 
     [Fact]
@@ -252,7 +253,7 @@ public class DeliveryTests
     {
         var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(Drone, Hub) });
 
-        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve()));
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, SurelyRetrieved(Drone)));
     }
 
     [Fact]

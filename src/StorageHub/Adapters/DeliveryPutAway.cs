@@ -70,6 +70,7 @@ internal sealed class DeliveryPutAway
                 break;
             case DeliveryCheck.NothingLanded:
                 _log($"{Drones(group)}: nothing new arrived");
+                CountDoneRetrieves(group);
                 Finish();
                 break;
             case DeliveryCheck.Landed:
@@ -153,12 +154,30 @@ internal sealed class DeliveryPutAway
             var dronesHold = group.Landings.SelectMany(landing => GameStorages.ReadHeld(items, landing.DroneId)).ToList();
 
             foreach (var drone in Delivery.RetrievesToFinish(group, dronesHold, _retrieves.IsAwaiting)) _retrieves.Finish(drone);
-
-            foreach (var drone in Delivery.RetrievesDone(group, _retrieves.IsAwaiting)) _retrieves.CountRetrieve(drone);
         }
         catch (Exception ex)
         {
             _log($"could not check whether {Drones(group)} were left empty, their retrieve stays: {ex}");
+        }
+        finally
+        {
+            CountDoneRetrieves(group);
+        }
+    }
+
+    /// <summary>
+    /// Runs after any retrieve this delivery finished, so a drone the put-away emptied counts too. Also runs when nothing
+    /// new was seen, since the game may still have unloaded the drone into the hub.
+    /// </summary>
+    private void CountDoneRetrieves(LandingGroup group)
+    {
+        try
+        {
+            foreach (var drone in Delivery.RetrievesDone(group, _retrieves.IsSurelyRetrieved)) _retrieves.CountRetrieve(drone);
+        }
+        catch (Exception ex)
+        {
+            _log($"could not count the retrieve of {Drones(group)} toward events: {ex}");
         }
     }
 

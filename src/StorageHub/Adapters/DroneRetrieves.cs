@@ -43,6 +43,24 @@ internal sealed class DroneRetrieves
         }
     }
 
+    /// <summary>
+    /// Whether the drone surely no longer waits for a retrieve. Unlike IsAwaiting, a failed or locked read answers no, so
+    /// a drone the player may still retrieve is never counted twice.
+    /// </summary>
+    public bool IsSurelyRetrieved(long droneId)
+    {
+        try
+        {
+            return GameSingleton.Existing<BattleLogicWorld>()?._StrangerTradeActiveManager is { IsLocked: false } trade && !trade.IsDroneReturned(droneId);
+        }
+        catch (Exception ex)
+        {
+            _log($"could not tell whether drone {droneId} was retrieved, it does not count toward events: {ex.Message}");
+
+            return false;
+        }
+    }
+
     /// <summary>Finishes the retrieve of a drone that is back and waiting for one; any other drone is left alone.</summary>
     public void Finish(long droneId)
     {
@@ -91,7 +109,7 @@ internal sealed class DroneRetrieves
             if (GameSingleton.Existing<BattleLogicWorld>()?._DynamicEventManager is not { } events) return;
 
             events.OnActionCompleted(RetrieveSuppliesActionId);
-            _log($"drone {droneId}: its retrieve counts toward events");
+            _log($"drone {droneId}: reported its retrieve (action {RetrieveSuppliesActionId}) to events");
         }
         catch (Exception ex)
         {

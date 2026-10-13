@@ -13,13 +13,19 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.6.1";
+    private const string Version = "0.6.2";
 
     public override void Load()
     {
-        var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8, "Key that opens and closes the storage panel.").Value;
-        var isVerbose = Config.Bind("Diagnostics", "Verbose", false, "Also log every planned move and every storage's tag rank, for working out why an item went where it did.").Value;
-        var isKeepOn = Config.Bind("Keep", "Enabled", true, "Leave the amounts on the panel's Keep in bag list in your bag whenever you put the bag away, whole or one item at a time. Off: putting away ignores the list, which is kept for when you turn it back on.").Value;
+        var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8,
+            "The key that opens and closes the Storage Hub panel. Default: F8.\n" +
+            "打开和关闭 Storage Hub 面板的按键。默认 F8。").Value;
+        var isVerbose = Config.Bind("Diagnostics", "Verbose", false,
+            "Write extra detail to BepInEx/storage-hub.log: every planned move, what the keep list left in your bag, and how well each storage's tags matched an item. Turn it on to find out why an item went where it did. Default: off.\n" +
+            "在 BepInEx/storage-hub.log 日志里写入更多细节：每一步计划的移动、「Keep in bag」清单留在背包里的物品，以及每个储物家具的标签和物品有多匹配。想弄清某件物品为什么被放到那里时再打开。默认关闭。").Value;
+        var isKeepOn = Config.Bind("Keep", "Enabled", true,
+            "When you put your bag away, leave the amounts on the panel's \"Keep in bag\" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
+            "收纳背包时，按面板上「Keep in bag」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。").Value;
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 
@@ -37,7 +43,9 @@ public sealed class Plugin : BasePlugin
 
     private void StartDeliveryPutAway(Harmony harmony, WebPage page, HubLog log)
     {
-        var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true, "When a drone lands, put what it brought into the storages tagged for it, the way Put away bag does. What no storage takes stays where the game put it.").Value;
+        var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true,
+            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. Default: on.\n" +
+            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「Put whole bag away by tag」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。默认开启。").Value;
 
         log.Write($"auto put-away of drone deliveries {autoPutAway}");
 
@@ -51,10 +59,18 @@ public sealed class Plugin : BasePlugin
 
     private void StartOrganizer(Harmony harmony, HubLog log)
     {
-        var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", true, "Tidy a storage's items each time you open it. Your own bag is never tidied on open.").Value;
-        var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true, "Pack small items into a square in the top-left corner and big items from the bottom-right, so the free space stays in one piece for big items. Also applies to the game's Sort button. Off: storages are tidied the way the game's Sort does it, and Sort is left alone.").Value;
-        var smallItemMaxArea = Math.Max(0, Config.Bind("Organize", "SmallItemMaxArea", 2, "Items covering this many cells or fewer count as small.").Value);
-        var mergeStacks = Config.Bind("Organize", "MergeStacks", true, "When a storage is tidied, top up partial stacks of one kind from each other first. Food only merges when it spoils within the same hour, the rule Stacking uses, and stacks on mold are left alone.").Value;
+        var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", true,
+            "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: on.\n" +
+            "每次打开储物家具时整理里面的物品。打开储物家具时不会整理你自己的背包。默认开启。").Value;
+        var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true,
+            "Pack small items into the top-left corner and big items from the bottom-right, so the free space stays in one piece for big items. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. Default: on.\n" +
+            "把小件物品集中到左上角，大件物品从右下角开始摆，让空位连成一整块，方便以后放大件。游戏的「一键整理」按钮也会这样摆。关闭后，储物家具按游戏「一键整理」的方式整理，「一键整理」按钮保持原样。默认开启。").Value;
+        var smallItemMaxArea = Math.Max(0, Config.Bind("Organize", "SmallItemMaxArea", 2,
+            "Items that take up this many cells or fewer count as small when CompactSmallItems packs a storage. 0 means no item counts as small. Default: 2.\n" +
+            "占用格子数不超过这个数的物品，在 CompactSmallItems 摆放时算作小件。设为 0 表示没有物品算作小件。默认 2。").Value);
+        var mergeStacks = Config.Bind("Organize", "MergeStacks", true,
+            "When a storage is tidied, first top up part-full stacks of the same item from each other. Food only merges when the stacks spoil within an hour of each other. Stacks on moldy cells are left alone. Default: on.\n" +
+            "整理储物家具时，先把同一种物品没堆满的几堆互相补满。食物只有在剩余保质期相差不超过 1 小时时才会合并。压在霉格上的物品不会合并。默认开启。").Value;
 
         log.Write($"organize on open {organizeOnOpen}, compact small items {compactSmallItems}, small means up to {smallItemMaxArea} cells, merge stacks {mergeStacks}");
 

@@ -232,6 +232,30 @@ public class DeliveryTests
     }
 
     [Fact]
+    public void A_drone_whose_cargo_the_game_unloaded_into_the_hub_counts_as_retrieved()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve()));
+    }
+
+    [Fact]
+    public void A_drone_still_waiting_for_the_player_to_retrieve_is_left_for_the_game_to_count()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(OtherDrone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve(OtherDrone)));
+    }
+
+    [Fact]
+    public void A_drone_that_landed_twice_in_one_delivery_counts_as_retrieved_once()
+    {
+        var group = new LandingGroup(new[] { LandingOf(Drone, Hub), LandingOf(Drone, Hub) });
+
+        Assert.Equal(new[] { Drone.OwnerId }, Delivery.RetrievesDone(group, AwaitingRetrieve()));
+    }
+
+    [Fact]
     public void The_log_line_says_what_went_where_and_what_stayed()
     {
         var home = HomeWithHub();

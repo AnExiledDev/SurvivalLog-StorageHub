@@ -153,6 +153,8 @@ internal sealed class DeliveryPutAway
             var dronesHold = group.Landings.SelectMany(landing => GameStorages.ReadHeld(items, landing.DroneId)).ToList();
 
             foreach (var drone in Delivery.RetrievesToFinish(group, dronesHold, _retrieves.IsAwaiting)) _retrieves.Finish(drone);
+
+            foreach (var drone in Delivery.RetrievesDone(group, _retrieves.IsAwaiting)) _retrieves.CountRetrieve(drone);
         }
         catch (Exception ex)
         {

@@ -18,6 +18,9 @@ internal sealed class DroneRetrieves
     /// </summary>
     private const string CargoRetrievedTag = "StrangerTradeCargoRetrieved";
 
+    /// <summary>The game's "Conduct Drone trade and retrieve supplies" action (Config_Action 9010), which events 10205, 52780 and 62780 ask for.</summary>
+    private const int RetrieveSuppliesActionId = 9010;
+
     private readonly Action<string> _log;
 
     public DroneRetrieves(Action<string> log)
@@ -73,6 +76,27 @@ internal sealed class DroneRetrieves
         trade.PushDroneHubUpdate();
 
         return true;
+    }
+
+    /// <summary>
+    /// Tells the game's events that this drone's supplies were retrieved, as its own Retrieve supplies does
+    /// (AE_RetrieveDroneCargo calls DynamicEventManager.OnActionCompleted). Without it an event such as "Conduct Drone
+    /// trade and retrieve supplies" can never finish once cargo is unloaded for the player. With no such event pending the
+    /// game counts nothing.
+    /// </summary>
+    public void CountRetrieve(long droneId)
+    {
+        try
+        {
+            if (GameSingleton.Existing<BattleLogicWorld>()?._DynamicEventManager is not { } events) return;
+
+            events.OnActionCompleted(RetrieveSuppliesActionId);
+            _log($"drone {droneId}: its retrieve counts toward events");
+        }
+        catch (Exception ex)
+        {
+            _log($"counting the retrieve of drone {droneId} toward events failed, an event asking for one may stay open: {ex.Message}");
+        }
     }
 
     /// <summary>

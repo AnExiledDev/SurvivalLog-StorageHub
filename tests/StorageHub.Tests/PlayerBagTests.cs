@@ -33,14 +33,16 @@ public class PlayerBagTests
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
-    public void Each_player_bag_packs_validly_and_scores_at_least_as_well_as_it_was_found(int number)
+    public void Each_player_bag_packs_validly_and_strands_fewer_cells_than_the_corner_layout(int number)
     {
+        // The corner layout is the first candidate and wins every tie, so this fails if no other layout ever beats it.
         var bag = PlayerBag(number);
 
         var packed = Fits(Packing.Pack(bag.Space, bag.Items, Compact));
+        var corners = Fits(Packing.PackCorners(bag.Space, bag.Items, Compact));
 
         Assert.True(Packing.IsValid(bag.Space, bag.Items, packed));
-        Assert.True(Score(bag, packed).CompareTo(Score(bag, bag.AsFound)) >= 0, $"packed {Score(bag, packed)} against found {Score(bag, bag.AsFound)}");
+        Assert.True(Score(bag, packed).StrandedCells < Score(bag, corners).StrandedCells, $"packed {Score(bag, packed)} against corners {Score(bag, corners)}");
     }
 
     [Theory]

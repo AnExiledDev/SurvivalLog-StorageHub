@@ -27,7 +27,7 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `OrganizeOnOpen` | `true` | Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. |
-| `CompactSmallItems` | `true` | Pack big items toward the bottom-right and small items toward the top-left. Several layouts are tried, and the one kept leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. |
+| `CompactSmallItems` | `true` | Pack big items toward the bottom-right and small items usually toward the top-left. Several layouts are tried, and the one kept leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. |
 | `SmallItemMaxArea` | `2` | Items that take up this many cells or fewer count as small when `CompactSmallItems` packs a storage. `0` means no item counts as small. |
 | `MergeStacks` | `true` | When a storage is tidied, first top up part-full stacks of the same item from each other. Food only merges when the stacks spoil within an hour of each other. Stacks on moldy cells are left alone. |
 

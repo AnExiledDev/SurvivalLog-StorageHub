@@ -69,8 +69,54 @@ internal static class LayoutScoring
         return taken;
     }
 
-    private static int RoomLeft(Occupancy taken, GridSize grid, IEnumerable<Footprint> shapes) =>
-        shapes.Where(shape => taken.FirstFit(shape.W, shape.H, grid.Cols, grid.Rows) is not null).Sum(shape => shape.Area);
+    private static int RoomLeft(Occupancy taken, GridSize grid, IEnumerable<Footprint> shapes)
+    {
+        var takenCounts = TakenCounts(taken, grid);
+
+        return shapes.Where(shape => FitsSomewhere(takenCounts, shape)).Sum(shape => shape.Area);
+    }
+
+    /// <summary>
+    /// How many taken cells lie above and to the left of each grid corner, so counting the taken cells under any
+    /// rectangle takes four lookups instead of a walk over it.
+    /// </summary>
+    private static int[,] TakenCounts(Occupancy taken, GridSize grid)
+    {
+        var counts = new int[Math.Max(0, grid.Cols) + 1, Math.Max(0, grid.Rows) + 1];
+
+        for (var y = 0; y < grid.Rows; y++)
+        {
+            for (var x = 0; x < grid.Cols; x++)
+            {
+                var here = taken.IsTaken(x, y) ? 1 : 0;
+
+                counts[x + 1, y + 1] = here + counts[x, y + 1] + counts[x + 1, y] - counts[x, y];
+            }
+        }
+
+        return counts;
+    }
+
+    /// <summary>True when the shape has a free spot anywhere in the bag.</summary>
+    private static bool FitsSomewhere(int[,] takenCounts, Footprint shape)
+    {
+        var cols = takenCounts.GetLength(0) - 1;
+        var rows = takenCounts.GetLength(1) - 1;
+
+        if (shape.W <= 0 || shape.H <= 0) return false;
+
+        for (var y = 0; y + shape.H <= rows; y++)
+        {
+            for (var x = 0; x + shape.W <= cols; x++)
+            {
+                var takenUnder = takenCounts[x + shape.W, y + shape.H] - takenCounts[x, y + shape.H] - takenCounts[x + shape.W, y] + takenCounts[x, y];
+
+                if (takenUnder == 0) return true;
+            }
+        }
+
+        return false;
+    }
 
     private static int LargestFreeRectangle(Occupancy taken, GridSize grid)
     {
@@ -79,7 +125,7 @@ internal static class LayoutScoring
 
         for (var y = 0; y < grid.Rows; y++)
         {
-            for (var x = 0; x < grid.Cols; x++) heights[x] = taken.IsFree(new Cell(x, y), 1, 1) ? heights[x] + 1 : 0;
+            for (var x = 0; x < grid.Cols; x++) heights[x] = taken.IsTaken(x, y) ? 0 : heights[x] + 1;
 
             largest = Math.Max(largest, LargestUnder(heights));
         }
@@ -106,74 +152,85 @@ internal static class LayoutScoring
         return largest;
     }
 
-    private static int StrandedCells(Occupancy taken, GridSize grid) => FreeCells(taken, grid).Count(cell => !InFreeSquare(taken, cell));
+    private static int StrandedCells(Occupancy taken, GridSize grid)
+    {
+        var stranded = 0;
+
+        for (var y = 0; y < grid.Rows; y++)
+        {
+            for (var x = 0; x < grid.Cols; x++)
+            {
+                if (!taken.IsTaken(x, y) && !InFreeSquare(taken, x, y)) stranded++;
+            }
+        }
+
+        return stranded;
+    }
 
     /// <summary>True when some free 2 by 2 square covers the cell.</summary>
-    private static bool InFreeSquare(Occupancy taken, Cell cell) =>
-        new[] { cell, new Cell(cell.X - 1, cell.Y), new Cell(cell.X, cell.Y - 1), new Cell(cell.X - 1, cell.Y - 1) }
-            .Any(corner => taken.IsFree(corner, 2, 2));
+    private static bool InFreeSquare(Occupancy taken, int x, int y) =>
+        taken.IsFree(new Cell(x, y), 2, 2)
+        || taken.IsFree(new Cell(x - 1, y), 2, 2)
+        || taken.IsFree(new Cell(x, y - 1), 2, 2)
+        || taken.IsFree(new Cell(x - 1, y - 1), 2, 2);
 
     private static int FreeRegions(Occupancy taken, GridSize grid)
     {
-        var seen = new HashSet<Cell>();
+        var seen = new bool[Math.Max(0, grid.Cols), Math.Max(0, grid.Rows)];
         var regions = 0;
 
-        foreach (var cell in FreeCells(taken, grid))
+        for (var y = 0; y < grid.Rows; y++)
         {
-            if (!seen.Add(cell)) continue;
+            for (var x = 0; x < grid.Cols; x++)
+            {
+                if (taken.IsTaken(x, y) || seen[x, y]) continue;
 
-            regions++;
+                regions++;
 
-            MarkRegion(taken, cell, seen);
+                MarkRegion(taken, grid, new Cell(x, y), seen);
+            }
         }
 
         return regions;
     }
 
     /// <summary>Marks every free cell joined to the start through free side neighbours as seen.</summary>
-    private static void MarkRegion(Occupancy taken, Cell start, HashSet<Cell> seen)
+    private static void MarkRegion(Occupancy taken, GridSize grid, Cell start, bool[,] seen)
     {
         var open = new Stack<Cell>();
 
-        open.Push(start);
+        Visit(start.X, start.Y);
 
         while (open.Count > 0)
         {
             var cell = open.Pop();
 
-            foreach (var next in SideNeighbours(cell))
-            {
-                if (taken.IsFree(next, 1, 1) && seen.Add(next)) open.Push(next);
-            }
+            Visit(cell.X + 1, cell.Y);
+            Visit(cell.X - 1, cell.Y);
+            Visit(cell.X, cell.Y + 1);
+            Visit(cell.X, cell.Y - 1);
         }
-    }
 
-    private static IEnumerable<Cell> SideNeighbours(Cell cell) =>
-        new[] { new Cell(cell.X + 1, cell.Y), new Cell(cell.X - 1, cell.Y), new Cell(cell.X, cell.Y + 1), new Cell(cell.X, cell.Y - 1) };
-
-    private static IEnumerable<Cell> FreeCells(Occupancy taken, GridSize grid)
-    {
-        for (var y = 0; y < grid.Rows; y++)
+        void Visit(int x, int y)
         {
-            for (var x = 0; x < grid.Cols; x++)
-            {
-                var cell = new Cell(x, y);
+            if (x < 0 || y < 0 || x >= grid.Cols || y >= grid.Rows || taken.IsTaken(x, y) || seen[x, y]) return;
 
-                if (taken.IsFree(cell, 1, 1)) yield return cell;
-            }
+            seen[x, y] = true;
+
+            open.Push(new Cell(x, y));
         }
     }
 
     private static int SameItemEdges(IReadOnlyList<PackItem> items, IReadOnlyDictionary<long, Cell> positions)
     {
-        var placed = items.Where(item => positions.ContainsKey(item.Id)).ToList();
+        var placed = items.Where(item => positions.ContainsKey(item.Id)).Select(item => (Item: item, At: positions[item.Id])).ToList();
         var edges = 0;
 
         for (var i = 0; i < placed.Count; i++)
         {
             for (var j = i + 1; j < placed.Count; j++)
             {
-                if (placed[i].ConfigId == placed[j].ConfigId) edges += SharedEdge(placed[i], positions[placed[i].Id], placed[j], positions[placed[j].Id]);
+                if (placed[i].Item.ConfigId == placed[j].Item.ConfigId) edges += SharedEdge(placed[i].Item, placed[i].At, placed[j].Item, placed[j].At);
             }
         }
 

@@ -11,7 +11,7 @@ Survival Log makes you open storage after storage to find something, and again t
 [*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
 [*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them.[/*]
-[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way.[/*]
+[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way.[/*]
 [/list]
 The keep list, deliveries, tidying and stack merging can each be turned off in the config.
 

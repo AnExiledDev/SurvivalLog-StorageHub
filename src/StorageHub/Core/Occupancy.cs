@@ -40,6 +40,9 @@ internal sealed class Occupancy
         return true;
     }
 
+    /// <summary>True when the cell is taken. The caller keeps the cell inside the bag.</summary>
+    public bool IsTaken(int x, int y) => _taken[x, y];
+
     public void Take(Cell at, int w, int h)
     {
         for (var x = at.X; x < at.X + w; x++)

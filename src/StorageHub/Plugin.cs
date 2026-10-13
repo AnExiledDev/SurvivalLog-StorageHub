@@ -63,8 +63,8 @@ public sealed class Plugin : BasePlugin
             "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: on.\n" +
             "每次打开储物家具时整理里面的物品。打开储物家具时不会整理你自己的背包。默认开启。").Value;
         var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true,
-            "Pack big items toward the bottom-right and small items toward the top-left. Several layouts are tried, and the one kept leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. Default: on.\n" +
-            "大件物品靠右下角摆，小件物品靠左上角摆。会试几种摆法，选出只能放小件的零散空格最少、留给大件的空间最多的那一种。同类物品在不多占空间时会放在一起。游戏的「一键整理」按钮也会这样摆。关闭后，储物家具按游戏「一键整理」的方式整理，「一键整理」按钮保持原样。默认开启。").Value;
+            "Pack big items toward the bottom-right and small items usually toward the top-left. Several layouts are tried, and the one kept leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. Default: on.\n" +
+            "大件物品靠右下角摆，小件物品一般靠左上角摆。会试几种摆法，选出只能放小件的零散空格最少、留给大件的空间最多的那一种。同类物品在不多占空间时会放在一起。游戏的「一键整理」按钮也会这样摆。关闭后，储物家具按游戏「一键整理」的方式整理，「一键整理」按钮保持原样。默认开启。").Value;
         var smallItemMaxArea = Math.Max(0, Config.Bind("Organize", "SmallItemMaxArea", 2,
             "Items that take up this many cells or fewer count as small when CompactSmallItems packs a storage. 0 means no item counts as small. Default: 2.\n" +
             "占用格子数不超过这个数的物品，在 CompactSmallItems 摆放时算作小件。设为 0 表示没有物品算作小件。默认 2。").Value);

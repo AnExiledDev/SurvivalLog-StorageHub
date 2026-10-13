@@ -28,23 +28,33 @@ internal static class ContactPacking
 {
     private static readonly Lean[] SmallLeans = { Lean.TopLeftByRow, Lean.TopLeftByColumn, Lean.BottomRight };
 
-    /// <summary>Every layout that holds all the items, in a fixed order, so the same bag always gives the same layouts.</summary>
+    /// <summary>
+    /// Every layout that holds all the items, in a fixed order, so the same bag always gives the same layouts. Orders
+    /// that come out the same are tried once, and the big items are placed once per big-item order and shared by all
+    /// the small-item layouts built on it.
+    /// </summary>
     public static IEnumerable<IReadOnlyDictionary<long, Cell>> Layouts(BagSpace space, IReadOnlyList<PackItem> items, PackOptions options)
     {
         var big = items.Where(item => item.Area > options.SmallMaxArea).ToList();
         var small = items.Where(item => item.Area <= options.SmallMaxArea).ToList();
+        var smallOrders = DistinctOrders(SmallOrders(small));
 
-        foreach (var variant in Variants(big, small).DistinctBy(variant => variant.Key))
+        // With no small items to place, every lean gives the same layout.
+        var leans = small.Count == 0 ? new[] { SmallLeans[0] } : SmallLeans;
+
+        foreach (var bigOrder in DistinctOrders(BigOrders(big)))
         {
-            if (Place(space, variant) is { } positions) yield return positions;
+            if (Placed(new ContactGrid(space), bigOrder, Lean.BottomRight) is not { } withBig) continue;
+
+            foreach (var smallOrder in smallOrders)
+            {
+                foreach (var lean in leans)
+                {
+                    if (Placed(withBig.Copy(), smallOrder, lean) is { } bag) yield return bag.Positions;
+                }
+            }
         }
     }
-
-    private static IEnumerable<Variant> Variants(List<PackItem> big, List<PackItem> small) =>
-        from bigOrder in BigOrders(big)
-        from smallOrder in SmallOrders(small)
-        from lean in SmallLeans
-        select new Variant(bigOrder, smallOrder, lean);
 
     private static IEnumerable<List<PackItem>> BigOrders(List<PackItem> big)
     {
@@ -70,54 +80,78 @@ internal static class ContactPacking
             .SelectMany(kind => kind.OrderBy(item => item.Id))
             .ToList();
 
-    /// <summary>Where every item goes when placed in the variant's order, or null when one finds no spot.</summary>
-    private static IReadOnlyDictionary<long, Cell>? Place(BagSpace space, Variant variant)
+    /// <summary>Each order once, the first time it comes up, since the same order always gives the same layout.</summary>
+    private static List<List<PackItem>> DistinctOrders(IEnumerable<List<PackItem>> orders)
     {
-        var bag = new ContactGrid(space);
-        var placements = variant.Big.Select(item => (item, Lean.BottomRight)).Concat(variant.Small.Select(item => (item, variant.SmallLean)));
+        var distinct = new List<List<PackItem>>();
 
-        foreach (var (item, lean) in placements)
+        foreach (var order in orders)
+        {
+            if (!distinct.Any(seen => seen.SequenceEqual(order))) distinct.Add(order);
+        }
+
+        return distinct;
+    }
+
+    /// <summary>The bag with every item of the order placed in turn, or null when one finds no spot.</summary>
+    private static ContactGrid? Placed(ContactGrid bag, List<PackItem> order, Lean lean)
+    {
+        foreach (var item in order)
         {
             if (!bag.TryPlace(item, lean)) return null;
         }
 
-        return bag.Positions;
-    }
-
-    /// <summary>One order to place the items in. The key tells two variants with the same orders apart from different ones.</summary>
-    private sealed record Variant(List<PackItem> Big, List<PackItem> Small, Lean SmallLean)
-    {
-        public string Key { get; } = $"{string.Join(",", Big.Select(item => item.Id))}|{string.Join(",", Small.Select(item => item.Id))}|{SmallLean}";
+        return bag;
     }
 }
 
 /// <summary>A bag being filled by contact: which cells are taken, and which item sits on each.</summary>
 internal sealed class ContactGrid
 {
-    private readonly GridSize _grid;
-    private readonly Occupancy _taken;
+    private readonly int _cols;
+    private readonly int _rows;
+    private readonly bool[,] _taken;
     private readonly PackItem?[,] _owners;
-    private readonly Dictionary<long, Cell> _positions = new();
+    private readonly Dictionary<long, Cell> _positions;
 
-    public ContactGrid(BagSpace space)
+    public ContactGrid(BagSpace space) : this(Math.Max(0, space.Grid.Cols), Math.Max(0, space.Grid.Rows))
     {
-        _grid = space.Grid;
-        _taken = new Occupancy(space);
-        _owners = new PackItem?[Math.Max(0, _grid.Cols), Math.Max(0, _grid.Rows)];
+        foreach (var cell in space.Blocked)
+        {
+            if (space.Grid.Holds(cell, 1, 1)) _taken[cell.X, cell.Y] = true;
+        }
+    }
+
+    private ContactGrid(int cols, int rows) : this(new bool[cols, rows], new PackItem?[cols, rows], new Dictionary<long, Cell>())
+    {
+    }
+
+    private ContactGrid(bool[,] taken, PackItem?[,] owners, Dictionary<long, Cell> positions)
+    {
+        _cols = taken.GetLength(0);
+        _rows = taken.GetLength(1);
+        _taken = taken;
+        _owners = owners;
+        _positions = positions;
     }
 
     public IReadOnlyDictionary<long, Cell> Positions => _positions;
+
+    /// <summary>A separate bag holding the same items in the same places, to be filled further on its own.</summary>
+    public ContactGrid Copy() => new((bool[,])_taken.Clone(), (PackItem?[,])_owners.Clone(), new Dictionary<long, Cell>(_positions));
 
     /// <summary>Puts the item on its best free spot; false when it has none.</summary>
     public bool TryPlace(PackItem item, Lean lean)
     {
         if (BestSpot(item, lean) is not { } at) return false;
 
-        _taken.Take(at, item.W, item.H);
-
         for (var x = at.X; x < at.X + item.W; x++)
         {
-            for (var y = at.Y; y < at.Y + item.H; y++) _owners[x, y] = item;
+            for (var y = at.Y; y < at.Y + item.H; y++)
+            {
+                _taken[x, y] = true;
+                _owners[x, y] = item;
+            }
         }
 
         _positions[item.Id] = at;
@@ -125,90 +159,117 @@ internal sealed class ContactGrid
         return true;
     }
 
-    /// <summary>The free spot touching the most, then touching the most of the same kind, then first in the lean's order.</summary>
+    /// <summary>
+    /// The free spot touching the most, then touching the most of the same kind, then first in the lean's order:
+    /// the lowest row then the rightmost column for BottomRight, the top row then the leftmost column for TopLeftByRow,
+    /// and the leftmost column then the top row for TopLeftByColumn.
+    /// </summary>
     private Cell? BestSpot(PackItem item, Lean lean)
     {
+        var lastX = _cols - item.W;
+        var lastY = _rows - item.H;
         Cell? best = null;
-        var bestTouch = (Sides: -1, SameKind: -1);
-
-        foreach (var at in Spots(item, lean))
-        {
-            if (!_taken.IsFree(at, item.W, item.H)) continue;
-
-            var touch = Touch(item, at);
-
-            if (touch.CompareTo(bestTouch) <= 0) continue;
-
-            best = at;
-            bestTouch = touch;
-        }
-
-        return best;
-    }
-
-    /// <summary>Every top-left cell where the item lies inside the bag, in the order the lean prefers them.</summary>
-    private IEnumerable<Cell> Spots(PackItem item, Lean lean)
-    {
-        var lastX = _grid.Cols - item.W;
-        var lastY = _grid.Rows - item.H;
+        var bestContact = new Contact(-1, -1);
 
         switch (lean)
         {
             case Lean.BottomRight:
                 for (var y = lastY; y >= 0; y--)
                 {
-                    for (var x = lastX; x >= 0; x--) yield return new Cell(x, y);
+                    for (var x = lastX; x >= 0; x--) Consider(x, y);
                 }
 
                 break;
             case Lean.TopLeftByRow:
                 for (var y = 0; y <= lastY; y++)
                 {
-                    for (var x = 0; x <= lastX; x++) yield return new Cell(x, y);
+                    for (var x = 0; x <= lastX; x++) Consider(x, y);
                 }
 
                 break;
             case Lean.TopLeftByColumn:
                 for (var x = 0; x <= lastX; x++)
                 {
-                    for (var y = 0; y <= lastY; y++) yield return new Cell(x, y);
+                    for (var y = 0; y <= lastY; y++) Consider(x, y);
                 }
 
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(lean), lean, "unknown lean");
         }
+
+        return best;
+
+        void Consider(int x, int y)
+        {
+            if (!IsFree(x, y, item.W, item.H)) return;
+
+            var contact = ContactAt(item, x, y);
+
+            if (!contact.Beats(bestContact)) return;
+
+            best = new Cell(x, y);
+            bestContact = contact;
+        }
+    }
+
+    /// <summary>True when no cell under a w by h item at this cell is taken. The caller keeps the item inside the bag.</summary>
+    private bool IsFree(int left, int top, int w, int h)
+    {
+        for (var x = left; x < left + w; x++)
+        {
+            for (var y = top; y < top + h; y++)
+            {
+                if (_taken[x, y]) return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
     /// How much of the item's outline touches something when it sits at this cell: Sides counts the cells just outside
     /// its edges that are off the grid, mold or taken, and SameKind those taken by an item of the same kind.
     /// </summary>
-    private (int Sides, int SameKind) Touch(PackItem item, Cell at)
+    private Contact ContactAt(PackItem item, int left, int top)
     {
-        var touch = (Sides: 0, SameKind: 0);
+        var sides = 0;
+        var sameKind = 0;
 
-        for (var x = at.X; x < at.X + item.W; x++)
+        for (var x = left; x < left + item.W; x++)
         {
-            Count(item, new Cell(x, at.Y - 1), ref touch);
-            Count(item, new Cell(x, at.Y + item.H), ref touch);
+            Count(x, top - 1);
+            Count(x, top + item.H);
         }
 
-        for (var y = at.Y; y < at.Y + item.H; y++)
+        for (var y = top; y < top + item.H; y++)
         {
-            Count(item, new Cell(at.X - 1, y), ref touch);
-            Count(item, new Cell(at.X + item.W, y), ref touch);
+            Count(left - 1, y);
+            Count(left + item.W, y);
         }
 
-        return touch;
+        return new Contact(sides, sameKind);
+
+        void Count(int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= _cols || y >= _rows)
+            {
+                sides++;
+
+                return;
+            }
+
+            if (!_taken[x, y]) return;
+
+            sides++;
+
+            if (_owners[x, y]?.ConfigId == item.ConfigId) sameKind++;
+        }
     }
 
-    private void Count(PackItem item, Cell neighbour, ref (int Sides, int SameKind) touch)
+    /// <summary>How a spot touches what is around it. More sides wins, then more of the same kind.</summary>
+    private readonly record struct Contact(int Sides, int SameKind)
     {
-        if (_taken.IsFree(neighbour, 1, 1)) return;
-
-        touch.Sides++;
-
-        if (_grid.Holds(neighbour, 1, 1) && _owners[neighbour.X, neighbour.Y]?.ConfigId == item.ConfigId) touch.SameKind++;
+        public bool Beats(Contact other) => Sides > other.Sides || (Sides == other.Sides && SameKind > other.SameKind);
     }
 }

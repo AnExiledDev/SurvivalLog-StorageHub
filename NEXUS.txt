@@ -7,7 +7,7 @@ Survival Log makes you open storage after storage to find something, and again t
 [size=5]Main features[/size]
 [list]
 [*][b]The panel[/b]: press F8 to search every item you own at home, see where each one sits, and take it into your bag or put it away.[/*]
-[*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen.[/*]
+[*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen. Material racks count as tagged Materials and take only what they have a slot for.[/*]
 [*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
 [*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them.[/*]

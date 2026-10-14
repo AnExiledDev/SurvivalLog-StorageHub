@@ -176,7 +176,7 @@ public class DeliveryTests
     {
         var wood = Stack(3, Wood, 6, Hub);
         var home = HomeWithHub(wood) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, Drone, Rack } };
-        var facts = new PutFacts((_, _) => null, stack => stack.ConfigId == Wood ? new PutRank(4, 15) : null, (stack, storage) => storage == Rack && stack.ConfigId == Wood);
+        var facts = new PutFacts((_, _) => null, (stack, storage) => storage == Rack && stack.ConfigId == Wood ? new PutRank(4, 16) : null);
 
         var steps = Delivery.Plan(home, new[] { wood }, new[] { Hub.OwnerId, Drone.OwnerId }, facts);
 

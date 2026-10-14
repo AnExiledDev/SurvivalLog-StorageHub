@@ -12,11 +12,14 @@ public class PutAwayTests
     /// <summary>What the game ranks an item at in a storage tagged Materials and nothing else.</summary>
     private static readonly PutRank MaterialsOnly = new(Level: 4, Specificity: 15);
 
+    /// <summary>What the game's own rack rule ranks a material it has a slot for: one step more specific than MaterialsOnly.</summary>
+    private static readonly PutRank RackSlot = new(Level: 4, Specificity: 16);
+
     private static Inventory WithRack(params ItemStack[] stacks) => Home(stacks) with { Storages = new[] { Bag, Fridge, Box, Rack } };
 
-    /// <summary>Wood and Rope are materials, and the rack has a slot for Wood only, the way it has none for straps.</summary>
+    /// <summary>The rack has a slot for Wood only; Rope is a material it has none for, the way it has none for straps.</summary>
     private static PutFacts RackFacts(Func<ItemStack, Storage, PutRank?> tagRank) =>
-        new(tagRank, stack => stack.ConfigId is Wood or Rope ? MaterialsOnly : null, (stack, storage) => storage == Rack && stack.ConfigId == Wood);
+        new(tagRank, (stack, storage) => storage == Rack && stack.ConfigId == Wood ? RackSlot : null);
 
     [Fact]
     public void A_storage_tagged_for_the_item_beats_one_that_only_already_holds_it()
@@ -103,24 +106,37 @@ public class PutAwayTests
     }
 
     [Fact]
-    public void An_item_that_is_not_a_material_is_never_offered_to_a_material_rack()
+    public void An_item_the_rack_has_no_slot_for_is_never_offered_to_it()
     {
         var apple = Stack(1, Apple, 2, Bag);
-        var rackWithASlotForEverything = RackFacts((_, _) => null) with { RackHasRow = (_, _) => true };
+        var rope = Stack(2, Rope, 2, Bag);
 
-        var step = StoragePlan.PutAway(WithRack(apple), new[] { apple }, rackWithASlotForEverything).Single();
+        var steps = StoragePlan.PutAway(WithRack(apple, rope), new[] { apple, rope }, RackFacts((_, _) => null));
 
-        Assert.Empty(step.Targets);
+        Assert.All(steps, step => Assert.Empty(step.Targets));
     }
 
     [Fact]
-    public void A_material_the_rack_has_no_slot_for_is_never_offered_to_it()
+    public void A_material_racks_storage_tag_rank_is_never_consulted()
     {
         var rope = Stack(1, Rope, 2, Bag);
+        var everyStorageTagged = RackFacts((_, _) => new PutRank(0, 20));
 
-        var step = StoragePlan.PutAway(WithRack(rope), new[] { rope }, RackFacts((_, _) => null)).Single();
+        var step = StoragePlan.PutAway(WithRack(rope), new[] { rope }, everyStorageTagged).Single();
 
-        Assert.Empty(step.Targets);
+        Assert.Equal(new[] { Fridge.OwnerId, Box.OwnerId }, step.Targets);
+    }
+
+    [Fact]
+    public void Floor_put_away_fills_a_material_rack_with_what_it_has_a_slot_for_and_bags_the_rest()
+    {
+        var woodOnFloor = Stack(1, Wood, 5, Floor);
+        var ropeOnFloor = Stack(2, Rope, 2, Floor);
+
+        var steps = StoragePlan.PutAwayFloor(WithRack(), new[] { woodOnFloor, ropeOnFloor }, RackFacts((_, _) => null));
+
+        Assert.Equal(new[] { Rack.OwnerId, Bag.OwnerId }, steps[0].Targets);
+        Assert.Equal(new[] { Bag.OwnerId }, steps[1].Targets);
     }
 
     [Fact]
@@ -138,7 +154,7 @@ public class PutAwayTests
     public void A_storage_the_game_ranks_more_specifically_than_a_material_rack_still_goes_first()
     {
         var wood = Stack(1, Wood, 5, Bag);
-        var closerThanARack = MaterialsOnly with { Specificity = MaterialsOnly.Specificity + 2 };
+        var closerThanARack = RackSlot with { Specificity = RackSlot.Specificity + 1 };
 
         var step = StoragePlan.PutAway(WithRack(wood), new[] { wood }, RackFacts((_, storage) => storage == Box ? closerThanARack : null)).Single();
 

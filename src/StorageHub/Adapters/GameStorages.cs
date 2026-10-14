@@ -7,8 +7,6 @@ using GameCore.HotUpdate.ReduxUI;
 using Il2CppInterop.Runtime;
 using StorageHub.Core;
 using Il2CppItems = Il2CppSystem.Collections.Generic.Dictionary<long, Il2CppSystem.Collections.Generic.Dictionary<long, GameCore.HotUpdate.ReduxUI.Data_Item>>;
-using Il2CppTagList = Il2CppSystem.Collections.Generic.List<int>;
-using Il2CppTagRule = Il2CppSystem.Collections.Generic.IReadOnlyList<int>;
 
 namespace StorageHub.Adapters;
 
@@ -30,9 +28,6 @@ internal sealed class GameStorages
     /// <summary>What the game's shelf life read answers for an item that never spoils.</summary>
     private const float NeverSpoilsByGame = -1f;
 
-    /// <summary>The game's Materials tag. The game's own rack code names it by this id too (FurnitureTagRules.GetRackLevel).</summary>
-    private const int MaterialsTagId = 1012;
-
     /// <summary>What an item's spoil clock reads, for the fridge tag rules.</summary>
     private readonly record struct ShelfClock(float StartTime, float TimeLeft, float PresetShelfScale);
 
@@ -43,6 +38,8 @@ internal sealed class GameStorages
     private readonly Dictionary<long, float> _daysLeft = new();
     private IntPtr _namedWorld;
     private bool _hasReportedRankFailure;
+    private bool _hasReportedRackRankFailure;
+    private bool _hasReportedRackCheckFailure;
     private bool _hasReportedUnpickableDrop;
     private bool _hasReportedShelfLifeFailure;
 
@@ -135,14 +132,14 @@ internal sealed class GameStorages
     }
 
     /// <summary>What the game says about each stack and storage, read through the storages from the last Read.</summary>
-    public PutFacts Facts => new(Rank, MaterialsRank, RackHasRow);
+    public PutFacts Facts => new(Rank, RackRank);
 
     /// <summary>What the storage's tag rule thinks of the stack, or null when the rule does not want it.</summary>
     public PutRank? Rank(ItemStack stack, Storage storage)
     {
         if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return null;
 
-        return RankByGame(stack, (itemConfig, daysLeft) =>
+        return RankByGame(stack, "tag rank", ref _hasReportedRankFailure, (itemConfig, daysLeft) =>
         {
             var tags = furniture.GetAgentComponent<FurnitureTagComponent>();
 
@@ -150,30 +147,21 @@ internal sealed class GameStorages
         });
     }
 
-    /// <summary>What a storage tagged Materials and nothing else would think of the stack, or null when it would not want it.</summary>
-    public PutRank? MaterialsRank(ItemStack stack) =>
-        RankByGame(stack, (itemConfig, daysLeft) =>
-            FurnitureTagRules.TryGetMatchRank(MaterialsOnlyRule(), itemConfig, daysLeft, FurnitureTagMatchPurpose.PutIn, out var level, out var specificity) ? new PutRank(level, specificity) : null);
-
-    /// <summary>Whether a material rack has a slot for the item. The game refuses it any other item, however much room is left.</summary>
-    public bool RackHasRow(ItemStack stack, Storage storage)
+    /// <summary>What the game's own rack rule thinks of the stack, the rank its robots use, or null when the rack has no slot for it.</summary>
+    public PutRank? RackRank(ItemStack stack, Storage storage)
     {
-        if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return false;
+        if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return null;
 
-        try
+        return RankByGame(stack, "material rack rank", ref _hasReportedRackRankFailure, (itemConfig, daysLeft) =>
         {
-            return GameSingleton.Existing<ConfigManager>()?.GetMaterialRackRow(furniture.AgentConfigId, stack.ConfigId) != null;
-        }
-        catch (Exception ex)
-        {
-            ReportRankFailure(ex);
+            var rack = furniture.GetAgentComponent<MaterialRackComponent>();
 
-            return false;
-        }
+            return rack != null && rack.TryGetPutRank(furniture.AgentConfigId, itemConfig, daysLeft, out var level, out var specificity) ? new PutRank(level, specificity) : null;
+        });
     }
 
     /// <summary>Runs one of the game's rank checks on the stack's item and its real time left, failing soft to "not wanted".</summary>
-    private PutRank? RankByGame(ItemStack stack, Func<Config_Item, float, PutRank?> rank)
+    private PutRank? RankByGame(ItemStack stack, string what, ref bool hasReported, Func<Config_Item, float, PutRank?> rank)
     {
         if (!_clocks.TryGetValue(stack.ItemId, out var clock)) return null;
 
@@ -189,26 +177,17 @@ internal sealed class GameStorages
         }
         catch (Exception ex)
         {
-            ReportRankFailure(ex);
+            ReportOnce(what, ref hasReported, ex);
 
             return null;
         }
     }
 
-    private static Il2CppTagRule MaterialsOnlyRule()
+    private void ReportOnce(string what, ref bool hasReported, Exception ex)
     {
-        var rule = new Il2CppTagList();
+        if (!hasReported) _log($"{what} failed (reported once): {ex}");
 
-        rule.Add(MaterialsTagId);
-
-        return rule.Cast<Il2CppTagRule>();
-    }
-
-    private void ReportRankFailure(Exception ex)
-    {
-        if (!_hasReportedRankFailure) _log("tag rank failed (reported once): " + ex);
-
-        _hasReportedRankFailure = true;
+        hasReported = true;
     }
 
     /// <summary>The game's quick-move of one whole stack. False when the game refuses, usually because the target is full.</summary>
@@ -373,7 +352,7 @@ internal sealed class GameStorages
         }
         catch (Exception ex)
         {
-            ReportRankFailure(ex);
+            ReportOnce("material rack check", ref _hasReportedRackCheckFailure, ex);
 
             return false;
         }

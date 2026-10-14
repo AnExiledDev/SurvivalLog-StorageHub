@@ -24,7 +24,7 @@ internal static class Fixtures
             new Dictionary<int, string> { [Apple] = "Red Apple", [Rope] = "Rope", [RedBerry] = "Red Berry" });
 
     /// <summary>Put-away facts for a home without a material rack, where only the storages' own tag rules count.</summary>
-    public static PutFacts Tags(Func<ItemStack, Storage, PutRank?> tagRank) => new(tagRank, _ => null, (_, _) => false);
+    public static PutFacts Tags(Func<ItemStack, Storage, PutRank?> tagRank) => new(tagRank, (_, _) => null);
 
     public static ItemStack Stack(long itemId, int configId, int count, Storage where) => new(itemId, configId, count, where.OwnerId);
 }

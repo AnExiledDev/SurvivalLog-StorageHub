@@ -472,25 +472,16 @@ internal sealed class HubSession
         return isPickedUp;
     }
 
-    private PutFacts LoggedFacts => _game.Facts with { TagRank = RankAndLog, MaterialsRank = MaterialsRankAndLog };
+    private PutFacts LoggedFacts => new(Logged(_game.Rank), Logged(_game.RackRank));
 
-    private PutRank? RankAndLog(ItemStack stack, Storage storage)
+    private Func<ItemStack, Storage, PutRank?> Logged(Func<ItemStack, Storage, PutRank?> rankOf) => (stack, storage) =>
     {
-        var rank = _game.Rank(stack, storage);
+        var rank = rankOf(stack, storage);
 
         if (_isVerbose && rank.HasValue) _log($"  rank {Describe(stack)} in {storage.Name}: level {rank.Value.Level}, specificity {rank.Value.Specificity}");
 
         return rank;
-    }
-
-    private PutRank? MaterialsRankAndLog(ItemStack stack)
-    {
-        var rank = _game.MaterialsRank(stack);
-
-        if (_isVerbose && rank.HasValue) _log($"  materials rank {Describe(stack)}: level {rank.Value.Level}, specificity {rank.Value.Specificity}, one more for a material rack with a slot for it");
-
-        return rank;
-    }
+    };
 
     private string Describe(ItemStack stack) => $"{_inventory.ItemName(stack.ConfigId)} x{stack.Count} (item {stack.ItemId}) from {_inventory.StorageName(stack.OwnerId)}";
 

@@ -52,7 +52,7 @@ Each stack in your bag is offered to your home storages in this order:
 
 1. Storages whose tag rule wants the item. The closest-fitting rule goes first, and between equal fits, a storage that already holds that item goes first. Tag rules that care about freshness (a fridge, say) see each stack's real time left.
 
-   A material rack has no tags, so it counts as tagged Materials, one step closer than a storage tagged Materials and nothing else, the way the game's own robots fill it. It only takes the materials it has a slot for.
+   A material rack has no tags, so it counts as tagged Materials and is ranked the way the game's own robots rank it: one step closer than a storage tagged Materials and nothing else. It only takes the materials it has a slot for.
 2. Storages that already hold some of that item, even with no tag for it.
 3. Nothing else. A stack no storage wants stays in your bag, and the status line names it.
 

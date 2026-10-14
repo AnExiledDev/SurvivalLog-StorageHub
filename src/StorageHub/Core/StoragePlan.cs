@@ -10,7 +10,7 @@ public sealed record MoveStep(ItemStack Stack, IReadOnlyList<long> Targets);
 public static class StoragePlan
 {
     /// <summary>Send each stack to the best home storage for it. Only furniture storages are ever targets, and never a drone.</summary>
-    public static IReadOnlyList<MoveStep> PutAway(Inventory inventory, IEnumerable<ItemStack> stacks, Func<ItemStack, Storage, PutRank?> rankOf)
+    public static IReadOnlyList<MoveStep> PutAway(Inventory inventory, IEnumerable<ItemStack> stacks, PutFacts facts)
     {
         var homes = inventory.Storages.Where(storage => storage.Kind == StorageKind.Furniture && storage.Bay != DroneBay.Drone).ToList();
         var held = inventory.Stacks.Select(stack => (stack.OwnerId, stack.ConfigId)).ToHashSet();
@@ -18,7 +18,7 @@ public static class StoragePlan
         return stacks
             .Select(stack => new MoveStep(stack, PutChoice.Targets(homes
                 .Where(home => home.OwnerId != stack.OwnerId)
-                .Select(home => new PutCandidate(home.OwnerId, rankOf(stack, home), held.Contains((home.OwnerId, stack.ConfigId)))))))
+                .Select(home => new PutCandidate(home.OwnerId, facts.RankOf(stack, home), held.Contains((home.OwnerId, stack.ConfigId)))))))
             .ToList();
     }
 
@@ -26,9 +26,9 @@ public static class StoragePlan
     /// Floor items go where PutAway would send them, and failing every storage, into the bag, so nothing has to be
     /// left lying around just because no storage is tagged for it.
     /// </summary>
-    public static IReadOnlyList<MoveStep> PutAwayFloor(Inventory inventory, IEnumerable<ItemStack> floorStacks, Func<ItemStack, Storage, PutRank?> rankOf)
+    public static IReadOnlyList<MoveStep> PutAwayFloor(Inventory inventory, IEnumerable<ItemStack> floorStacks, PutFacts facts)
     {
-        var steps = PutAway(inventory, floorStacks, rankOf);
+        var steps = PutAway(inventory, floorStacks, facts);
 
         if (inventory.Bag is not { } bag) return steps;
 

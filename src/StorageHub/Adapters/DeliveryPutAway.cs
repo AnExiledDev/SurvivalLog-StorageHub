@@ -135,7 +135,7 @@ internal sealed class DeliveryPutAway
         var landed = group.Owners.SelectMany(owner => _game.ReadOwner(owner)).ToList();
         var delivered = Delivery.Delivered(group.Before, landed);
         var inventory = Named(ready.Inventory, group, delivered);
-        var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Rank);
+        var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Facts);
 
         return Delivery.Describe(Delivery.Place(steps, _game.Move), inventory);
     }

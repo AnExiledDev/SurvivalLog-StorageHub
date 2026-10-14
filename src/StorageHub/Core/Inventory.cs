@@ -22,8 +22,11 @@ public enum DroneBay
     Hub,
 }
 
-/// <summary>A place items live: the player's bag, a home storage, or the workbench drawer.</summary>
-public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneBay Bay = DroneBay.None)
+/// <summary>
+/// A place items live: the player's bag, a home storage, or the workbench drawer. A material rack is a home storage
+/// with no tags of its own and a slot for each material it holds.
+/// </summary>
+public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneBay Bay = DroneBay.None, bool IsMaterialRack = false)
 {
     public bool IsDroneBay => Bay != DroneBay.None;
 }

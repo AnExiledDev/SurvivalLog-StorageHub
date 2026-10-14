@@ -51,6 +51,8 @@ On the game's inventory screen, a "Mods" button sits next to the game's Sort but
 Each stack in your bag is offered to your home storages in this order:
 
 1. Storages whose tag rule wants the item. The closest-fitting rule goes first, and between equal fits, a storage that already holds that item goes first. Tag rules that care about freshness (a fridge, say) see each stack's real time left.
+
+   A material rack has no tags, so it counts as tagged Materials, one step closer than a storage tagged Materials and nothing else, the way the game's own robots fill it. It only takes the materials it has a slot for.
 2. Storages that already hold some of that item, even with no tag for it.
 3. Nothing else. A stack no storage wants stays in your bag, and the status line names it.
 
@@ -169,7 +171,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.0 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.1 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

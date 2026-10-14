@@ -7,6 +7,8 @@ using GameCore.HotUpdate.ReduxUI;
 using Il2CppInterop.Runtime;
 using StorageHub.Core;
 using Il2CppItems = Il2CppSystem.Collections.Generic.Dictionary<long, Il2CppSystem.Collections.Generic.Dictionary<long, GameCore.HotUpdate.ReduxUI.Data_Item>>;
+using Il2CppTagList = Il2CppSystem.Collections.Generic.List<int>;
+using Il2CppTagRule = Il2CppSystem.Collections.Generic.IReadOnlyList<int>;
 
 namespace StorageHub.Adapters;
 
@@ -27,6 +29,9 @@ internal sealed class GameStorages
 
     /// <summary>What the game's shelf life read answers for an item that never spoils.</summary>
     private const float NeverSpoilsByGame = -1f;
+
+    /// <summary>The game's Materials tag. The game's own rack code names it by this id too (FurnitureTagRules.GetRackLevel).</summary>
+    private const int MaterialsTagId = 1012;
 
     /// <summary>What an item's spoil clock reads, for the fridge tag rules.</summary>
     private readonly record struct ShelfClock(float StartTime, float TimeLeft, float PresetShelfScale);
@@ -129,29 +134,81 @@ internal sealed class GameStorages
         }
     }
 
+    /// <summary>What the game says about each stack and storage, read through the storages from the last Read.</summary>
+    public PutFacts Facts => new(Rank, MaterialsRank, RackHasRow);
+
     /// <summary>What the storage's tag rule thinks of the stack, or null when the rule does not want it.</summary>
     public PutRank? Rank(ItemStack stack, Storage storage)
     {
-        if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture) || !_clocks.TryGetValue(stack.ItemId, out var clock)) return null;
+        if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return null;
+
+        return RankByGame(stack, (itemConfig, daysLeft) =>
+        {
+            var tags = furniture.GetAgentComponent<FurnitureTagComponent>();
+
+            return tags != null && tags.TryGetPutRank(furniture.AgentConfigId, itemConfig, daysLeft, out var level, out var specificity) ? new PutRank(level, specificity) : null;
+        });
+    }
+
+    /// <summary>What a storage tagged Materials and nothing else would think of the stack, or null when it would not want it.</summary>
+    public PutRank? MaterialsRank(ItemStack stack) =>
+        RankByGame(stack, (itemConfig, daysLeft) =>
+            FurnitureTagRules.TryGetMatchRank(MaterialsOnlyRule(), itemConfig, daysLeft, FurnitureTagMatchPurpose.PutIn, out var level, out var specificity) ? new PutRank(level, specificity) : null);
+
+    /// <summary>Whether a material rack has a slot for the item. The game refuses it any other item, however much room is left.</summary>
+    public bool RackHasRow(ItemStack stack, Storage storage)
+    {
+        if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return false;
 
         try
         {
-            var tags = furniture.GetAgentComponent<FurnitureTagComponent>();
-            var itemConfig = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(stack.ConfigId);
-
-            if (tags == null || itemConfig == null) return null;
-
-            var daysLeft = Freshness.DaysLeft(itemConfig.Life, clock.StartTime, clock.TimeLeft, clock.PresetShelfScale, Furniture.GetCompressorNowHours());
-            return tags.TryGetPutRank(furniture.AgentConfigId, itemConfig, daysLeft, out var level, out var specificity) ? new PutRank(level, specificity) : null;
+            return GameSingleton.Existing<ConfigManager>()?.GetMaterialRackRow(furniture.AgentConfigId, stack.ConfigId) != null;
         }
         catch (Exception ex)
         {
-            if (!_hasReportedRankFailure) _log("tag rank failed (reported once): " + ex);
+            ReportRankFailure(ex);
 
-            _hasReportedRankFailure = true;
+            return false;
+        }
+    }
+
+    /// <summary>Runs one of the game's rank checks on the stack's item and its real time left, failing soft to "not wanted".</summary>
+    private PutRank? RankByGame(ItemStack stack, Func<Config_Item, float, PutRank?> rank)
+    {
+        if (!_clocks.TryGetValue(stack.ItemId, out var clock)) return null;
+
+        try
+        {
+            var itemConfig = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(stack.ConfigId);
+
+            if (itemConfig == null) return null;
+
+            var daysLeft = Freshness.DaysLeft(itemConfig.Life, clock.StartTime, clock.TimeLeft, clock.PresetShelfScale, Furniture.GetCompressorNowHours());
+
+            return rank(itemConfig, daysLeft);
+        }
+        catch (Exception ex)
+        {
+            ReportRankFailure(ex);
 
             return null;
         }
+    }
+
+    private static Il2CppTagRule MaterialsOnlyRule()
+    {
+        var rule = new Il2CppTagList();
+
+        rule.Add(MaterialsTagId);
+
+        return rule.Cast<Il2CppTagRule>();
+    }
+
+    private void ReportRankFailure(Exception ex)
+    {
+        if (!_hasReportedRankFailure) _log("tag rank failed (reported once): " + ex);
+
+        _hasReportedRankFailure = true;
     }
 
     /// <summary>The game's quick-move of one whole stack. False when the game refuses, usually because the target is full.</summary>
@@ -303,7 +360,22 @@ internal sealed class GameStorages
         {
             _furnitures[homes[i].InstanceId] = homes[i];
 
-            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]));
+            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), IsMaterialRack(config, homes[i]));
+        }
+    }
+
+    /// <summary>A material rack by the game's own rack table, so any rack the game adds counts too.</summary>
+    private bool IsMaterialRack(ConfigManager config, Furniture furniture)
+    {
+        try
+        {
+            return config.IsMaterialRackFurniture(furniture.AgentConfigId);
+        }
+        catch (Exception ex)
+        {
+            ReportRankFailure(ex);
+
+            return false;
         }
     }
 

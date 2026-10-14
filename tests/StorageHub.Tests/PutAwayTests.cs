@@ -9,6 +9,15 @@ public class PutAwayTests
     private static readonly Storage DroneHub = new(500, "Drone Hub", StorageKind.Furniture, DroneBay.Hub);
     private static readonly Storage Drone = new(600, "Drone", StorageKind.Furniture, DroneBay.Drone);
 
+    /// <summary>What the game ranks an item at in a storage tagged Materials and nothing else.</summary>
+    private static readonly PutRank MaterialsOnly = new(Level: 4, Specificity: 15);
+
+    private static Inventory WithRack(params ItemStack[] stacks) => Home(stacks) with { Storages = new[] { Bag, Fridge, Box, Rack } };
+
+    /// <summary>Wood and Rope are materials, and the rack has a slot for Wood only, the way it has none for straps.</summary>
+    private static PutFacts RackFacts(Func<ItemStack, Storage, PutRank?> tagRank) =>
+        new(tagRank, stack => stack.ConfigId is Wood or Rope ? MaterialsOnly : null, (stack, storage) => storage == Rack && stack.ConfigId == Wood);
+
     [Fact]
     public void A_storage_tagged_for_the_item_beats_one_that_only_already_holds_it()
     {
@@ -56,7 +65,7 @@ public class PutAwayTests
         var apple = Stack(1, Apple, 2, Fridge);
         var home = Home(apple, Stack(2, Apple, 1, Box), Stack(3, Apple, 1, Bag), Stack(4, Apple, 1, Drawer));
 
-        var step = StoragePlan.PutAway(home, new[] { apple }, (_, _) => new PutRank(0, 0)).Single();
+        var step = StoragePlan.PutAway(home, new[] { apple }, Tags((_, _) => new PutRank(0, 0))).Single();
 
         Assert.Equal(new[] { Box.OwnerId }, step.Targets);
     }
@@ -67,7 +76,7 @@ public class PutAwayTests
         var apple = Stack(1, Apple, 2, Bag);
         var withDrone = Home(apple, Stack(2, Apple, 1, Drone)) with { Storages = new[] { Bag, Fridge, Drone } };
 
-        var step = StoragePlan.PutAway(withDrone, new[] { apple }, (_, storage) => storage == Drone ? new PutRank(0, 1) : null).Single();
+        var step = StoragePlan.PutAway(withDrone, new[] { apple }, Tags((_, storage) => storage == Drone ? new PutRank(0, 1) : null)).Single();
 
         Assert.Empty(step.Targets);
     }
@@ -78,9 +87,62 @@ public class PutAwayTests
         var apple = Stack(1, Apple, 2, Bag);
         var withHub = Home(apple) with { Storages = new[] { Bag, Fridge, DroneHub } };
 
-        var step = StoragePlan.PutAway(withHub, new[] { apple }, (_, storage) => storage == DroneHub ? new PutRank(0, 1) : null).Single();
+        var step = StoragePlan.PutAway(withHub, new[] { apple }, Tags((_, storage) => storage == DroneHub ? new PutRank(0, 1) : null)).Single();
 
         Assert.Equal(new[] { DroneHub.OwnerId }, step.Targets);
+    }
+
+    [Fact]
+    public void A_material_goes_into_an_empty_material_rack_that_has_a_slot_for_it()
+    {
+        var wood = Stack(1, Wood, 5, Bag);
+
+        var step = StoragePlan.PutAway(WithRack(wood), new[] { wood }, RackFacts((_, _) => null)).Single();
+
+        Assert.Equal(new[] { Rack.OwnerId }, step.Targets);
+    }
+
+    [Fact]
+    public void An_item_that_is_not_a_material_is_never_offered_to_a_material_rack()
+    {
+        var apple = Stack(1, Apple, 2, Bag);
+        var rackWithASlotForEverything = RackFacts((_, _) => null) with { RackHasRow = (_, _) => true };
+
+        var step = StoragePlan.PutAway(WithRack(apple), new[] { apple }, rackWithASlotForEverything).Single();
+
+        Assert.Empty(step.Targets);
+    }
+
+    [Fact]
+    public void A_material_the_rack_has_no_slot_for_is_never_offered_to_it()
+    {
+        var rope = Stack(1, Rope, 2, Bag);
+
+        var step = StoragePlan.PutAway(WithRack(rope), new[] { rope }, RackFacts((_, _) => null)).Single();
+
+        Assert.Empty(step.Targets);
+    }
+
+    [Fact]
+    public void A_material_rack_goes_before_a_box_tagged_only_Materials_even_one_already_holding_the_item()
+    {
+        var wood = Stack(1, Wood, 5, Bag);
+        var facts = RackFacts((_, storage) => storage == Box ? MaterialsOnly : null);
+
+        var step = StoragePlan.PutAway(WithRack(wood, Stack(2, Wood, 3, Box)), new[] { wood }, facts).Single();
+
+        Assert.Equal(new[] { Rack.OwnerId, Box.OwnerId }, step.Targets);
+    }
+
+    [Fact]
+    public void A_storage_the_game_ranks_more_specifically_than_a_material_rack_still_goes_first()
+    {
+        var wood = Stack(1, Wood, 5, Bag);
+        var closerThanARack = MaterialsOnly with { Specificity = MaterialsOnly.Specificity + 2 };
+
+        var step = StoragePlan.PutAway(WithRack(wood), new[] { wood }, RackFacts((_, storage) => storage == Box ? closerThanARack : null)).Single();
+
+        Assert.Equal(new[] { Box.OwnerId, Rack.OwnerId }, step.Targets);
     }
 
     [Fact]
@@ -91,7 +153,7 @@ public class PutAwayTests
         PutRank? FridgeTakesFood(ItemStack stack, Storage storage) =>
             storage == Fridge && stack.ConfigId == Apple ? new PutRank(0, 1) : null;
 
-        var steps = StoragePlan.PutAway(Home(apple, rope), new[] { apple, rope }, FridgeTakesFood);
+        var steps = StoragePlan.PutAway(Home(apple, rope), new[] { apple, rope }, Tags(FridgeTakesFood));
 
         Assert.Equal(new[] { Fridge.OwnerId }, steps[0].Targets);
         Assert.Empty(steps[1].Targets);
@@ -102,7 +164,7 @@ public class PutAwayTests
     {
         var appleOnFloor = Stack(1, Apple, 3, Floor);
 
-        var step = StoragePlan.PutAway(Home(), new[] { appleOnFloor }, (_, _) => new PutRank(0, 1)).Single();
+        var step = StoragePlan.PutAway(Home(), new[] { appleOnFloor }, Tags((_, _) => new PutRank(0, 1))).Single();
 
         Assert.Equal(new[] { Fridge.OwnerId, Box.OwnerId }, step.Targets);
     }
@@ -112,7 +174,7 @@ public class PutAwayTests
     {
         var ropeOnFloor = Stack(1, Rope, 1, Floor);
 
-        var step = StoragePlan.PutAway(Home(Stack(2, Apple, 1, Box)), new[] { ropeOnFloor }, (_, _) => null).Single();
+        var step = StoragePlan.PutAway(Home(Stack(2, Apple, 1, Box)), new[] { ropeOnFloor }, Tags((_, _) => null)).Single();
 
         Assert.Empty(step.Targets);
     }
@@ -122,7 +184,7 @@ public class PutAwayTests
     {
         var ropeOnFloor = Stack(1, Rope, 1, Floor);
 
-        var step = StoragePlan.PutAwayFloor(Home(), new[] { ropeOnFloor }, (_, _) => null).Single();
+        var step = StoragePlan.PutAwayFloor(Home(), new[] { ropeOnFloor }, Tags((_, _) => null)).Single();
 
         Assert.Equal(new[] { Bag.OwnerId }, step.Targets);
     }
@@ -133,7 +195,7 @@ public class PutAwayTests
         var appleOnFloor = Stack(1, Apple, 3, Floor);
         PutRank? FridgeTakesFood(ItemStack stack, Storage storage) => storage == Fridge ? new PutRank(0, 1) : null;
 
-        var step = StoragePlan.PutAwayFloor(Home(), new[] { appleOnFloor }, FridgeTakesFood).Single();
+        var step = StoragePlan.PutAwayFloor(Home(), new[] { appleOnFloor }, Tags(FridgeTakesFood)).Single();
 
         Assert.Equal(new[] { Fridge.OwnerId, Bag.OwnerId }, step.Targets);
     }
@@ -143,7 +205,7 @@ public class PutAwayTests
     {
         var noBag = new Inventory(new[] { Fridge }, Array.Empty<ItemStack>(), new Dictionary<int, string>());
 
-        var step = StoragePlan.PutAwayFloor(noBag, new[] { Stack(1, Rope, 1, Floor) }, (_, _) => null).Single();
+        var step = StoragePlan.PutAwayFloor(noBag, new[] { Stack(1, Rope, 1, Floor) }, Tags((_, _) => null)).Single();
 
         Assert.Empty(step.Targets);
     }

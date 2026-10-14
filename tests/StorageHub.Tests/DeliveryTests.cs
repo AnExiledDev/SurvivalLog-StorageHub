@@ -122,7 +122,7 @@ public class DeliveryTests
         var berries = Stack(3, RedBerry, 4, Hub);
         var home = HomeWithHub(berries);
 
-        var steps = Delivery.Plan(home, new[] { berries }, new[] { Hub.OwnerId, Drone.OwnerId }, (stack, storage) => storage == Fridge ? new PutRank(1, 1) : null);
+        var steps = Delivery.Plan(home, new[] { berries }, new[] { Hub.OwnerId, Drone.OwnerId }, Tags((stack, storage) => storage == Fridge ? new PutRank(1, 1) : null));
 
         Assert.Equal(new[] { Fridge.OwnerId }, Assert.Single(steps).Targets);
     }
@@ -133,7 +133,7 @@ public class DeliveryTests
         var rope = Stack(1, Rope, 2, Drone);
         var home = HomeWithHub(Stack(9, Rope, 5, Hub), rope);
 
-        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
+        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, Tags((_, _) => null));
 
         Assert.Empty(Assert.Single(steps).Targets);
     }
@@ -144,7 +144,7 @@ public class DeliveryTests
         var rope = Stack(1, Rope, 2, Hub);
         var home = HomeWithTwoHubs(rope, Stack(9, Rope, 5, OtherDrone));
 
-        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
+        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, Tags((_, _) => null));
 
         Assert.Empty(Assert.Single(steps).Targets);
     }
@@ -155,7 +155,7 @@ public class DeliveryTests
         var rope = Stack(1, Rope, 2, Hub);
         var home = HomeWithTwoHubs(rope, Stack(9, Rope, 5, OtherHub));
 
-        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, _) => null);
+        var steps = Delivery.Plan(home, new[] { rope }, new[] { Hub.OwnerId, Drone.OwnerId }, Tags((_, _) => null));
 
         Assert.Empty(Assert.Single(steps).Targets);
     }
@@ -166,9 +166,21 @@ public class DeliveryTests
         var berries = Stack(3, RedBerry, 4, Hub);
         var home = HomeWithTwoHubs(berries);
 
-        var steps = Delivery.Plan(home, new[] { berries }, new[] { Hub.OwnerId, Drone.OwnerId }, (_, storage) => storage == Fridge || storage.IsDroneBay ? new PutRank(1, 1) : null);
+        var steps = Delivery.Plan(home, new[] { berries }, new[] { Hub.OwnerId, Drone.OwnerId }, Tags((_, storage) => storage == Fridge || storage.IsDroneBay ? new PutRank(1, 1) : null));
 
         Assert.Equal(new[] { Fridge.OwnerId }, Assert.Single(steps).Targets);
+    }
+
+    [Fact]
+    public void Delivered_materials_go_into_a_material_rack_with_a_slot_for_them()
+    {
+        var wood = Stack(3, Wood, 6, Hub);
+        var home = HomeWithHub(wood) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, Drone, Rack } };
+        var facts = new PutFacts((_, _) => null, stack => stack.ConfigId == Wood ? new PutRank(4, 15) : null, (stack, storage) => storage == Rack && stack.ConfigId == Wood);
+
+        var steps = Delivery.Plan(home, new[] { wood }, new[] { Hub.OwnerId, Drone.OwnerId }, facts);
+
+        Assert.Equal(new[] { Rack.OwnerId }, Assert.Single(steps).Targets);
     }
 
     [Fact]

@@ -100,11 +100,11 @@ public static class Delivery
     /// The put-away plan for a delivery: the same tag rules as the bag's put-away, but no drone and no drone hub is ever
     /// a target, the ones the cargo landed in or any other, so a stack nothing wants stays where the game put it.
     /// </summary>
-    public static IReadOnlyList<MoveStep> Plan(Inventory inventory, IReadOnlyList<ItemStack> delivered, IReadOnlyCollection<long> landingOwners, Func<ItemStack, Storage, PutRank?> rankOf)
+    public static IReadOnlyList<MoveStep> Plan(Inventory inventory, IReadOnlyList<ItemStack> delivered, IReadOnlyCollection<long> landingOwners, PutFacts facts)
     {
         var targets = inventory with { Storages = inventory.Storages.Where(storage => !storage.IsDroneBay && !landingOwners.Contains(storage.OwnerId)).ToList() };
 
-        return StoragePlan.PutAway(targets, delivered, rankOf);
+        return StoragePlan.PutAway(targets, delivered, facts);
     }
 
     /// <summary>Tries each step's targets in order until the game accepts the stack, and records where each one went.</summary>

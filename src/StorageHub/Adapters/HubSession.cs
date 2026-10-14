@@ -378,7 +378,7 @@ internal sealed class HubSession
 
         if (_isVerbose) LogKept(split.Kept);
 
-        var moved = Execute(StoragePlan.PutAway(_inventory, split.PutAway, RankAndLog), MoveAndLog);
+        var moved = Execute(StoragePlan.PutAway(_inventory, split.PutAway, LoggedFacts), MoveAndLog);
 
         return kept.Length == 0 ? moved : moved + " " + kept;
     }
@@ -441,7 +441,7 @@ internal sealed class HubSession
 
         AddNames(floor.Select(stack => stack.ConfigId));
 
-        return Execute(StoragePlan.PutAwayFloor(_inventory, floor, RankAndLog), PickUpAndLog);
+        return Execute(StoragePlan.PutAwayFloor(_inventory, floor, LoggedFacts), PickUpAndLog);
     }
 
     private string Execute(IReadOnlyList<MoveStep> steps, Func<ItemStack, long, bool> tryMove)
@@ -472,11 +472,22 @@ internal sealed class HubSession
         return isPickedUp;
     }
 
+    private PutFacts LoggedFacts => _game.Facts with { TagRank = RankAndLog, MaterialsRank = MaterialsRankAndLog };
+
     private PutRank? RankAndLog(ItemStack stack, Storage storage)
     {
         var rank = _game.Rank(stack, storage);
 
         if (_isVerbose && rank.HasValue) _log($"  rank {Describe(stack)} in {storage.Name}: level {rank.Value.Level}, specificity {rank.Value.Specificity}");
+
+        return rank;
+    }
+
+    private PutRank? MaterialsRankAndLog(ItemStack stack)
+    {
+        var rank = _game.MaterialsRank(stack);
+
+        if (_isVerbose && rank.HasValue) _log($"  materials rank {Describe(stack)}: level {rank.Value.Level}, specificity {rank.Value.Specificity}, one more for a material rack with a slot for it");
 
         return rank;
     }

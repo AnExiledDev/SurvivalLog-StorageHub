@@ -40,6 +40,7 @@ internal sealed class GameStorages
     private bool _hasReportedRankFailure;
     private bool _hasReportedRackRankFailure;
     private bool _hasReportedRackCheckFailure;
+    private bool _hasReportedRobotPutFailure;
     private bool _hasReportedUnpickableDrop;
     private bool _hasReportedShelfLifeFailure;
 
@@ -339,7 +340,26 @@ internal sealed class GameStorages
         {
             _furnitures[homes[i].InstanceId] = homes[i];
 
-            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), IsMaterialRack(config, homes[i]));
+            var isRack = IsMaterialRack(config, homes[i]);
+
+            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), isRack, isRack && IsRobotPutOff(homes[i]));
+        }
+    }
+
+    /// <summary>The rack's own switch that stops robots putting items in, failing soft to "on" so the rack stays a target.</summary>
+    private bool IsRobotPutOff(Furniture furniture)
+    {
+        try
+        {
+            var rack = furniture.GetAgentComponent<MaterialRackComponent>();
+
+            return rack != null && !rack.GetAllowRobotPut();
+        }
+        catch (Exception ex)
+        {
+            ReportOnce("rack robot put switch", ref _hasReportedRobotPutFailure, ex);
+
+            return false;
         }
     }
 

@@ -24,9 +24,10 @@ public enum DroneBay
 
 /// <summary>
 /// A place items live: the player's bag, a home storage, or the workbench drawer. A material rack is a home storage
-/// with no tags of its own and a slot for each material it holds.
+/// with no tags of its own and a slot for each material it holds. IsRobotPutOff is the rack's own switch that stops
+/// robots putting items in.
 /// </summary>
-public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneBay Bay = DroneBay.None, bool IsMaterialRack = false)
+public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneBay Bay = DroneBay.None, bool IsMaterialRack = false, bool IsRobotPutOff = false)
 {
     public bool IsDroneBay => Bay != DroneBay.None;
 }

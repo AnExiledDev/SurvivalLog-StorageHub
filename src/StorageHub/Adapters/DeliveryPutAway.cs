@@ -23,14 +23,16 @@ internal sealed class DeliveryPutAway
     private readonly DroneRetrieves _retrieves;
     private readonly WebPage _page;
     private readonly Action<string> _log;
+    private readonly bool _skipRobotPutOff;
 
     private List<Landing> _waiting = new();
     private LandingGroup? _group;
     private float _startedAt;
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
 
-    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log)
+    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log, bool skipRobotPutOff)
     {
+        _skipRobotPutOff = skipRobotPutOff;
         _takeNext = takeNext;
         _game = game;
         _retrieves = retrieves;
@@ -135,7 +137,7 @@ internal sealed class DeliveryPutAway
         var landed = group.Owners.SelectMany(owner => _game.ReadOwner(owner)).ToList();
         var delivered = Delivery.Delivered(group.Before, landed);
         var inventory = Named(ready.Inventory, group, delivered);
-        var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Facts);
+        var steps = Delivery.Plan(inventory, delivered, group.Owners, _game.Facts, _skipRobotPutOff);
 
         return Delivery.Describe(Delivery.Place(steps, _game.Move), inventory);
     }

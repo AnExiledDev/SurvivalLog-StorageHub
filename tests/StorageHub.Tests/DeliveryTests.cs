@@ -184,6 +184,32 @@ public class DeliveryTests
     }
 
     [Fact]
+    public void A_rack_with_robot_put_off_is_skipped_when_the_setting_asks()
+    {
+        var wood = Stack(3, Wood, 6, Hub);
+        var switchedOff = Rack with { IsRobotPutOff = true };
+        var home = HomeWithHub(wood) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, Drone, switchedOff } };
+        var facts = new PutFacts((_, _) => null, (stack, storage) => storage.IsMaterialRack && stack.ConfigId == Wood ? new PutRank(4, 16) : null);
+
+        var steps = Delivery.Plan(home, new[] { wood }, new[] { Hub.OwnerId, Drone.OwnerId }, facts, skipRobotPutOff: true);
+
+        Assert.Empty(Assert.Single(steps).Targets);
+    }
+
+    [Fact]
+    public void A_rack_with_robot_put_off_still_fills_by_default()
+    {
+        var wood = Stack(3, Wood, 6, Hub);
+        var switchedOff = Rack with { IsRobotPutOff = true };
+        var home = HomeWithHub(wood) with { Storages = new[] { Bag, Fridge, Box, Drawer, Hub, Drone, switchedOff } };
+        var facts = new PutFacts((_, _) => null, (stack, storage) => storage.IsMaterialRack && stack.ConfigId == Wood ? new PutRank(4, 16) : null);
+
+        var steps = Delivery.Plan(home, new[] { wood }, new[] { Hub.OwnerId, Drone.OwnerId }, facts);
+
+        Assert.Equal(new[] { Rack.OwnerId }, Assert.Single(steps).Targets);
+    }
+
+    [Fact]
     public void Each_stack_lands_in_the_first_storage_that_takes_it_or_stays_put()
     {
         var berries = Stack(3, RedBerry, 4, Hub);

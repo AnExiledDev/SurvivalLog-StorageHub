@@ -21,6 +21,7 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `AutoPutAway` | `true` | When a drone comes home, put what it brought into the storages tagged for it, the same way "Put whole bag away by tag" does. Anything no storage takes stays where the game put it. Also counts each delivery as retrieving the supplies, so drone trade events can finish. |
+| `SkipRacksWithRobotPutOff` | `false` | When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. |
 
 ## Organize
 

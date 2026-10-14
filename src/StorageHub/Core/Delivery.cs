@@ -98,14 +98,18 @@ public static class Delivery
 
     /// <summary>
     /// The put-away plan for a delivery: the same tag rules as the bag's put-away, but no drone and no drone hub is ever
-    /// a target, the ones the cargo landed in or any other, so a stack nothing wants stays where the game put it.
+    /// a target, the ones the cargo landed in or any other, so a stack nothing wants stays where the game put it. With
+    /// skipRobotPutOff, a material rack whose robot put switch is off is not a target either.
     /// </summary>
-    public static IReadOnlyList<MoveStep> Plan(Inventory inventory, IReadOnlyList<ItemStack> delivered, IReadOnlyCollection<long> landingOwners, PutFacts facts)
+    public static IReadOnlyList<MoveStep> Plan(Inventory inventory, IReadOnlyList<ItemStack> delivered, IReadOnlyCollection<long> landingOwners, PutFacts facts, bool skipRobotPutOff = false)
     {
-        var targets = inventory with { Storages = inventory.Storages.Where(storage => !storage.IsDroneBay && !landingOwners.Contains(storage.OwnerId)).ToList() };
+        var targets = inventory with { Storages = inventory.Storages.Where(storage => IsTarget(storage, landingOwners, skipRobotPutOff)).ToList() };
 
         return StoragePlan.PutAway(targets, delivered, facts);
     }
+
+    private static bool IsTarget(Storage storage, IReadOnlyCollection<long> landingOwners, bool skipRobotPutOff) =>
+        !storage.IsDroneBay && !landingOwners.Contains(storage.OwnerId) && !(skipRobotPutOff && storage.IsRobotPutOff);
 
     /// <summary>Tries each step's targets in order until the game accepts the stack, and records where each one went.</summary>
     public static IReadOnlyList<Placement> Place(IEnumerable<MoveStep> steps, Func<ItemStack, long, bool> tryMove)

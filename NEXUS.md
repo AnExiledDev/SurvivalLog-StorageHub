@@ -18,7 +18,7 @@ The keep list, deliveries, tidying and stack merging can each be turned off in t
 [size=5]Keep in bag[/size]
 The game can't split a stack, so the keep list keeps whole stacks: the smallest stack that covers the amount, or else the fullest stacks until it is covered, the fresher one first between stacks of the same size. You often keep a few more than you asked for.
 
-The list is saved in [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it, and a file this version can't understand is copied aside with a .broken- name before starting fresh.
+The list is saved in [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it, and a file this version can't understand is copied aside with a .broken- name before starting fresh.
 
 Storage Hub keeps nothing of its own in your save and does not edit game files. [b]Back up your saves before trying a new version[/b], since it moves real items around.
 
@@ -43,18 +43,18 @@ If you run into anything strange, please tell me (see Feedback below).
 [size=5]Installation[/size]
 [list=1]
 [*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
-[*]Put [font=Courier New]StorageHub.dll[/font] in the BepInEx&#92;plugins folder inside the game folder. Full path example:
-[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;StorageHub.dll[/code][/*]
+[*]Put [font=Courier New]StorageHub.dll[/font] in the BepInEx\plugins folder inside the game folder. Full path example:
+[code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\StorageHub.dll[/code][/*]
 [/list]
 
 [size=5]Uninstall[/size]
-Delete [font=Courier New]StorageHub.dll[/font] from the [font=Courier New]BepInEx&#92;plugins[/font] folder. The items it moved stay where they are.
+Delete [font=Courier New]StorageHub.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder. The items it moved stay where they are.
 
 [size=5]Configuration[/size]
-To change the panel key or turn off any piece, edit [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
+To change the panel key or turn off any piece, edit [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
 
 [size=5]Feedback[/size]
-Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx&#92;LogOutput.log[/font] and [font=Courier New]BepInEx&#92;storage-hub.log[/font].
+Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and [font=Courier New]BepInEx\storage-hub.log[/font].
 
 [size=5]Source and license[/size]
 Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub]github.com/AnExiledDev/SurvivalLog-StorageHub[/url]
@@ -78,7 +78,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 [size=5]留在背包[/size]
 游戏无法拆分堆叠，所以「留在背包」清单按整堆保留：优先留下刚好够数量的最小一堆，否则从最满的堆开始留，直到够数；大小相同的堆先留更新鲜的。所以实际留下的常常比你设定的多一些。
 
-清单保存在 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.keep.json[/font]。[b]目前所有存档共用同一个清单。[/b]如果这个文件读不出来，模组会拒绝收纳背包和修改清单，而不是覆盖它；当前版本无法识别的文件会被另存为带 .broken- 的名字，然后重新开始一个空清单。
+清单保存在 [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]。[b]目前所有存档共用同一个清单。[/b]如果这个文件读不出来，模组会拒绝收纳背包和修改清单，而不是覆盖它；当前版本无法识别的文件会被另存为带 .broken- 的名字，然后重新开始一个空清单。
 
 Storage Hub 不在你的存档里保存任何自己的数据，也不修改游戏文件。[b]试用新版本前请先备份存档[/b]，因为它会移动真实的物品。
 
@@ -101,18 +101,18 @@ Storage Hub 不在你的存档里保存任何自己的数据，也不修改游�
 [size=5]安装[/size]
 [list=1]
 [*]安装 [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i]（如果之前没有装过其他模组，先启动一次游戏，让 BepInEx 完成初始化，然后退出）[/i]。[/*]
-[*]把 [font=Courier New]StorageHub.dll[/font] 放进游戏目录下的 BepInEx&#92;plugins 文件夹。完整路径示例：
-[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;StorageHub.dll[/code][/*]
+[*]把 [font=Courier New]StorageHub.dll[/font] 放进游戏目录下的 BepInEx\plugins 文件夹。完整路径示例：
+[code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\StorageHub.dll[/code][/*]
 [/list]
 
 [size=5]卸载[/size]
-从 [font=Courier New]BepInEx&#92;plugins[/font] 文件夹中删除 [font=Courier New]StorageHub.dll[/font]。模组移动过的物品会留在原处。
+从 [font=Courier New]BepInEx\plugins[/font] 文件夹中删除 [font=Courier New]StorageHub.dll[/font]。模组移动过的物品会留在原处。
 
 [size=5]配置[/size]
-如需修改面板按键或关闭任何一项功能，请在游戏关闭时编辑 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
+如需修改面板按键或关闭任何一项功能，请在游戏关闭时编辑 [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
 
 [size=5]反馈[/size]
-发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx&#92;LogOutput.log[/font] 和 [font=Courier New]BepInEx&#92;storage-hub.log[/font]。
+发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx\LogOutput.log[/font] 和 [font=Courier New]BepInEx\storage-hub.log[/font]。
 
 [size=5]源代码与许可[/size]
 基于 MIT 许可开源：[url=https://github.com/AnExiledDev/SurvivalLog-StorageHub]github.com/AnExiledDev/SurvivalLog-StorageHub[/url]

@@ -13,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.7.3";
+    private const string Version = "0.7.4";
 
     public override void Load()
     {
@@ -32,7 +32,7 @@ public sealed class Plugin : BasePlugin
         log.Write($"===== Storage Hub {Version} started, toggle key {toggleKey}, verbose {isVerbose}, keep list {isKeepOn}");
         InputGate.Apply(harmony, log.Write);
         PageMessages.Apply(harmony, log.Write);
-        var page = new WebPage(log.Write);
+        var page = new WebPage(log.Write, toggleKey.ToString());
         var keep = new KeepListKeeper(new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json")), () => DateTime.Now, log.Write);
         StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keep, isKeepOn);
         StoragePanel.Log = log.Write;

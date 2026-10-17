@@ -84,7 +84,7 @@ public static class Texts
         ("keepTip", new("Items putting the bag away always leaves in your bag, and how many of each", "收纳背包时总会留在背包里的物品，以及每种留多少")),
         ("putAwayBag", new("Put whole bag away by tag", "按标签收纳整个背包")),
         ("putAwayFloor", new("Put floor items away by tag", "按标签收纳地面物品")),
-        ("closeKeys", new("F8 / Esc to close", "按 F8 / Esc 关闭")),
+        ("closeKeys", new("{0} / Esc to close", "按 {0} / Esc 关闭")),
         ("subItems", new("{0} kinds of item across {1} storages and your bag", "{1} 个储物家具和背包里共有 {0} 种物品")),
         ("subRot", new("Food that spoils, soonest first, across {0} storages, your bag and the floor at home", "{0} 个储物家具、背包和家里地面上会腐败的食物，最快腐败的排在前面")),
         ("subKeep", new("Putting the bag away leaves these in your bag", "收纳背包时，这些物品会留在背包里")),

@@ -406,7 +406,7 @@
     keepTip: 'Items putting the bag away always leaves in your bag, and how many of each',
     putAwayBag: 'Put whole bag away by tag',
     putAwayFloor: 'Put floor items away by tag',
-    closeKeys: 'F8 / Esc to close',
+    closeKeys: '{0} / Esc to close',
     subItems: '{0} kinds of item across {1} storages and your bag',
     subRot: 'Food that spoils, soonest first, across {0} storages, your bag and the floor at home',
     subKeep: 'Putting the bag away leaves these in your bag',
@@ -923,7 +923,7 @@
     ui.keepButton.className = 'sh-btn' + (state.view === 'keep' ? ' sh-on' : '');
     ui.bagButton.textContent = say('putAwayBag');
     ui.floorButton.textContent = say('putAwayFloor');
-    ui.closeKeys.textContent = say('closeKeys');
+    ui.closeKeys.textContent = say('closeKeys', window.__storagehubToggleKey || 'F8');
   }
 
   function renderList() {

@@ -140,10 +140,22 @@ public class TextsTests
     [Fact]
     public void The_words_statement_carries_every_label_in_the_chosen_language()
     {
-        var script = PageWords.Script(isChinese: true);
+        var script = PageWords.Script(isChinese: true, "F8");
 
         Assert.StartsWith("window.__storagehubWords={", script);
         Assert.All(Texts.Page, word => Assert.Contains(HubView.Str(word.Key) + ":" + HubView.Str(word.Phrase.Zh), script));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_footer_names_the_key_the_player_set_instead_of_F8(bool isChinese)
+    {
+        var script = PageWords.Script(isChinese, "Insert");
+
+        Assert.Contains("window.__storagehubToggleKey=\"Insert\";", script);
+        Assert.Contains("{0} / Esc", Texts.Page.Single(word => word.Key == "closeKeys").Phrase.Pick(isChinese));
+        Assert.Contains("say('closeKeys', window.__storagehubToggleKey", PageScript());
     }
 
     private static string PageScript()

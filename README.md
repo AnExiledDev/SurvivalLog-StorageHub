@@ -173,7 +173,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.3 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.4 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

@@ -19,13 +19,15 @@ internal sealed class WebPage
     private const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
 
     private readonly Action<string> _log;
+    private readonly string _toggleKey;
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
 
-    public WebPage(Action<string> log)
+    public WebPage(Action<string> log, string toggleKey)
     {
         _log = log;
+        _toggleKey = toggleKey;
     }
 
     public void KeepInstalled(float now)
@@ -58,7 +60,7 @@ internal sealed class WebPage
 
     private void Call(string expression) => Run($"{Words()}window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}");
 
-    private static string Words() => PageWords.Script(GameLanguage.IsChinese());
+    private string Words() => PageWords.Script(GameLanguage.IsChinese(), _toggleKey);
 
     private bool Run(string javaScript)
     {

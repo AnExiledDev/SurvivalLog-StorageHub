@@ -26,15 +26,16 @@ public static class MoveRunner
     /// <summary>One line for the panel: what moved, and which items had nowhere to go.</summary>
     public static string Describe(MoveReport report, Inventory inventory)
     {
-        if (report.Moved == 0 && report.Unplaced.Count == 0) return "Nothing to move.";
+        var isChinese = inventory.IsChinese;
 
-        var moved = $"Moved {report.Moved} stack{(report.Moved == 1 ? "" : "s")}.";
+        if (report.Moved == 0 && report.Unplaced.Count == 0) return Texts.NothingToMove.Pick(isChinese);
+
+        var moved = Texts.Moved.Say(isChinese, report.Moved);
 
         if (report.Unplaced.Count == 0) return moved;
 
         var names = report.Unplaced.Select(stack => inventory.ItemName(stack.ConfigId)).Distinct().ToList();
-        var shown = string.Join(", ", names.Take(5)) + (names.Count > 5 ? $" and {names.Count - 5} more" : "");
 
-        return $"{moved} {report.Unplaced.Count} had nowhere to go: {shown}.";
+        return Texts.Sentences(isChinese, moved, Texts.Nowhere.Say(isChinese, report.Unplaced.Count, Texts.List(isChinese, names, 5)));
     }
 }

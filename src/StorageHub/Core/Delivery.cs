@@ -166,17 +166,22 @@ public static class Delivery
     /// </summary>
     public static string Describe(IReadOnlyList<Placement> placements, Inventory inventory)
     {
-        if (placements.Count == 0) return "Drone delivery: nothing new arrived.";
+        var isChinese = inventory.IsChinese;
+
+        if (placements.Count == 0) return Texts.DeliveryNothing.Pick(isChinese);
 
         var moved = Totals(placements.Where(placement => placement.Target.HasValue), placement => placement.Target ?? 0, inventory);
         var stayed = Totals(placements.Where(placement => !placement.Target.HasValue), placement => placement.Stack.OwnerId, inventory);
-        var line = moved.Count == 0 ? "Drone delivery: no storage takes any of it." : $"Drone delivery: {Listing(moved, "to")}.";
+        var line = moved.Count == 0 ? Texts.DeliveryNoTaker.Pick(isChinese) : Texts.DeliveryMoved.Say(isChinese, Listing(moved, Texts.UnitsTo, isChinese));
 
         if (stayed.Count == 0) return line;
 
         var stayedPlaces = stayed.Select(total => total.Place).Distinct().ToList();
+        var stayedLine = stayedPlaces.Count == 1
+            ? Texts.StayedIn.Say(isChinese, stayedPlaces[0], Listing(stayed, Texts.Units, isChinese))
+            : Texts.Stayed.Say(isChinese, Listing(stayed, Texts.UnitsIn, isChinese));
 
-        return stayedPlaces.Count == 1 ? $"{line} Stayed in {stayedPlaces[0]}: {Listing(stayed, null)}." : $"{line} Stayed: {Listing(stayed, "in")}.";
+        return Texts.Sentences(isChinese, line, stayedLine);
     }
 
     private static bool SharesABag(Landing landing, IReadOnlyList<Landing> group) =>
@@ -192,13 +197,13 @@ public static class Delivery
             .Select(group => (inventory.ItemName(group.Key.ConfigId), group.Sum(placement => placement.Stack.Count), inventory.StorageName(group.Key.Place)))
             .ToList();
 
-    /// <summary>"12 Wood to Wooden Box, 3 Red Apple to Fridge", or without the places when linkWord is null; long lists are cut short.</summary>
-    private static string Listing(List<(string Item, int Units, string Place)> totals, string? linkWord)
+    /// <summary>"12 Wood to Wooden Box, 3 Red Apple to Fridge", each entry said by entry ({0} units, {1} item, {2} place); long lists are cut short.</summary>
+    private static string Listing(List<(string Item, int Units, string Place)> totals, Phrase entry, bool isChinese)
     {
         const int Shown = 6;
 
-        var entries = totals.Select(total => linkWord == null ? $"{total.Units} {total.Item}" : $"{total.Units} {total.Item} {linkWord} {total.Place}").ToList();
+        var entries = totals.Select(total => entry.Say(isChinese, total.Units, total.Item, total.Place)).ToList();
 
-        return string.Join(", ", entries.Take(Shown)) + (entries.Count > Shown ? $" and {entries.Count - Shown} more" : "");
+        return Texts.List(isChinese, entries, Shown);
     }
 }

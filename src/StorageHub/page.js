@@ -373,13 +373,11 @@
   // ===== END slmod-menu v1 =====
 
   var PREFIX = 'slmod|storagehub|';
-  var KIND_LABEL = { bag: 'Bag', storage: 'Storage', drawer: 'Drawer' };
+  var KIND_WORD = { bag: 'kindBag', storage: 'kindStorage', drawer: 'kindDrawer' };
   var BUSY_TIMEOUT_MS = 5000;
 
   var TIMES = '\u00d7';
   var MINUS = '\u2212';
-  // Labels the list draws in warning colour: food that has turned, or will within the hour.
-  var URGENT_LEFT = { 'spoiled': true, 'under 1h': true };
   var MAX_KEEP = 9999;
   // A run of +/- clicks is saved once, this long after the last one.
   var KEEP_SAVE_DELAY_MS = 350;
@@ -397,6 +395,74 @@
   // asked for in between wait for the mouse to come up.
   var isPointerDown = false;
   var isRedrawHeld = false;
+
+  // The panel's words, used until the plugin sends them in the game's language (window.__storagehubWords) before each call.
+  var ENGLISH = {
+    search: 'Search items...',
+    searchKeep: 'Search every item to add it to the keep list...',
+    rotView: 'Rotting soon',
+    rotTip: 'Food in your bag, your storages and on the floor at home, soonest to spoil first',
+    keepView: 'Keep in bag',
+    keepTip: 'Items putting the bag away always leaves in your bag, and how many of each',
+    putAwayBag: 'Put whole bag away by tag',
+    putAwayFloor: 'Put floor items away by tag',
+    closeKeys: 'F8 / Esc to close',
+    subItems: '{0} kinds of item across {1} storages and your bag',
+    subRot: 'Food that spoils, soonest first, across {0} storages, your bag and the floor at home',
+    subKeep: 'Putting the bag away leaves these in your bag',
+    noMatch: 'Nothing matches that search.',
+    noItems: 'No items found.',
+    keep: 'Keep',
+    keepN: 'Keep {0}',
+    keepOnTip: 'On the keep list: open it to change the amount',
+    keepAddTip: 'Add to the keep list: putting the bag away leaves this many in your bag',
+    keepOff: 'The keep list is turned off in the config (Keep, Enabled), so putting the bag away moves everything.',
+    keepEmpty: 'Nothing on the keep list yet. Find an item on the right, or press Keep on an item in the main list.',
+    keepRemoveTip: 'Take off the keep list',
+    heldNone: '{0} in your bag, none kept',
+    held: '{0} in your bag',
+    heldShort: '{0} in your bag, {1} short',
+    keepLess: 'Keep one fewer',
+    keepMore: 'Keep one more',
+    keepAmountTip: 'How many to keep in your bag',
+    keepAddTitle: 'Add to the keep list',
+    noName: 'No item has that name.',
+    bagEmpty: 'Your bag is empty. Type a name above to find any item.',
+    moreResults: '{0} more. Type more of the name to narrow it down.',
+    hintBag: 'In your bag now. Type a name above to search every item in the game.',
+    hintAll: 'Every item in the game',
+    hintLoading: 'Items you own (the full item list is still loading)',
+    inBag: '{0} in bag',
+    keeping: 'Keeping {0}',
+    addKeep: '+ Keep',
+    addKeepTip: 'Add to the keep list, keeping {0}',
+    nothingSpoils: 'Nothing here spoils.',
+    floorOnlyTip: 'Only on the floor: "Put floor items away by tag" picks it up',
+    pickItem: 'Pick an item on the left.',
+    total: '{0} in total',
+    takeAll: 'Take all into bag',
+    putAwayTag: 'Put away by tag',
+    putAway: 'Put away',
+    take: 'Take',
+    kindBag: 'Bag',
+    kindStorage: 'Storage',
+    kindDrawer: 'Drawer',
+    menuPutAwayTip: 'Move everything in your bag into the storages whose tags want it',
+    menuFloor: 'Put away floor',
+    menuFloorTip: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag'
+  };
+
+  function words() {
+    return window.__storagehubWords || ENGLISH;
+  }
+
+  // say('held', 3) fills {0} with 3; a key the plugin's words lack falls back to English.
+  function say(key) {
+    var args = arguments;
+    var text = words()[key] || ENGLISH[key] || key;
+
+    return text.replace(/\{(\d)\}/g, function (all, index) { return String(args[Number(index) + 1]); });
+  }
 
   function send(message) {
     try {
@@ -517,16 +583,15 @@
     var bar = el('div', 'sh-bar');
     var search = el('input', 'sh-search');
     search.type = 'text';
-    search.placeholder = 'Search items...';
-    var rotButton = button('Rotting soon', 'rotView');
-    rotButton.title = 'Food in your bag, your storages and on the floor at home, soonest to spoil first';
-    var keepButton = button('Keep in bag', 'keepView');
-    keepButton.title = 'Items putting the bag away always leaves in your bag, and how many of each';
+    var rotButton = button('', 'rotView');
+    var keepButton = button('', 'keepView');
+    var bagButton = button('', 'putAwayBag');
+    var floorButton = button('', 'putAwayFloor');
     bar.appendChild(search);
     bar.appendChild(rotButton);
     bar.appendChild(keepButton);
-    bar.appendChild(button('Put whole bag away by tag', 'putAwayBag'));
-    bar.appendChild(button('Put floor items away by tag', 'putAwayFloor'));
+    bar.appendChild(bagButton);
+    bar.appendChild(floorButton);
 
     var body = el('div', 'sh-body');
     var list = el('div', 'sh-list');
@@ -536,8 +601,9 @@
 
     var foot = el('div', 'sh-foot');
     var status = el('div', 'sh-status');
+    var closeKeys = el('div');
     foot.appendChild(status);
-    foot.appendChild(el('div', '', 'F8 / Esc to close'));
+    foot.appendChild(closeKeys);
 
     plate.appendChild(head);
     plate.appendChild(bar);
@@ -578,7 +644,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sub: sub, search: search, rotButton: rotButton, keepButton: keepButton, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, sub: sub, search: search, rotButton: rotButton, keepButton: keepButton, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
   }
 
   // The click comes straight after mouseup, so the held redraw runs once it is through.
@@ -655,7 +721,6 @@
 
     if (state.view === 'keep') askForCatalog();
 
-    ui.search.placeholder = state.view === 'keep' ? 'Search every item to add it to the keep list...' : 'Search items...';
     render();
   }
 
@@ -844,13 +909,21 @@
   function renderHeader() {
     var homes = state.data.storages.filter(function (s) { return s.kind !== 'bag'; }).length;
     var subtitles = {
-      items: state.data.items.length + ' kinds of item across ' + homes + ' storages and your bag',
-      rot: 'Food that spoils, soonest first, across ' + homes + ' storages, your bag and the floor at home',
-      keep: 'Putting the bag away leaves these in your bag'
+      items: say('subItems', state.data.items.length, homes),
+      rot: say('subRot', homes),
+      keep: say('subKeep')
     };
     ui.sub.textContent = subtitles[state.view];
+    ui.search.placeholder = say(state.view === 'keep' ? 'searchKeep' : 'search');
+    ui.rotButton.textContent = say('rotView');
+    ui.rotButton.title = say('rotTip');
     ui.rotButton.className = 'sh-btn' + (state.view === 'rot' ? ' sh-on' : '');
+    ui.keepButton.textContent = say('keepView');
+    ui.keepButton.title = say('keepTip');
     ui.keepButton.className = 'sh-btn' + (state.view === 'keep' ? ' sh-on' : '');
+    ui.bagButton.textContent = say('putAwayBag');
+    ui.floorButton.textContent = say('putAwayFloor');
+    ui.closeKeys.textContent = say('closeKeys');
   }
 
   function renderList() {
@@ -871,7 +944,7 @@
     ui.list.textContent = '';
 
     if (items.length === 0) {
-      ui.list.appendChild(el('div', 'sh-empty', state.query ? 'Nothing matches that search.' : 'No items found.'));
+      ui.list.appendChild(el('div', 'sh-empty', say(state.query ? 'noMatch' : 'noItems')));
 
       return;
     }
@@ -894,8 +967,8 @@
 
   function quickKeepButton(id) {
     var isOnList = isKept(id);
-    var node = withArgs(button(isOnList ? 'Keep ' + keptAmount(id) : 'Keep', 'quickKeep', 'sh-mini' + (isOnList ? ' sh-on' : '')), id);
-    node.title = isOnList ? 'On the keep list: open it to change the amount' : 'Add to the keep list: putting the bag away leaves this many in your bag';
+    var node = withArgs(button(isOnList ? say('keepN', keptAmount(id)) : say('keep'), 'quickKeep', 'sh-mini' + (isOnList ? ' sh-on' : '')), id);
+    node.title = say(isOnList ? 'keepOnTip' : 'keepAddTip');
 
     return node;
   }
@@ -909,10 +982,10 @@
     var keep = state.data.keep || { on: true, rows: [] };
     ui.list.textContent = '';
 
-    if (!keep.on) ui.list.appendChild(el('div', 'sh-banner', 'The keep list is turned off in the config (Keep, Enabled), so putting the bag away moves everything.'));
+    if (!keep.on) ui.list.appendChild(el('div', 'sh-banner', say('keepOff')));
 
     if (keepRows().length === 0) {
-      ui.list.appendChild(el('div', 'sh-empty', 'Nothing on the keep list yet. Find an item on the right, or press Keep on an item in the main list.'));
+      ui.list.appendChild(el('div', 'sh-empty', say('keepEmpty')));
 
       return;
     }
@@ -936,26 +1009,26 @@
     row.appendChild(stepperNode(kept.id, amount));
 
     var remove = withArgs(button(TIMES, 'keepRemove', 'sh-del'), kept.id);
-    remove.title = 'Take off the keep list';
+    remove.title = say('keepRemoveTip');
     row.appendChild(remove);
 
     return row;
   }
 
   function heldNode(held, amount) {
-    if (amount === 0) return el('div', 'sh-held', held + ' in your bag, none kept');
+    if (amount === 0) return el('div', 'sh-held', say('heldNone', held));
 
     var isShort = held < amount;
 
-    return el('div', 'sh-held' + (isShort ? ' sh-held-short' : ''), held + ' in your bag' + (isShort ? ', ' + (amount - held) + ' short' : ''));
+    return el('div', 'sh-held' + (isShort ? ' sh-held-short' : ''), isShort ? say('heldShort', held, amount - held) : say('held', held));
   }
 
   function stepperNode(id, amount) {
     var step = el('div', 'sh-step');
     var less = withArgs(button(MINUS, 'keepStep'), id + '|-1');
     var more = withArgs(button('+', 'keepStep'), id + '|1');
-    less.title = 'Keep one fewer';
-    more.title = 'Keep one more';
+    less.title = say('keepLess');
+    more.title = say('keepMore');
     step.appendChild(less);
     step.appendChild(amountField(id, amount));
     step.appendChild(more);
@@ -972,7 +1045,7 @@
     field.max = String(MAX_KEEP);
     field.value = String(amount);
     field.setAttribute('data-shown', String(amount));
-    field.title = 'How many to keep in your bag';
+    field.title = say('keepAmountTip');
     field.addEventListener('focus', function () {
       send('focus|1');
       field.select();
@@ -1019,12 +1092,12 @@
     ui.detail.textContent = '';
 
     var head = el('div');
-    head.appendChild(el('div', 'sh-dname', 'Add to the keep list'));
+    head.appendChild(el('div', 'sh-dname', say('keepAddTitle')));
     head.appendChild(el('div', 'sh-hint', keepAddHint(words.length > 0)));
     ui.detail.appendChild(head);
 
     if (found.length === 0) {
-      ui.detail.appendChild(el('div', 'sh-empty', words.length > 0 ? 'No item has that name.' : 'Your bag is empty. Type a name above to find any item.'));
+      ui.detail.appendChild(el('div', 'sh-empty', say(words.length > 0 ? 'noName' : 'bagEmpty')));
 
       return;
     }
@@ -1033,16 +1106,16 @@
 
     found.slice(0, MAX_KEEP_RESULTS).forEach(function (item) { picks.appendChild(keepPickNode(item)); });
 
-    if (found.length > MAX_KEEP_RESULTS) picks.appendChild(el('div', 'sh-empty', (found.length - MAX_KEEP_RESULTS) + ' more. Type more of the name to narrow it down.'));
+    if (found.length > MAX_KEEP_RESULTS) picks.appendChild(el('div', 'sh-empty', say('moreResults', found.length - MAX_KEEP_RESULTS)));
 
     ui.detail.appendChild(picks);
     picks.scrollTop = scroll;
   }
 
   function keepAddHint(isSearching) {
-    if (!isSearching) return 'In your bag now. Type a name above to search every item in the game.';
+    if (!isSearching) return say('hintBag');
 
-    return state.catalog.length > 0 ? 'Every item in the game' : 'Items you own (the full item list is still loading)';
+    return say(state.catalog.length > 0 ? 'hintAll' : 'hintLoading');
   }
 
   function keepPickNode(item) {
@@ -1051,13 +1124,13 @@
     pick.appendChild(icon(item, 'sh-i38'));
     pick.appendChild(el('div', 'sh-name', item.name));
 
-    if (held > 0) pick.appendChild(el('span', 'sh-badge sh-badge-bag', held + ' in bag'));
+    if (held > 0) pick.appendChild(el('span', 'sh-badge sh-badge-bag', say('inBag', held)));
 
     if (isKept(item.id)) {
-      pick.appendChild(el('span', 'sh-badge', 'Keeping ' + keptAmount(item.id)));
+      pick.appendChild(el('span', 'sh-badge', say('keeping', keptAmount(item.id))));
     } else {
-      var add = withArgs(button('+ Keep', 'keepAdd'), item.id);
-      add.title = 'Add to the keep list, keeping ' + suggestedKeep(item.id);
+      var add = withArgs(button(say('addKeep'), 'keepAdd'), item.id);
+      add.title = say('addKeepTip', suggestedKeep(item.id));
       pick.appendChild(add);
     }
 
@@ -1072,7 +1145,7 @@
     ui.list.textContent = '';
 
     if (rows.length === 0) {
-      ui.list.appendChild(el('div', 'sh-empty', state.query ? 'Nothing matches that search.' : 'Nothing here spoils.'));
+      ui.list.appendChild(el('div', 'sh-empty', say(state.query ? 'noMatch' : 'nothingSpoils')));
 
       return;
     }
@@ -1085,13 +1158,13 @@
       var row = el('div', 'sh-row' + (hasDetail ? '' : ' sh-still') + (isSelected ? ' sh-active' : ''));
 
       if (hasDetail) row.setAttribute('data-item', String(rot.id));
-      else row.title = 'Only on the floor: "Put floor items away by tag" picks it up';
+      else row.title = say('floorOnlyTip');
 
       row.appendChild(icon(rot, 'sh-i38'));
       row.appendChild(el('div', 'sh-name', rot.name));
       row.appendChild(el('span', 'sh-badge sh-where', rot.where));
       row.appendChild(el('div', 'sh-count', TIMES + rot.count));
-      row.appendChild(el('div', 'sh-left' + (URGENT_LEFT[rot.left] ? ' sh-left-urgent' : ''), rot.left));
+      row.appendChild(el('div', 'sh-left' + (rot.urgent ? ' sh-left-urgent' : ''), rot.left));
       fragment.appendChild(row);
     });
 
@@ -1112,7 +1185,7 @@
     ui.detail.textContent = '';
 
     if (!item) {
-      ui.detail.appendChild(el('div', 'sh-empty', 'Pick an item on the left.'));
+      ui.detail.appendChild(el('div', 'sh-empty', say('pickItem')));
 
       return;
     }
@@ -1120,7 +1193,7 @@
     var head = el('div', 'sh-dhead');
     var titles = el('div');
     titles.appendChild(el('div', 'sh-dname', item.name));
-    titles.appendChild(el('div', 'sh-dtotal', item.total + ' in total'));
+    titles.appendChild(el('div', 'sh-dtotal', say('total', item.total)));
     head.appendChild(icon(item, 'sh-i64'));
     head.appendChild(titles);
     ui.detail.appendChild(head);
@@ -1129,8 +1202,8 @@
     var hasElsewhere = item.at.some(function (at) { return storageOf(at[0]).kind !== 'bag'; });
     var actions = el('div', 'sh-actions');
 
-    if (hasElsewhere) actions.appendChild(withArgs(button('Take all into bag', 'takeAll'), item.id));
-    if (hasBag) actions.appendChild(withArgs(button('Put away by tag', 'putAway'), item.id));
+    if (hasElsewhere) actions.appendChild(withArgs(button(say('takeAll'), 'takeAll'), item.id));
+    if (hasBag) actions.appendChild(withArgs(button(say('putAwayTag'), 'putAway'), item.id));
 
     ui.detail.appendChild(actions);
 
@@ -1140,10 +1213,10 @@
       var storage = storageOf(at[0]);
       var isBag = storage.kind === 'bag';
       var loc = el('div', 'sh-loc');
-      loc.appendChild(el('span', 'sh-badge' + (isBag ? ' sh-badge-bag' : ''), KIND_LABEL[storage.kind] || storage.kind));
+      loc.appendChild(el('span', 'sh-badge' + (isBag ? ' sh-badge-bag' : ''), KIND_WORD[storage.kind] ? say(KIND_WORD[storage.kind]) : storage.kind));
       loc.appendChild(el('div', 'sh-name', storage.name));
       loc.appendChild(el('div', 'sh-count', TIMES + at[1]));
-      loc.appendChild(isBag ? withArgs(button('Put away', 'putAway'), item.id) : withArgs(button('Take', 'take'), item.id + '|' + storage.id));
+      loc.appendChild(isBag ? withArgs(button(say('putAway'), 'putAway'), item.id) : withArgs(button(say('take'), 'take'), item.id + '|' + storage.id));
       locs.appendChild(loc);
     });
 
@@ -1253,9 +1326,21 @@
   var FLOOR_ICON = 'M3 19h18v2H3zM12 3l6 6h-4v7h-4V9H6z';
 
   var menuEntries = [
-    { id: 'storagehub.putaway', label: 'Put away by tag', title: 'Move everything in your bag into the storages whose tags want it', icon: PUT_AWAY_ICON, order: 100, run: function () { sendAction('putAwayBag'); } },
-    { id: 'storagehub.floor', label: 'Put away floor', title: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag', icon: FLOOR_ICON, order: 110, run: function () { sendAction('putAwayFloor'); } }
+    { id: 'storagehub.putaway', labelWord: 'putAwayTag', titleWord: 'menuPutAwayTip', icon: PUT_AWAY_ICON, order: 100, run: function () { sendAction('putAwayBag'); } },
+    { id: 'storagehub.floor', labelWord: 'menuFloor', titleWord: 'menuFloorTip', icon: FLOOR_ICON, order: 110, run: function () { sendAction('putAwayFloor'); } }
   ];
+  var menuWords = null;
+
+  function menuEntry(entry) {
+    return { id: entry.id, label: say(entry.labelWord), title: say(entry.titleWord), icon: entry.icon, order: entry.order, run: entry.run };
+  }
+
+  function relabelMenu() {
+    if (menuWords === words()) return;
+
+    menuWords = words();
+    menuEntries.forEach(function (entry) { slmodMenu.update(entry.id, { label: say(entry.labelWord), title: say(entry.titleWord) }); });
+  }
 
   // Reads the page's Vue state, which a game update can rename; failing open shows the buttons on every tab, so the
   // first failure is reported.
@@ -1299,11 +1384,13 @@
     var bar = doc.querySelector('.bag-slot .toolbar');
     var isWanted = !!bar && backpackTabWantsButton(doc);
 
+    relabelMenu();
     menuEntries.forEach(function (entry) { slmodMenu.setWanted(entry.id, isWanted); });
     slmodMenu.place(doc);
   }
 
-  menuEntries.forEach(function (entry) { slmodMenu.add(entry); });
+  menuEntries.forEach(function (entry) { slmodMenu.add(menuEntry(entry)); });
+  menuWords = words();
   // The game sends the page no keys, so the plugin holds the game's hotkeys back while the menu is open and closes
   // it on Esc itself.
   slmodMenu.watch('storagehub', function (isOpen) { send('menu|' + (isOpen ? '1' : '0')); });

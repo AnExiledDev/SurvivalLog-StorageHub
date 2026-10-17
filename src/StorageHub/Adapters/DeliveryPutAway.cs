@@ -132,7 +132,7 @@ internal sealed class DeliveryPutAway
     /// <summary>The landing bags are read again here, through the same reader that ranks them, so the plan sees this frame's counts.</summary>
     private string PutAway(LandingGroup group)
     {
-        if (_game.Read() is not InventoryRead.Ready ready) return "Drone delivery: storages could not be read, everything stayed where it landed.";
+        if (_game.Read() is not InventoryRead.Ready ready) return Texts.DeliveryUnread.Pick(GameLanguage.IsChinese());
 
         var landed = group.Owners.SelectMany(owner => _game.ReadOwner(owner)).ToList();
         var delivered = Delivery.Delivered(group.Before, landed);
@@ -191,8 +191,8 @@ internal sealed class DeliveryPutAway
 
         foreach (var landing in group.Landings)
         {
-            if (landing.HubId is { } hub && storages.All(storage => storage.OwnerId != hub)) storages.Add(new Storage(hub, "Drone hub", StorageKind.Furniture, DroneBay.Hub));
-            if (storages.All(storage => storage.OwnerId != landing.DroneId)) storages.Add(new Storage(landing.DroneId, "Drone", StorageKind.Furniture, DroneBay.Drone));
+            if (landing.HubId is { } hub && storages.All(storage => storage.OwnerId != hub)) storages.Add(new Storage(hub, Texts.DroneHub.Pick(inventory.IsChinese), StorageKind.Furniture, DroneBay.Hub));
+            if (storages.All(storage => storage.OwnerId != landing.DroneId)) storages.Add(new Storage(landing.DroneId, Texts.Drone.Pick(inventory.IsChinese), StorageKind.Furniture, DroneBay.Drone));
         }
 
         foreach (var stack in delivered) names.TryAdd(stack.ConfigId, _game.NameOf(stack.ConfigId));

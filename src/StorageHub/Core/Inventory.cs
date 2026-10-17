@@ -35,8 +35,8 @@ public sealed record Storage(long OwnerId, string Name, StorageKind Kind, DroneB
 /// <summary>One stack, which is one item instance in the game, and the storage holding it.</summary>
 public sealed record ItemStack(long ItemId, int ConfigId, int Count, long OwnerId);
 
-/// <summary>Everything the player owns at home, read in one go.</summary>
-public sealed record Inventory(IReadOnlyList<Storage> Storages, IReadOnlyList<ItemStack> Stacks, IReadOnlyDictionary<int, string> ItemNames)
+/// <summary>Everything the player owns at home, read in one go, and whether the game is showing Chinese.</summary>
+public sealed record Inventory(IReadOnlyList<Storage> Storages, IReadOnlyList<ItemStack> Stacks, IReadOnlyDictionary<int, string> ItemNames, bool IsChinese = false)
 {
     public static readonly Inventory Empty = new(new List<Storage>(), new List<ItemStack>(), new Dictionary<int, string>());
 
@@ -45,7 +45,8 @@ public sealed record Inventory(IReadOnlyList<Storage> Storages, IReadOnlyList<It
 
     public Storage? Bag => Storages.FirstOrDefault(storage => storage.Kind == StorageKind.Bag);
 
-    public string ItemName(int configId) => ItemNames.TryGetValue(configId, out var name) ? name : $"Item {configId}";
+    public string ItemName(int configId) => ItemNames.TryGetValue(configId, out var name) ? name : Texts.UnnamedItem.Say(IsChinese, configId);
 
-    public string StorageName(long ownerId) => ownerId == FloorOwnerId ? "Floor" : Storages.FirstOrDefault(storage => storage.OwnerId == ownerId)?.Name ?? $"Storage {ownerId}";
+    public string StorageName(long ownerId) =>
+        ownerId == FloorOwnerId ? Texts.Floor.Pick(IsChinese) : Storages.FirstOrDefault(storage => storage.OwnerId == ownerId)?.Name ?? Texts.UnnamedStorage.Say(IsChinese, ownerId);
 }

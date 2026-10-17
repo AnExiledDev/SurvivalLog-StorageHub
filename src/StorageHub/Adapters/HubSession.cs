@@ -13,8 +13,6 @@ namespace StorageHub.Adapters;
 internal sealed class HubSession
 {
     private const float RefreshSeconds = 1f;
-    private const string FailedStatus = "That failed, see BepInEx/storage-hub.log.";
-    private const string KeepNotReadStatus = "Could not read the keep list, see BepInEx/storage-hub.log.";
 
     private readonly GameStorages _game;
     private readonly WebPage _page;
@@ -161,7 +159,7 @@ internal sealed class HubSession
     private void GiveUpOnFailedRead()
     {
         Close();
-        _page.Status(_status.Result(FailedStatus));
+        _page.Status(_status.Result(Texts.Failed.Pick(IsChinese)));
     }
 
     private bool TryReadView(string reason, out string view, out string? notReady)
@@ -198,7 +196,7 @@ internal sealed class HubSession
     private string ReadView(out string? notReady)
     {
         _nextRefreshAt = Time.unscaledTime + RefreshSeconds;
-        notReady = RefreshInventory(out var reason) ? null : "Not available right now: " + reason;
+        notReady = RefreshInventory(out var reason) ? null : NotAvailable(reason);
 
         var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
         AddNames(_keep.List.Amounts.Keys);
@@ -337,7 +335,7 @@ internal sealed class HubSession
         }
         catch (Exception ex)
         {
-            status = FailedStatus;
+            status = Texts.Failed.Pick(IsChinese);
             _log(name + " failed: " + ex);
         }
         finally
@@ -354,7 +352,7 @@ internal sealed class HubSession
     /// <summary>The inventory is read again first: the bag button works with the panel shut, when nothing here is fresh.</summary>
     private string Take(Func<ItemStack, bool> wanted)
     {
-        if (!RefreshInventory(out var reason)) return "Not available right now: " + reason;
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         return Execute(StoragePlan.Take(_inventory, _inventory.Stacks.Where(wanted)), MoveAndLog);
     }
@@ -365,13 +363,13 @@ internal sealed class HubSession
     /// </summary>
     private string PutAway(Func<ItemStack, bool> wanted)
     {
-        if (_isKeepOn && !_keep.TryRead()) return KeepNotReadStatus + " Nothing was put away.";
+        if (_isKeepOn && !_keep.TryRead()) return Texts.Sentences(IsChinese, Texts.KeepNotRead.Pick(IsChinese), Texts.NothingPutAway.Pick(IsChinese));
 
-        if (!RefreshInventory(out var reason)) return "Not available right now: " + reason;
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         var bag = _inventory.Bag;
 
-        if (bag == null) return "No bag found.";
+        if (bag == null) return Texts.NoBag.Pick(IsChinese);
 
         var split = BagKeep.Split(_inventory.Stacks.Where(stack => stack.OwnerId == bag.OwnerId && wanted(stack)), _isKeepOn ? _keep.List : KeepList.Empty, _game.DaysLeft);
         var kept = BagKeep.Describe(split, _inventory);
@@ -380,7 +378,7 @@ internal sealed class HubSession
 
         var moved = Execute(StoragePlan.PutAway(_inventory, split.PutAway, LoggedFacts), MoveAndLog);
 
-        return kept.Length == 0 ? moved : moved + " " + kept;
+        return Texts.Sentences(IsChinese, moved, kept);
     }
 
     private void LogKept(IEnumerable<ItemStack> kept)
@@ -395,9 +393,9 @@ internal sealed class HubSession
             case KeepEdit.Saved:
                 return KeptStatus(configId);
             case KeepEdit.NotRead:
-                return KeepNotReadStatus;
+                return Texts.KeepNotRead.Pick(IsChinese);
             case KeepEdit.NotSaved:
-                return "Could not save the keep list, see BepInEx/storage-hub.log.";
+                return Texts.KeepNotSaved.Pick(IsChinese);
             default:
                 throw new InvalidOperationException("unknown keep edit");
         }
@@ -407,12 +405,16 @@ internal sealed class HubSession
     {
         var name = _game.NameOf(configId);
 
-        if (!_keep.List.Has(configId)) return $"{name} is off the keep list.";
+        if (!_keep.List.Has(configId)) return Texts.OffKeepList.Say(IsChinese, name);
 
         var amount = _keep.List.AmountOf(configId);
 
-        return amount == 0 ? $"Keeping no {name} in your bag for now." : $"Keeping {amount} {name} in your bag.";
+        return amount == 0 ? Texts.KeepingNone.Say(IsChinese, name) : Texts.Keeping.Say(IsChinese, amount, name);
     }
+
+    private static bool IsChinese => GameLanguage.IsChinese();
+
+    private static string NotAvailable(string reason) => Texts.NotAvailable.Say(IsChinese, reason);
 
     /// <summary>A failed catalog is answered with an empty one, which the page takes as "ask again later".</summary>
     private void SendCatalog()
@@ -433,11 +435,11 @@ internal sealed class HubSession
     /// <summary>Floor items are not in the storage read, so their names are added before anything is logged.</summary>
     private string PutAwayFloor()
     {
-        if (!RefreshInventory(out var reason)) return "Not available right now: " + reason;
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         var floor = _game.ReadFloor();
 
-        if (floor.Count == 0) return "Nothing on the floor at home.";
+        if (floor.Count == 0) return Texts.NothingOnFloor.Pick(IsChinese);
 
         AddNames(floor.Select(stack => stack.ConfigId));
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace StorageHub.Core;
@@ -58,9 +57,10 @@ public static class BagKeep
             .GroupBy(stack => stack.ConfigId)
             .Select(kind => (Name: inventory.ItemName(kind.Key), Count: kind.Sum(stack => stack.Count)))
             .OrderBy(kind => kind.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(kind => kind.Count.ToString(CultureInfo.InvariantCulture) + " " + kind.Name);
+            .Select(kind => Texts.Units.Say(inventory.IsChinese, kind.Count, kind.Name))
+            .ToList();
 
-        return "Kept in your bag: " + string.Join(", ", kinds) + ".";
+        return Texts.KeptInBag.Say(inventory.IsChinese, Texts.List(inventory.IsChinese, kinds, kinds.Count));
     }
 
     private static IEnumerable<ItemStack> KeepOf(IEnumerable<ItemStack> kind, int amount, IReadOnlyDictionary<long, float> daysLeft)

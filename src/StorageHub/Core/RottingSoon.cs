@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace StorageHub.Core;
 
 /// <summary>Items of one kind in one place that spoil in the same hour, for the "Rotting soon" view.</summary>
-public sealed record RotRow(int ConfigId, string Name, int Count, long OwnerId, string Where, int HoursLeft)
+public sealed record RotRow(int ConfigId, string Name, int Count, long OwnerId, string Where, int HoursLeft, bool IsChinese = false)
 {
     /// <summary>How long is left, the way the list shows it: "spoiled", "under 1h", "5h", "2d 3h".</summary>
-    public string Label => RottingSoon.Label(HoursLeft);
+    public string Label => RottingSoon.Label(HoursLeft, IsChinese);
+
+    /// <summary>Spoiled, or will be within the hour; the list draws these in a warning colour.</summary>
+    public bool IsUrgent => HoursLeft < 1;
 }
 
 public static class RottingSoon
@@ -24,7 +26,7 @@ public static class RottingSoon
             .Concat(floor)
             .Where(stack => daysLeft.TryGetValue(stack.ItemId, out var days) && Spoils(days))
             .GroupBy(stack => (stack.ConfigId, stack.OwnerId, Hours: HoursLeft(daysLeft[stack.ItemId])))
-            .Select(group => new RotRow(group.Key.ConfigId, inventory.ItemName(group.Key.ConfigId), group.Sum(stack => stack.Count), group.Key.OwnerId, inventory.StorageName(group.Key.OwnerId), group.Key.Hours))
+            .Select(group => new RotRow(group.Key.ConfigId, inventory.ItemName(group.Key.ConfigId), group.Sum(stack => stack.Count), group.Key.OwnerId, inventory.StorageName(group.Key.OwnerId), group.Key.Hours, inventory.IsChinese))
             .OrderBy(row => row.HoursLeft)
             .ThenBy(row => row.Name, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(row => row.Where, StringComparer.CurrentCultureIgnoreCase)
@@ -32,16 +34,16 @@ public static class RottingSoon
             .ToList();
 
     /// <summary>Hours below 0 mean the item has already spoiled.</summary>
-    public static string Label(int hoursLeft)
+    public static string Label(int hoursLeft, bool isChinese = false)
     {
-        if (hoursLeft < 0) return "spoiled";
+        if (hoursLeft < 0) return Texts.Spoiled.Pick(isChinese);
 
-        if (hoursLeft == 0) return "under 1h";
+        if (hoursLeft == 0) return Texts.UnderAnHour.Pick(isChinese);
 
         var days = hoursLeft / 24;
         var hours = hoursLeft % 24;
 
-        return days == 0 ? Text(hours) + "h" : $"{Text(days)}d {Text(hours)}h";
+        return days == 0 ? Texts.HoursLeft.Say(isChinese, hours) : Texts.DaysLeft.Say(isChinese, days, hours);
     }
 
     /// <summary>The game answers -1 for an item that never spoils or has stopped, and Freshness.NeverSpoils stands in when the game cannot be asked.</summary>
@@ -49,6 +51,4 @@ public static class RottingSoon
 
     /// <summary>Whole hours left, rounded down, so the list only changes once an hour; -1 means already spoiled.</summary>
     private static int HoursLeft(float daysLeft) => daysLeft <= 0f ? -1 : (int)Math.Floor(daysLeft * 24f);
-
-    private static string Text(int number) => number.ToString(CultureInfo.InvariantCulture);
 }

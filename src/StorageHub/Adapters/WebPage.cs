@@ -38,7 +38,7 @@ internal sealed class WebPage
 
     public void Install()
     {
-        if (Run(Script())) _log("page script sent to the web UI");
+        if (Run(Words() + Script())) _log("page script sent to the web UI");
     }
 
     public void Open(string viewJson) => Call($"open({viewJson})");
@@ -56,7 +56,9 @@ internal sealed class WebPage
     /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made.</summary>
     public void CloseMenu() => Run("window.__slmodmenu&&window.__slmodmenu.close()");
 
-    private void Call(string expression) => Run($"window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}");
+    private void Call(string expression) => Run($"{Words()}window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}");
+
+    private static string Words() => PageWords.Script(GameLanguage.IsChinese());
 
     private bool Run(string javaScript)
     {

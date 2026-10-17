@@ -17,6 +17,8 @@ Survival Log makes you open storage after storage to find something, and again t
 
 The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)).
 
+The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names come from the game as it words them.
+
 Storage Hub keeps nothing of its own in your save and does not edit game files. The items it moves stay where it put them, so removing the mod undoes nothing.
 
 **Back up your saves before trying a new version of this mod.** It moves real items around in your save, and a new version can have new bugs.
@@ -145,12 +147,11 @@ Moving items around is finicky. The mod checks every move and puts things back w
 - A delivered stack that topped up a stack already in the hub moves whole, including what was there before.
 - When the hub is full, the game leaves the cargo in the drone. Anything the game moves out of the drone later is not put away.
 - The keep list is one list for all saves.
-- The mod's own text is in English. Item and storage names come from the game, in your language.
 - `BepInEx\storage-hub.log` is never trimmed. Delete it now and then if it grows large.
 
 ## Requirements
 
-- Survival Log 1.1.18317. Built for this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.18902. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 
 ## Install
@@ -164,7 +165,7 @@ Delete `StorageHub.dll` from the `BepInEx\plugins` folder. For a clean slate, al
 
 ## Configuration
 
-Settings live in `BepInEx\config\com.dev.survivallog.storagehub.cfg`, created the first time the game starts with the mod. Edit it while the game is closed; changes apply at the next game start. See [CONFIG.md](CONFIG.md) for every setting.
+Settings live in `BepInEx\config\com.dev.survivallog.storagehub.cfg`, created the first time the game starts with the mod. Edit it while the game is closed; changes apply at the next game start. Each setting in the cfg file is explained in English and Simplified Chinese. See [CONFIG.md](CONFIG.md) for every setting.
 
 The keep list is not in that file. Change it in the panel ("Keep in bag").
 
@@ -172,7 +173,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.2 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.7.3 started`. It names the toggle key and whether verbose logging and the keep list are on. The lines after it say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

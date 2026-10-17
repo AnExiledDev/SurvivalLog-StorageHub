@@ -13,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.7.2";
+    private const string Version = "0.7.3";
 
     public override void Load()
     {
@@ -22,10 +22,10 @@ public sealed class Plugin : BasePlugin
             "打开和关闭 Storage Hub 面板的按键。默认 F8。").Value;
         var isVerbose = Config.Bind("Diagnostics", "Verbose", false,
             "Write extra detail to BepInEx/storage-hub.log: every planned move, what the keep list left in your bag, and how well each storage's tags matched an item. Turn it on to find out why an item went where it did. Default: off.\n" +
-            "在 BepInEx/storage-hub.log 日志里写入更多细节：每一步计划的移动、「Keep in bag」清单留在背包里的物品，以及每个储物家具的标签和物品有多匹配。想弄清某件物品为什么被放到那里时再打开。默认关闭。").Value;
+            "在 BepInEx/storage-hub.log 日志里写入更多细节：每一步计划的移动、「留在背包」清单留在背包里的物品，以及每个储物家具的标签和物品有多匹配。想弄清某件物品为什么被放到那里时再打开。默认关闭。").Value;
         var isKeepOn = Config.Bind("Keep", "Enabled", true,
             "When you put your bag away, leave the amounts on the panel's \"Keep in bag\" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
-            "收纳背包时，按面板上「Keep in bag」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。").Value;
+            "收纳背包时，按面板上「留在背包」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。").Value;
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 
@@ -45,7 +45,7 @@ public sealed class Plugin : BasePlugin
     {
         var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true,
             "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also counts each delivery as retrieving the supplies, so events that ask for a drone trade and a retrieve can finish; with this off, those events stay open when the drone hub unloads the drone for you. Default: on.\n" +
-            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「Put whole bag away by tag」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时会把每次送货算作「取回物资」，让要求无人机交易并取回物资的事件可以完成；关闭后，如果无人机站替你卸货，这类事件会一直无法完成。默认开启。").Value;
+            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「按标签收纳整个背包」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时会把每次送货算作「取回物资」，让要求无人机交易并取回物资的事件可以完成；关闭后，如果无人机中控台替你卸货，这类事件会一直无法完成。默认开启。").Value;
 
         var skipRobotPutOff = Config.Bind("Delivery", "SkipRacksWithRobotPutOff", false,
             "When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. Default: off.\n" +

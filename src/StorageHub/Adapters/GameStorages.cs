@@ -65,18 +65,20 @@ internal sealed class GameStorages
         var player = agents?.GetLeadingRole();
         var config = GameSingleton.Existing<ConfigManager>();
 
-        if (cache == null) return new InventoryRead.NotReady("no item data yet (load a save first)");
-        if (world == null || agents == null || player == null || config == null) return new InventoryRead.NotReady("the game world is not loaded");
+        var isChinese = GameLanguage.IsChinese();
+
+        if (cache == null) return new InventoryRead.NotReady(Texts.NoItemData.Pick(isChinese));
+        if (world == null || agents == null || player == null || config == null) return new InventoryRead.NotReady(Texts.NoWorld.Pick(isChinese));
 
         ForgetNamesOfOtherWorld(world);
 
-        var storages = new List<Storage> { new(player.InstanceId, "Bag", StorageKind.Bag) };
+        var storages = new List<Storage> { new(player.InstanceId, Texts.Bag.Pick(isChinese), StorageKind.Bag) };
         storages.AddRange(HomeStorages(agents, config));
-        storages.Add(new Storage(WorkbenchDrawerConfig.DrawerOwnerId, "Workbench drawer", StorageKind.Drawer));
+        storages.Add(new Storage(WorkbenchDrawerConfig.DrawerOwnerId, Texts.WorkbenchDrawer.Pick(isChinese), StorageKind.Drawer));
         var stacks = ReadStacks(cache, storages, config, NowHours(world));
         var names = stacks.Select(stack => stack.ConfigId).Distinct().ToDictionary(id => id, id => ItemName(config, id));
 
-        return new InventoryRead.Ready(new Inventory(storages, stacks, names));
+        return new InventoryRead.Ready(new Inventory(storages, stacks, names, isChinese));
     }
 
     /// <summary>
@@ -260,7 +262,7 @@ internal sealed class GameStorages
     {
         var config = GameSingleton.Existing<ConfigManager>();
 
-        return config == null ? $"Item {configId}" : ItemName(config, configId);
+        return config == null ? Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId) : ItemName(config, configId);
     }
 
     /// <summary>
@@ -464,16 +466,16 @@ internal sealed class GameStorages
     {
         var item = config.Get_Config_Item(configId);
 
-        if (item == null) return $"Item {configId}";
+        if (item == null) return Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId);
 
-        return Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName) ?? $"Item {configId}";
+        return Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName) ?? Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId);
     }
 
     private static string FurnitureName(ConfigManager config, Furniture furniture)
     {
         var name = config.Get_Config_Furniture(furniture.AgentConfigId)?.Name;
 
-        return Translate(config, name) ?? NonEmpty(name) ?? $"Storage {furniture.InstanceId}";
+        return Translate(config, name) ?? NonEmpty(name) ?? Texts.UnnamedStorage.Say(GameLanguage.IsChinese(), furniture.InstanceId);
     }
 
     private static string? Translate(ConfigManager config, string? key)

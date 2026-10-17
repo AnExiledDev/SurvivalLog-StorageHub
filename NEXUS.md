@@ -1,0 +1,118 @@
+Name: Storage Hub
+Summary: One searchable list of everything in your bag and storages (F8), with buttons that put your bag away into the storages whose tags fit. Keep chosen items in your bag, see what rots soonest, get tidier storages and have drone deliveries put themselves away. 一个可搜索的列表，列出背包和家里储物家具里的所有物品（F8），还有按钮可以把背包里的物品按标签收纳到对应的储物家具。可以把选定的物品留在背包里，查看最快腐败的食物，让储物家具更整齐，并让无人机送回的物资自动收纳。
+
+Description (BBCode):
+Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds one panel that lists every item in your bag, your storages at home and the workbench drawer, in the game's own style, and puts things away for you. Every move goes through the game's own quick-move, so freshness and durability are kept.
+
+[size=5]Main features[/size]
+[list]
+[*][b]The panel[/b]: press F8 to search every item you own at home, see where each one sits, and take it into your bag or put it away.[/*]
+[*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen. Material racks count as tagged Materials and take only what they have a slot for.[/*]
+[*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest.[/*]
+[*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
+[*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
+[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way.[/*]
+[/list]
+The keep list, deliveries, tidying and stack merging can each be turned off in the config.
+
+[size=5]Keep in bag[/size]
+The game can't split a stack, so the keep list keeps whole stacks: the smallest stack that covers the amount, or else the fullest stacks until it is covered, the fresher one first between stacks of the same size. You often keep a few more than you asked for.
+
+The list is saved in [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it, and a file this version can't understand is copied aside with a .broken- name before starting fresh.
+
+Storage Hub keeps nothing of its own in your save and does not edit game files. [b]Back up your saves before trying a new version[/b], since it moves real items around.
+
+Works in English and Chinese.
+
+[size=5]Known issues[/size]
+[list]
+[*]Moving items is finicky. If anything ends up somewhere strange, goes missing or doubles, turn that piece off and tell me.[/*]
+[*]No put-away ever fills a drone or the workbench drawer. "Take all into bag" does take from a drone, so check before taking all of something a drone is carrying.[/*]
+[*]Racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags are never tidied.[/*]
+[*]After Sort, the game's own layout shows for one frame before the compact one replaces it.[/*]
+[*]Drone deliveries and stack merging only start after the prologue.[/*]
+[/list]
+If you run into anything strange, please tell me (see Feedback below).
+
+[size=5]Requirements[/size]
+[list]
+[*]Survival Log 1.1.18902. A game update can break it until the mod is updated.[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
+[/list]
+
+[size=5]Installation[/size]
+[list=1]
+[*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
+[*]Put [font=Courier New]StorageHub.dll[/font] in the BepInEx&#92;plugins folder inside the game folder. Full path example:
+[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;StorageHub.dll[/code][/*]
+[/list]
+
+[size=5]Uninstall[/size]
+Delete [font=Courier New]StorageHub.dll[/font] from the [font=Courier New]BepInEx&#92;plugins[/font] folder. The items it moved stay where they are.
+
+[size=5]Configuration[/size]
+To change the panel key or turn off any piece, edit [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.cfg[/font] while the game is closed (see [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese). Changes apply at the next game start.
+
+[size=5]Feedback[/size]
+Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or leave a comment here. For bugs, please include [font=Courier New]BepInEx&#92;LogOutput.log[/font] and [font=Courier New]BepInEx&#92;storage-hub.log[/font].
+
+[size=5]Source and license[/size]
+Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub]github.com/AnExiledDev/SurvivalLog-StorageHub[/url]
+
+[line]
+[size=5]简体中文[/size]
+
+在《Survival Log》里，找一件东西要打开一个又一个储物家具，放回去还要再来一遍。Storage Hub 加了一个面板，用游戏自己的风格列出背包、家里所有储物家具和工作台抽屉里的每件物品，并替你收纳。每次移动都走游戏自己的快速移动，所以新鲜度和耐久都会保留。
+
+[size=5]主要功能[/size]
+[list]
+[*][b]面板[/b]：按 F8 搜索家里拥有的所有物品，查看每件物品在哪里，把它取进背包或收纳起来。[/*]
+[*][b]按标签收纳[/b]：把整个背包，或家里地面上的所有物品，放进标签对应的储物家具。物品栏界面的 Mods 菜单里也有这两个按钮。材料架算作标签为「材料」的储物家具，只接收它有空位的物品。[/*]
+[*][b]留在背包[/b]：按名称选择物品并设定保留数量。收纳背包时会在背包里留下这么多，其余的收纳起来。[/*]
+[*][b]即将腐败[/b]：列出所有会腐败的食物，最快腐败的排在前面，并显示所在位置和剩余时间。[/*]
+[*][b]无人机送货[/b]：无人机回家时，它带回的物资会被放进对应标签的储物家具。卸空的无人机不会再提示你取回物资，这次送货也会计入要求取回物资的事件。有一个设置可以跳过机器人放置开关关闭的材料架。[/*]
+[*][b]整理储物家具[/b]：打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列。[/*]
+[/list]
+「留在背包」清单、无人机送货、整理和合并堆叠都可以在配置中单独关闭。
+
+[size=5]留在背包[/size]
+游戏无法拆分堆叠，所以「留在背包」清单按整堆保留：优先留下刚好够数量的最小一堆，否则从最满的堆开始留，直到够数；大小相同的堆先留更新鲜的。所以实际留下的常常比你设定的多一些。
+
+清单保存在 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.keep.json[/font]。[b]目前所有存档共用同一个清单。[/b]如果这个文件读不出来，模组会拒绝收纳背包和修改清单，而不是覆盖它；当前版本无法识别的文件会被另存为带 .broken- 的名字，然后重新开始一个空清单。
+
+Storage Hub 不在你的存档里保存任何自己的数据，也不修改游戏文件。[b]试用新版本前请先备份存档[/b]，因为它会移动真实的物品。
+
+[size=5]已知问题[/size]
+[list]
+[*]移动物品比较容易出问题。如果有物品跑到奇怪的地方、丢失或变多，请关闭对应的功能并告诉我。[/*]
+[*]任何收纳都不会把物品放进无人机或工作台抽屉。「全部收进背包」会从无人机里取东西，所以在全部取出无人机正在运送的物品之前请先确认。[/*]
+[*]架子、烹饪家具、堆肥箱、火锅、上锁的包和游戏的特殊背包永远不会被整理。[/*]
+[*]点击「整理」后，游戏自己的排列会先显示一帧，然后才被紧凑的排列替换。[/*]
+[*]无人机送货和合并堆叠要在序章结束后才会开始工作。[/*]
+[/list]
+如果遇到任何奇怪的情况，请告诉我（见下方反馈）。
+
+[size=5]前置要求[/size]
+[list]
+[*]Survival Log 1.1.18902。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
+[/list]
+
+[size=5]安装[/size]
+[list=1]
+[*]安装 [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i]（如果之前没有装过其他模组，先启动一次游戏，让 BepInEx 完成初始化，然后退出）[/i]。[/*]
+[*]把 [font=Courier New]StorageHub.dll[/font] 放进游戏目录下的 BepInEx&#92;plugins 文件夹。完整路径示例：
+[code]C:&#92;Program Files (x86)&#92;Steam&#92;steamapps&#92;common&#92;Survival Log&#92;BepInEx&#92;plugins&#92;StorageHub.dll[/code][/*]
+[/list]
+
+[size=5]卸载[/size]
+从 [font=Courier New]BepInEx&#92;plugins[/font] 文件夹中删除 [font=Courier New]StorageHub.dll[/font]。模组移动过的物品会留在原处。
+
+[size=5]配置[/size]
+如需修改面板按键或关闭任何一项功能，请在游戏关闭时编辑 [font=Courier New]BepInEx&#92;config&#92;com.dev.survivallog.storagehub.cfg[/font]。配置文件中每项设置都有中文说明，完整说明见 [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url]（英文）。修改会在下次启动游戏时生效。
+
+[size=5]反馈[/size]
+发现 bug 或有好点子？欢迎来 [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url] 打个招呼，或在这里留言。报告 bug 时，请附上 [font=Courier New]BepInEx&#92;LogOutput.log[/font] 和 [font=Courier New]BepInEx&#92;storage-hub.log[/font]。
+
+[size=5]源代码与许可[/size]
+基于 MIT 许可开源：[url=https://github.com/AnExiledDev/SurvivalLog-StorageHub]github.com/AnExiledDev/SurvivalLog-StorageHub[/url]

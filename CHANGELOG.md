@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2
+
+- The "Home" tab and the home storage tabs now also show at the brewing barrel, dye vat, shredder, ration press and drone trade. Each has its own filter ("For brewing", "For dyeing", "For the shredder", "For the ration press", "For trading"). At the drone trade, clicking a tradable item puts it on your side of the trade. The trade's tabs only show when it has more than one, so the "Home" tab needs at least one storage tab there too.
+
 ## 0.8.1
 
 - Stack merging works again for items that never spoil, such as wire, dyes, fuel and seeds. They merge whenever they were picked up and whether they were found on the map, made or bought.

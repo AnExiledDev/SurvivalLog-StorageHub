@@ -75,6 +75,12 @@ public class StationViewTests
         Assert.Equal("Res/Food/apple.png", Storage(view, Fridge)[0].GetProperty("icon").GetString());
     }
 
+    [Fact]
+    public void Every_station_the_view_names_is_one_the_page_can_ask_for_by_that_name()
+    {
+        foreach (var kind in Enum.GetValues<StationKind>()) Assert.Equal(kind, StationView.Parse(StationView.KindName(kind)));
+    }
+
     private static JsonDocument Parse(Inventory home, Func<ItemStack, bool> isUsable) => JsonDocument.Parse(StationView.Build(home, StationKind.Cooking, isUsable, _ => null));
 
     private static List<JsonElement> Storage(JsonDocument view, Storage storage) =>

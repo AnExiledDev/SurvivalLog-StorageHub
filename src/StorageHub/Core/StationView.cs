@@ -12,6 +12,11 @@ public enum StationKind
     Inventory,
     Cooking,
     RatCage,
+    Brew,
+    Dye,
+    Shredder,
+    Compressor,
+    Trade,
 }
 
 /// <summary>
@@ -33,6 +38,11 @@ public static class StationView
         StationKind.Inventory => "inventory",
         StationKind.Cooking => "cooking",
         StationKind.RatCage => "ratcage",
+        StationKind.Brew => "brew",
+        StationKind.Dye => "dye",
+        StationKind.Shredder => "shredder",
+        StationKind.Compressor => "compressor",
+        StationKind.Trade => "trade",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
     };
 
@@ -41,6 +51,11 @@ public static class StationView
         "inventory" => StationKind.Inventory,
         "cooking" => StationKind.Cooking,
         "ratcage" => StationKind.RatCage,
+        "brew" => StationKind.Brew,
+        "dye" => StationKind.Dye,
+        "shredder" => StationKind.Shredder,
+        "compressor" => StationKind.Compressor,
+        "trade" => StationKind.Trade,
         _ => null,
     };
 

@@ -66,6 +66,11 @@ public class PageCommandTests
     [InlineData("cooking", StationKind.Cooking)]
     [InlineData("ratcage", StationKind.RatCage)]
     [InlineData("inventory", StationKind.Inventory)]
+    [InlineData("brew", StationKind.Brew)]
+    [InlineData("dye", StationKind.Dye)]
+    [InlineData("shredder", StationKind.Shredder)]
+    [InlineData("compressor", StationKind.Compressor)]
+    [InlineData("trade", StationKind.Trade)]
     public void The_home_list_names_the_station_it_sits_beside(string name, StationKind kind)
     {
         Assert.Equal(new PageCommand.StationList(kind), PageCommand.Parse("slmod|storagehub|station|" + name));

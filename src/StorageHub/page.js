@@ -458,6 +458,11 @@
     homeSearch: 'Search every storage...',
     scopeCooking: 'For cooking',
     scopeRatCage: 'For the rat cage',
+    scopeBrew: 'For brewing',
+    scopeDye: 'For dyeing',
+    scopeShredder: 'For the shredder',
+    scopeCompressor: 'For the ration press',
+    scopeTrade: 'For trading',
     scopeAll: 'Everything',
     homeOpen: 'Open',
     homeClose: 'Close',
@@ -1427,9 +1432,22 @@
   // item, decided by the station's own rules. At a station, a usable item goes in the way the game's own click does
   // it: its storage's bag tab is shown underneath, then the item is clicked there. Anything else, or an item whose
   // storage has no tab, is taken into the bag.
+  //
+  // Each station page names its tab bar (tabs), the box inside it that holds the first tabs (pin; none means the bar
+  // itself), the class and element of a tab, the bag panel around the bar, and where the page keeps its tabs (model):
+  // 'bag' pages keep an owner per tab and switch with SWITCH_BAG, 'cart' pages keep a tab list in State and switch by
+  // index, and the drone trade keeps its tabs in Vue, so only the drawn tabs tell their owners. quick is the right
+  // click that moves an item straight into the station.
+  var BAG_TABS = { tabs: '#bagTabs', pin: '#bagTabPinned', tab: 'bag-tab', tag: 'div', model: 'bag' };
+  var CART_TABS = { tab: 'left-tab', tag: 'button', panel: '.cart', model: 'cart', quick: true };
   var STATION_PAGES = [
-    { kind: 'cooking', page: /Cooking\.html/, host: '.cooking-system' },
-    { kind: 'ratcage', page: /RatCage\.html/, host: '.generator-system' },
+    withTabs({ kind: 'cooking', page: /Cooking\.html/, host: '.cooking-system', scope: 'scopeCooking', panel: '.panel', quick: false }, BAG_TABS),
+    withTabs({ kind: 'ratcage', page: /RatCage\.html/, host: '.generator-system', scope: 'scopeRatCage', panel: '.panel', quick: false }, BAG_TABS),
+    withTabs({ kind: 'brew', page: /BrewPanel\.html/, host: '.brew-system', scope: 'scopeBrew', panel: '.col', quick: true }, BAG_TABS),
+    withTabs({ kind: 'dye', page: /DyePanel\.html/, host: '.dye-system', scope: 'scopeDye', panel: '.col', quick: true }, BAG_TABS),
+    withTabs({ kind: 'shredder', page: /Shredder\.html/, host: '.cart', scope: 'scopeShredder', tabs: '.cart > .left-tabs', pin: '#tabPinned' }, CART_TABS),
+    withTabs({ kind: 'compressor', page: /Compressor\.html/, host: '.cart', scope: 'scopeCompressor', tabs: '#tabs', pin: null }, CART_TABS),
+    { kind: 'trade', page: /TradeUI\.html/, host: '#app .cols', scope: 'scopeTrade', tabs: '.cols > .col > .bag-tabs', pin: '.bag-tab-pinned', tab: 'bag-tab', tag: 'button', panel: '.col', model: 'trade', quick: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
   var STATION_ASK_MS = 3000;
@@ -1448,7 +1466,7 @@
   var HOME_CSS = [
     '.slmh-host{position:relative}',
     // While the list is shown the bag panel keeps its own content and size, only hidden, so nothing reflows.
-    '.slmh-on>:not(.panel-title):not(.bag-tabs):not(.slmh-pane){visibility:hidden}',
+    '.slmh-on>:not(.panel-title):not(.col-t):not(.bag-tabs):not(.left-tabs):not(.slmh-pane){visibility:hidden}',
     // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
     '.slmh-forced .bag-tabs{display:flex!important}',
     '.slmh-forced #bagPanelTitle{display:none!important}',
@@ -1490,7 +1508,7 @@
   ].join('');
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
-  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false, reopen: null };
+  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -1546,6 +1564,15 @@
 
   function isInventory() {
     return !!home.station && home.station.kind === 'inventory';
+  }
+
+  function withTabs(own, shared) {
+    var merged = {};
+
+    Object.keys(shared).forEach(function (key) { merged[key] = shared[key]; });
+    Object.keys(own).forEach(function (key) { merged[key] = own[key]; });
+
+    return merged;
   }
 
   function findStation() {
@@ -1641,7 +1668,7 @@
     box.appendChild(search);
 
     if (!isInventory()) {
-      scope.appendChild(scopeButton(doc, say(home.station.kind === 'cooking' ? 'scopeCooking' : 'scopeRatCage'), false));
+      scope.appendChild(scopeButton(doc, say(home.station.scope), false));
       scope.appendChild(scopeButton(doc, say('scopeAll'), true));
       box.appendChild(scope);
     }
@@ -1702,15 +1729,25 @@
 
   function addHomeTab() {
     var doc = home.doc;
-    var tabs = doc && doc.getElementById('bagTabs');
-    var pinned = doc && doc.getElementById('bagTabPinned');
-    var panel = tabs && tabs.closest('.panel');
+    var st = home.station;
+    var tabs = doc && doc.querySelector(st.tabs);
+    var pinned = tabs && (st.pin ? tabs.querySelector(st.pin) : tabs);
+    var panel = tabs && tabs.closest(st.panel);
 
-    if (!pinned || !panel) return;
-    if (panel !== home.panel) adoptPanel(doc, tabs, panel);
+    // The drone trade draws no tab bar for the bag alone, so it has no home tab then.
+    if (!pinned || !panel) {
+      dropHomeTab();
 
-    var hasGameTab = !!pinned.querySelector('.bag-tab:not(.slmh-tab):not(.slmh-back)');
+      return;
+    }
 
+    if (panel !== home.panel || tabs !== home.tabsEl) adoptPanel(doc, tabs, panel);
+
+    var hasGameTab = !!pinned.querySelector(gameTabSelector());
+
+    // A page that redraws the panel may drop the classes, so they are put back on every pass.
+    panel.classList.add('slmh-host');
+    panel.classList.toggle('slmh-on', home.isShown);
     panel.classList.toggle('slmh-forced', !hasGameTab);
 
     if (hasGameTab && home.back.parentNode) home.back.parentNode.removeChild(home.back);
@@ -1720,26 +1757,49 @@
     markActiveTab();
   }
 
+  function dropHomeTab() {
+    if (!home.panel) return;
+
+    hideHome();
+    removeHomeTab();
+  }
+
+  function gameTabSelector() {
+    return '.' + home.station.tab + ':not(.slmh-tab):not(.slmh-back)';
+  }
+
   function adoptPanel(doc, tabs, panel) {
+    var tabClass = '.' + home.station.tab;
+
     removeHomeTab();
     addHomeStyle(doc);
     home.panel = panel;
-    home.tab = make(doc, 'div', 'bag-tab slmh-tab', say('homeTab'));
-    home.back = make(doc, 'div', 'bag-tab slmh-back');
+    home.tabsEl = tabs;
+    home.tab = makeTab(doc, 'slmh-tab', say('homeTab'));
+    home.back = makeTab(doc, 'slmh-back');
     home.tab.addEventListener('click', showHome);
     panel.classList.add('slmh-host');
     // Any other tab leaves the list; the game's own click on that tab then does the rest.
     tabs.addEventListener('click', function (e) {
-      var tab = e.target.closest('.bag-tab');
+      var tab = e.target.closest(tabClass);
 
-      if (tab && !tab.classList.contains('slmh-tab') && !tab.classList.contains('locked')) hideHome();
+      if (tab && !tab.classList.contains('slmh-tab') && !tab.classList.contains('locked') && !tab.disabled) hideHome();
     }, true);
     home.observer = new doc.defaultView.MutationObserver(function () {
       try {
         addHomeTab();
       } catch (e) {}
     });
-    home.observer.observe(tabs, { childList: true, subtree: true });
+    // Classes too: the drone trade's Vue rewrites a tab's class when the chosen tab changes, without a redraw.
+    home.observer.observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  }
+
+  function makeTab(doc, marker, text) {
+    var node = make(doc, home.station.tag, home.station.tab + ' ' + marker, text);
+
+    if (home.station.tag === 'button') node.type = 'button';
+
+    return node;
   }
 
   // Named after the panel's own title, which is the bag's name; set only on a change, as setting it is itself a redraw.
@@ -1753,7 +1813,7 @@
 
   // While the list shows, the game's chosen tab is only marked, so the game still knows which bag sits underneath.
   function markActiveTab() {
-    var tabs = home.panel.querySelectorAll('.bag-tab:not(.slmh-tab):not(.slmh-back)');
+    var tabs = home.panel.querySelectorAll(gameTabSelector());
 
     home.tab.classList.toggle('active', home.isShown);
     home.back.classList.toggle('active', !home.isShown);
@@ -1785,6 +1845,7 @@
     home.tab = null;
     home.back = null;
     home.panel = null;
+    home.tabsEl = null;
   }
 
   function showHome() {
@@ -1823,7 +1884,7 @@
   // The pane covers the panel below its tab bar, inside the panel's padding.
   function placePane() {
     var root = home.ui.root;
-    var tabs = home.doc.getElementById('bagTabs');
+    var tabs = home.tabsEl;
     var style = home.doc.defaultView.getComputedStyle(home.panel);
     var place = {
       top: tabs.offsetTop + tabs.offsetHeight + PANE_TAB_GAP + 'px',
@@ -2137,8 +2198,19 @@
 
   function switchTab(ownerId) {
     var core = pageCore();
+    var model = home.station.model;
 
-    if (core && activeOwner() !== ownerId) core.UnitySendEvent('SWITCH_BAG', { ownerId: Number(ownerId) });
+    if (!core || activeOwner() === ownerId) return;
+
+    if (model === 'trade') {
+      core.UnitySendEvent('SWITCH_BAG', { ownerId: String(ownerId) });
+    } else if (model === 'cart') {
+      var index = cartTabs().map(function (t) { return String(t.ownerId); }).indexOf(ownerId);
+
+      if (index >= 0) core.UnitySendEvent('TAB_SWITCH', { tab: index });
+    } else {
+      core.UnitySendEvent('SWITCH_BAG', { ownerId: Number(ownerId) });
+    }
   }
 
   function putInStation(ownerId, itemId) {
@@ -2170,17 +2242,31 @@
       }
     }
 
-    core.UnitySendEvent('ITEM_CLICK', { itemId: Number(itemId), rightClick: false });
+    // The drone trade gives an item with a right click on the bag; the other stations take it as the page's own click.
+    if (home.station.model === 'trade') core.UnitySendEvent('CLICK_ITEM', { itemKey: String(itemId), fromGrid: 'bag', rightClick: true });
+    else core.UnitySendEvent('ITEM_CLICK', { itemId: Number(itemId), rightClick: !!home.station.quick });
+
     askStationSoon();
   }
 
-  // The rat cage keeps its tabs in State; the stove keeps the owner on each tab element.
+  function cartTabs() {
+    var win = home.frame && home.frame.contentWindow;
+
+    return (win && win.State && win.State.cartTabs) || [];
+  }
+
+  // The rat cage, brewing barrel and dye vat keep their tabs in State, the shredder and ration press keep a cart in
+  // State, the stove keeps the owner on each tab element, and the drone trade on each tab's data-owner.
   function activeOwner() {
     var win = home.frame && home.frame.contentWindow;
+    var tabClass = '.' + home.station.tab;
     // While the home tab shows, the game's chosen tab is marked slmh-was instead of active.
-    var tab = win && win.document.querySelector('.bag-tab.active:not(.slmh-tab):not(.slmh-back), .bag-tab.slmh-was');
+    var tab = win && win.document.querySelector(tabClass + '.active:not(.slmh-tab):not(.slmh-back), ' + tabClass + '.slmh-was');
 
-    if (win && win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
+    if (!win) return null;
+    if (home.station.model === 'trade') return tab && tab.getAttribute('data-owner');
+    if (home.station.model === 'cart') return win.State && win.State.cartOwnerId != null ? String(win.State.cartOwnerId) : null;
+    if (win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
 
     return tab && tab._ownerId != null ? String(tab._ownerId) : null;
   }
@@ -2189,6 +2275,14 @@
     var win = home.frame && home.frame.contentWindow;
 
     if (!win) return [];
+
+    if (home.station.model === 'trade') {
+      return Array.prototype.map.call(win.document.querySelectorAll('.bag-tab[data-owner]'), function (t) { return t.getAttribute('data-owner'); });
+    }
+
+    if (home.station.model === 'cart') {
+      return cartTabs().filter(function (t) { return !t.locked; }).map(function (t) { return String(t.ownerId); });
+    }
 
     if (win.State && win.State.bagTabs) {
       return win.State.bagTabs.filter(function (t) { return !t.locked; }).map(function (t) { return String(t.ownerId); });

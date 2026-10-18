@@ -6,8 +6,9 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// What a station takes, asked of the game's own checks: the stove's ingredient rule, and the rat cage's food rule
-/// (spoilage included) or a live mouse. Read only, so the bag tab hooks may call it from inside a reducer.
+/// What a station takes, asked of the game's own checks: the stove's ingredient rule, the rat cage's food rule
+/// (spoilage included) or a live mouse, the brewing and dyeing ingredient flags, the shredder's list, the ration press's
+/// food rule, and the drone trade's value. Read only, so the bag tab hooks may call it from inside a reducer.
 /// </summary>
 internal static class StationRules
 {
@@ -30,6 +31,11 @@ internal static class StationRules
             {
                 StationKind.Cooking => Reducer_Web_Cooking.IsCookableIngredient(row),
                 StationKind.RatCage => Reducer_Web_RatCage.CheckFoodAdmissionSilent(item, state) || Reducer_Web_RatCage.IsIntactLiveMouse(item, row),
+                StationKind.Brew => row.CanBrew,
+                StationKind.Dye => config.IsPlantProduct(item.ItemConfigId),
+                StationKind.Shredder => config.IsShredableItem(item.ItemConfigId),
+                StationKind.Compressor => IsPressable(row, item.ItemConfigId),
+                StationKind.Trade => row.TradeValue > 0,
                 StationKind.Inventory => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
             };
@@ -46,4 +52,20 @@ internal static class StationRules
             return false;
         }
     }
+
+    /// <summary>
+    /// The ration press's own refusal checks (Reducer_Web_Compressor's deny text): food only, neither of the two liquid
+    /// sub-categories, nothing the press made itself, and nothing on its banned list. Spoiled food is left for the
+    /// press to refuse, as spoilage changes while the tab is open.
+    /// </summary>
+    private static bool IsPressable(Config_Item row, int configId) =>
+        row.Category == FoodCategory
+        && row.SubCategory != LiquidSubCategory
+        && row.SubCategory != OtherLiquidSubCategory
+        && !CompressorConfig.IsCompressProduct(configId)
+        && !CompressorConfig.IsBannedItem(configId);
+
+    private const int FoodCategory = 1;
+    private const int LiquidSubCategory = 9;
+    private const int OtherLiquidSubCategory = 10;
 }

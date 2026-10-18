@@ -158,6 +158,24 @@ public class TextsTests
         Assert.Contains("say('closeKeys', window.__storagehubToggleKey", PageScript());
     }
 
+    [Fact]
+    public void Every_station_has_a_page_entry_that_asks_for_its_list()
+    {
+        var script = PageScript();
+
+        Assert.All(Enum.GetValues<StationKind>(), kind => Assert.Contains("kind: '" + StationView.KindName(kind) + "'", script));
+    }
+
+    [Fact]
+    public void Every_station_page_names_a_scope_label_the_mod_translates()
+    {
+        var keys = Texts.Page.Select(word => word.Key).ToHashSet();
+        var scopes = Regex.Matches(PageScript(), @"scope: '(\w+)'").Select(match => match.Groups[1].Value).ToList();
+
+        Assert.Equal(Enum.GetValues<StationKind>().Length - 1, scopes.Count);
+        Assert.All(scopes, scope => Assert.Contains(scope, keys));
+    }
+
     private static string PageScript()
     {
         using var stream = typeof(TextsTests).Assembly.GetManifestResourceStream("StorageHub.page.js") ?? throw new InvalidOperationException("page.js is not embedded in the test assembly");

@@ -1430,7 +1430,10 @@
   var HOME_GAP = 24;
   var SEARCH_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fcfcfc" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
   var HOME_CSS = [
-    '.slmh-home{display:flex;flex-direction:column;width:' + HOME_WIDTH + 'px;min-height:0;flex:none}',
+    '.slmh-home,.panel.slmh-home{position:relative;box-sizing:border-box;width:' + HOME_WIDTH + 'px;flex:none;padding:0}',
+    // The page zooms itself to fit its panels, so the list adds no height of its own: it fills the height the other panels set and scrolls.
+    '.slmh-body{position:absolute;top:15px;right:15px;bottom:15px;left:15px;display:flex;flex-direction:column;min-height:0}',
+    '.slmh-inv .slmh-body{top:14px;right:16px;bottom:12px;left:16px}',
     '.slmh-home .panel-title{margin-bottom:10px}',
     '.slmh-home .panel-title .sub{margin-left:8px;font-size:12px;font-weight:400;color:#c0c0c0;letter-spacing:0}',
     '.slmh-search{position:relative}',
@@ -1461,7 +1464,7 @@
     '.slmh-tag.bag{color:#c0c0c0;background:rgba(255,255,255,.07)}',
     '.slmh-empty{padding:16px 6px;color:#c0c0c0;font-size:12.5px;text-align:center}',
     '.slmh-hint{margin-top:8px;font-size:12px;color:#c0c0c0}',
-    '.slmh-inv{position:fixed;z-index:50;box-sizing:border-box;padding:14px 16px 12px;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.94),rgba(20,20,22,.96));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-inv{position:fixed;z-index:50;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.94),rgba(20,20,22,.96));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
     '.slmh-inv .panel-title{font-size:17px;font-weight:700;color:#ffe6a8;letter-spacing:.5px}',
     '.slmh-inv .panel-title .sub{font-size:12px;font-weight:400;color:#999;margin-left:6px}'
   ].join('');
@@ -1574,6 +1577,7 @@
   function mountHome(doc) {
     var isInventory = home.station.kind === 'inventory';
     var root = make(doc, 'div', isInventory ? 'slmh-home slmh-inv' : 'slmh-home panel');
+    var body = make(doc, 'div', 'slmh-body');
     var title = make(doc, 'div', 'panel-title', say('homeTitle'));
     var sub = make(doc, 'span', 'sub');
     var search = make(doc, 'div', 'slmh-search');
@@ -1590,17 +1594,18 @@
     input.placeholder = say('homeSearch');
     input.value = home.query;
     search.appendChild(input);
-    root.appendChild(title);
-    root.appendChild(search);
+    body.appendChild(title);
+    body.appendChild(search);
 
     if (!isInventory) {
       scope.appendChild(scopeButton(doc, say(home.station.kind === 'cooking' ? 'scopeCooking' : 'scopeRatCage'), false));
       scope.appendChild(scopeButton(doc, say('scopeAll'), true));
-      root.appendChild(scope);
+      body.appendChild(scope);
     }
 
-    root.appendChild(list);
-    root.appendChild(hint);
+    body.appendChild(list);
+    body.appendChild(hint);
+    root.appendChild(body);
     home.ui = { root: root, sub: sub, input: input, scope: scope, list: list, isTyping: false };
     watchHomeSearch(input);
     list.addEventListener('click', onHomeClick);

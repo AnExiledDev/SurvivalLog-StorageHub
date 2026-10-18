@@ -27,6 +27,7 @@ internal sealed class HubSession
     private readonly StatusLine _status = new();
 
     private IconIndex? _icons;
+    private BesideBagStep _besideBag = new BesideBagStep.Idle();
     private Inventory _inventory = Inventory.Empty;
     private string _shownView = "";
     private float _nextRefreshAt;
@@ -52,6 +53,8 @@ internal sealed class HubSession
         _page.KeepInstalled(now);
 
         foreach (var command in CommandBatch.WithoutRepeatedMoves(TakeQueuedCommands())) HandleSafely(command);
+
+        AdvanceBesideBag();
 
         if (Input.GetKeyDown(_toggleKey))
         {
@@ -468,8 +471,45 @@ internal sealed class HubSession
     private void OpenBesideBag(long ownerId)
     {
         _log(ownerId == -1 ? "close the storage beside the bag" : $"open {_inventory.StorageName(ownerId)} beside the bag");
+        Run(BesideBag.Start(ownerId, _game.IsBackpackShowing()));
+    }
 
-        if (!_game.OpenBesideBag(ownerId)) _page.Status(_status.Result(NotAvailable(Texts.NoWorld.Pick(IsChinese))));
+    /// <summary>Run once a frame after the frame's commands, so a close sent on one frame is seen on the next.</summary>
+    private void AdvanceBesideBag()
+    {
+        if (_besideBag is BesideBagStep.Idle) return;
+
+        try
+        {
+            Run(BesideBag.Advance(_besideBag, _game.IsBackpackShowing()));
+        }
+        catch (Exception ex)
+        {
+            _besideBag = new BesideBagStep.Idle();
+            _log($"showing a storage beside the bag failed: {ex}");
+        }
+    }
+
+    private void Run(BesideBagTick tick)
+    {
+        _besideBag = tick.Next;
+
+        switch (tick.Command)
+        {
+            case BesideBagCommand.CloseBackpack:
+                _game.CloseBackpack();
+                break;
+            case BesideBagCommand.AskForBags:
+                if (!_game.AskForBags(tick.OwnerId)) _page.Status(_status.Result(NotAvailable(Texts.NoWorld.Pick(IsChinese))));
+                break;
+            case BesideBagCommand.ReportStuck:
+                _log($"the bag screen did not close within {BesideBag.CloseFrameLimit} frames, so the storage was not shown");
+                break;
+            case BesideBagCommand.None:
+                break;
+            default:
+                throw new InvalidOperationException("unhandled beside-bag command " + tick.Command);
+        }
     }
 
     /// <summary>Floor items are not in the storage read, so their names are added before anything is logged.</summary>

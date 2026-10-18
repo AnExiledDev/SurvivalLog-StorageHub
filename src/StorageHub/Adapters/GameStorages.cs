@@ -355,45 +355,19 @@ internal sealed class GameStorages
         return stack => cache.TryGetValue(stack.OwnerId, out var held) && held != null && held.TryGetValue(stack.ItemId, out var item) && item != null && StationRules.Takes(kind, item, state, config);
     }
 
+    /// <summary>Whether the bag screen shows; the game skips its bag request while it does.</summary>
+    public bool IsBackpackShowing() => GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.IsPageActive("Backpack") == true;
+
+    public void CloseBackpack() => Ac_BackpackUI_Close.SendAction();
+
     /// <summary>The game's own "open a storage beside the bag", as walking up to it does; -1 shows the bag alone.</summary>
-    public bool OpenBesideBag(long ownerId)
+    public bool AskForBags(long ownerId)
     {
         var player = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager?.GetLeadingRole();
 
         if (player == null) return false;
 
-        var ui = GameSingleton.Existing<ReduxUISystem>();
-
-        // The game's bag list request does nothing while the inventory is already showing (Reducer_Data_Item.RA_GetBagList
-        // checks IsPageActive("Backpack")), so the bags are handed to the inventory directly, the way that request
-        // would have once the page was closed.
-        if (ui?.GetWebUILayer()?.IsPageActive("Backpack") != true)
-        {
-            Ac_Item_GetBagList.SendAction(player.InstanceId, ownerId, false);
-
-            return true;
-        }
-
-        return ShowBags(ui, player.InstanceId, ownerId);
-    }
-
-    private static bool ShowBags(ReduxUISystem ui, long playerId, long ownerId)
-    {
-        var items = ui.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
-        var own = items == null ? null : State_Extensions_Item.GetBagData(items, playerId);
-
-        if (items == null || own == null) return false;
-
-        var bags = new Il2CppSystem.Collections.Generic.List<Data_Bag>();
-        var target = ownerId == -1 ? null : State_Extensions_Item.GetBagData(items, ownerId);
-
-        bags.Add(own);
-
-        if (target != null) bags.Add(target);
-
-        Ac_BackpackUI_OpenUI.SendAction(bags, false, 0);
-        EventDispatcherTools.NotifyGlobal(EnumNotify_Action.ReduxUI_RequestItemActionMarks);
-        EventDispatcherTools.NotifyGlobal(EnumNotify_Wish.ReduxUI_RequestWishMark);
+        Ac_Item_GetBagList.SendAction(player.InstanceId, ownerId, false);
 
         return true;
     }

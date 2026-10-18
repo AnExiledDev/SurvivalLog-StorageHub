@@ -1435,6 +1435,9 @@
   var STATION_ASK_MS = 3000;
   var STATION_AFTER_CLICK_MS = [400, 1200];
   var TAB_WAIT_MS = 2000;
+  // An Open closes the bag screen and opens it again with the storage beside it, which drops the window; it is put
+  // back once the screen is up again, for this long at most.
+  var REOPEN_MS = 3000;
   var TAB_POLL_MS = 80;
   var PANE_TAB_GAP = 8;
   var POP_WIDTH = 320;
@@ -1487,7 +1490,7 @@
   ].join('');
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
-  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false };
+  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -1534,6 +1537,8 @@
 
     if (isInventory()) keepPop();
     else keepHomeTab();
+
+    if (home.reopen && isInventory()) resumePop();
 
     // One ask learns whether the list is turned off; after that the list is kept fresh only while it shows.
     if (home.askedAt === 0 || (home.isShown && Date.now() - home.askedAt >= STATION_ASK_MS)) askStation();
@@ -1862,6 +1867,31 @@
     holdKeys();
   }
 
+  // The user closing the window also stops an Open from putting it back.
+  function shutPop() {
+    home.reopen = null;
+    closePop();
+  }
+
+  // Kept up through the window's whole wait, as the screen may still be on its way down when it is first seen.
+  function resumePop() {
+    var reopen = home.reopen;
+
+    if (Date.now() > reopen.until) {
+      home.reopen = null;
+
+      return;
+    }
+
+    if (!home.doc.querySelector('.bag-slot .toolbar') || !backpackTabWantsButton(home.doc)) return;
+    if (!home.isShown) openPop();
+
+    if (home.openId !== reopen.id) {
+      home.openId = reopen.id;
+      renderHome();
+    }
+  }
+
   // Shown on the bag side's item tab only, the same rule as the menu entry that opens it.
   function keepPop() {
     if (!home.isShown) return;
@@ -1885,7 +1915,7 @@
     var shut = make(doc, 'button', 'slmh-x', TIMES);
 
     removeHomeUi();
-    shut.addEventListener('click', closePop);
+    shut.addEventListener('click', shutPop);
     head.appendChild(make(doc, 'span', 'slmh-title', say('homeTitle')));
     head.appendChild(sub);
     head.appendChild(shut);
@@ -2064,15 +2094,18 @@
     }
   }
 
-  // On the inventory screen the storage opens beside the bag, the way walking up to it does; at a station its tab is shown.
+  // On the inventory screen the storage opens beside the bag, the way walking up to it does; at a station the list
+  // makes way for the storage's own tab.
   function openStorage(id) {
     if (home.station.kind !== 'inventory') {
+      hideHome();
       switchTab(id);
 
       return;
     }
 
     home.openId = home.openId === id ? null : id;
+    home.reopen = { id: home.openId, until: Date.now() + REOPEN_MS };
     send('openStorage|' + (home.openId === null ? '-1' : id));
     renderHome();
   }
@@ -2166,9 +2199,36 @@
     }).map(function (t) { return String(t._ownerId); });
   }
 
+  // A big rat cage has rows of mouse slots that make the middle panel taller than the screen, and the page then zooms
+  // everything down to fit. The slots scroll past three rows instead. Mice are dropped on the slot box as a whole, so
+  // a scrolled box takes them the same.
+  var CAGE_SLOT_CSS = [
+    '#mouseSlots{max-height:' + (3 * 64 + 2 * 8) + 'px;overflow-y:auto;overflow-x:hidden}',
+    '#mouseSlots::-webkit-scrollbar{width:6px}',
+    '#mouseSlots::-webkit-scrollbar-thumb{background:rgba(164,181,70,.45);border-radius:3px}'
+  ].join('');
+
+  function patchCageSlots() {
+    var found = findStation();
+
+    if (!found || found.station.kind !== 'ratcage' || found.doc.getElementById('slmh-cage-style')) return;
+
+    var style = make(found.doc, 'style');
+
+    style.id = 'slmh-cage-style';
+    style.textContent = CAGE_SLOT_CSS;
+    found.doc.head.appendChild(style);
+    // The page refits its zoom on resize, so the shorter panel takes effect at once.
+    found.frame.contentWindow.dispatchEvent(new found.frame.contentWindow.Event('resize'));
+  }
+
   setInterval(function () {
     try {
       patchBackpack();
+    } catch (e) {}
+
+    try {
+      patchCageSlots();
     } catch (e) {}
 
     try {
@@ -2176,6 +2236,6 @@
     } catch (e) {}
   }, 400);
 
-  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, closePop: closePop };
+  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, closePop: shutPop };
   send('ready');
 })();

@@ -4,6 +4,7 @@
 
 - A searchable home storage list. At the stove and the rat cage it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At a station, "For cooking" or "For the rat cage" shows only what it can use, and clicking a usable item puts it into the station; anything else goes to your bag. In the window, "Open" shows a storage beside your bag. `Esc` or the close button shuts it. New setting `HomeStorageList`.
 - The stove and the rat cage get a bag tab for every home storage holding something they can use. New setting `StorageTabs`.
+- At the rat cage, the mouse slots scroll past three rows, so a big cage no longer shrinks the whole screen.
 
 ## 0.7.4
 

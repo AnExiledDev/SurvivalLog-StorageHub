@@ -244,6 +244,29 @@ public class PutAwayTests
     }
 
     [Fact]
+    public void Taking_one_takes_a_single_unit_off_the_smallest_stack_in_that_storage()
+    {
+        var big = Stack(1, Rope, 9, Box);
+        var small = Stack(2, Rope, 3, Box);
+        var elsewhere = Stack(3, Rope, 1, Fridge);
+        var otherItem = Stack(4, Apple, 1, Box);
+
+        var steps = StoragePlan.TakeOne(Home(big, small, elsewhere, otherItem), Rope, Box.OwnerId);
+
+        Assert.Equal(new[] { (small with { Count = 1 }, Bag.OwnerId) }, steps.Select(s => (s.Stack, s.Targets.Single())));
+    }
+
+    [Fact]
+    public void Taking_one_from_the_bag_or_without_a_bag_plans_nothing()
+    {
+        var inBag = Stack(1, Rope, 4, Bag);
+        var noBag = new Inventory(new[] { Box }, new[] { Stack(2, Rope, 4, Box) }, new Dictionary<int, string>());
+
+        Assert.Empty(StoragePlan.TakeOne(Home(inBag), Rope, Bag.OwnerId));
+        Assert.Empty(StoragePlan.TakeOne(noBag, Rope, Box.OwnerId));
+    }
+
+    [Fact]
     public void Taking_without_a_bag_plans_nothing()
     {
         var noBag = new Inventory(new[] { Box }, new[] { Stack(1, Rope, 1, Box) }, new Dictionary<int, string>());

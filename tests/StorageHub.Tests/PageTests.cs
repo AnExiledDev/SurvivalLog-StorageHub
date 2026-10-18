@@ -24,6 +24,13 @@ public class PageCommandTests
     }
 
     [Fact]
+    public void Take_one_names_the_item_and_the_storage_it_comes_from()
+    {
+        Assert.Equal(new PageCommand.TakeOne(Apple, Fridge.OwnerId), PageCommand.Parse("slmod|storagehub|takeOne|1|200"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|takeOne|1"));
+    }
+
+    [Fact]
     public void Storage_ids_beyond_the_int_range_survive_the_round_trip()
     {
         Assert.Equal(new PageCommand.Take(7, 9_007_199_254_740_993), PageCommand.Parse("slmod|storagehub|take|7|9007199254740993"));
@@ -71,6 +78,7 @@ public class PageCommandTests
     [InlineData("shredder", StationKind.Shredder)]
     [InlineData("compressor", StationKind.Compressor)]
     [InlineData("trade", StationKind.Trade)]
+    [InlineData("workbench", StationKind.Workbench)]
     public void The_home_list_names_the_station_it_sits_beside(string name, StationKind kind)
     {
         Assert.Equal(new PageCommand.StationList(kind), PageCommand.Parse("slmod|storagehub|station|" + name));
@@ -99,7 +107,7 @@ public class PageCommandTests
     [InlineData("slmod|storagehub|keepRemove|apple")]
     [InlineData("slmod|storagehub|catalog|all")]
     [InlineData("slmod|storagehub|station")]
-    [InlineData("slmod|storagehub|station|workbench")]
+    [InlineData("slmod|storagehub|station|anvil")]
     [InlineData("slmod|storagehub|openStorage")]
     [InlineData("slmod|storagehub|openStorage|box")]
     public void A_malformed_command_is_never_acted_on(string message)

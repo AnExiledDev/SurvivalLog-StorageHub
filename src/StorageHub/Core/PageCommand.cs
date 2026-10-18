@@ -18,6 +18,9 @@ public abstract record PageCommand
     /// <summary>Move every stack of one item that sits in one storage into the bag.</summary>
     public sealed record Take(int ConfigId, long OwnerId) : PageCommand;
 
+    /// <summary>Move one unit of an item from one storage into the bag.</summary>
+    public sealed record TakeOne(int ConfigId, long OwnerId) : PageCommand;
+
     /// <summary>Move every stack of one item from every storage into the bag.</summary>
     public sealed record TakeAll(int ConfigId) : PageCommand;
 
@@ -73,6 +76,7 @@ public abstract record PageCommand
         return (parts[0], parts.Length) switch
         {
             ("take", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new Take(configId, ownerId),
+            ("takeOne", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new TakeOne(configId, ownerId),
             ("takeAll", 2) when TryInt(parts[1], out var configId) => new TakeAll(configId),
             ("putAway", 2) when TryInt(parts[1], out var configId) => new PutAway(configId),
             ("putAwayBag", 1) => new PutAwayBag(),

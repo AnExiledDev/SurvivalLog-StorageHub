@@ -463,6 +463,7 @@
     scopeShredder: 'For the shredder',
     scopeCompressor: 'For the ration press',
     scopeTrade: 'For trading',
+    scopeWorkbench: 'For the workbench',
     scopeAll: 'Everything',
     homeOpen: 'Open',
     homeClose: 'Close',
@@ -1426,7 +1427,7 @@
     holdKeys();
   });
 
-  // The home storage list. At the stove and the rat cage it is a tab in the bag panel's own tab bar: choosing it
+  // The home storage list. At a station it is a tab in the bag panel's own tab bar: choosing it
   // shows the list in the bag grid's place, at the same size, so the page's layout and zoom never change. On the
   // inventory screen it is a window opened from the Mods menu. The plugin sends the storages with an ok flag per
   // item, decided by the station's own rules. At a station, a usable item goes in the way the game's own click does
@@ -1436,8 +1437,9 @@
   // Each station page names its tab bar (tabs), the box inside it that holds the first tabs (pin; none means the bar
   // itself), the class and element of a tab, the bag panel around the bar, and where the page keeps its tabs (model):
   // 'bag' pages keep an owner per tab and switch with SWITCH_BAG, 'cart' pages keep a tab list in State and switch by
-  // index, and the drone trade keeps its tabs in Vue, so only the drawn tabs tell their owners. quick is the right
-  // click that moves an item straight into the station.
+  // index, the drone trade keeps its tabs in Vue, so only the drawn tabs tell their owners, and the workbench
+  // ('tooltable') keeps its last bag message in a script variable, tab 0 the bag, 1 the drawer and 2 on its cabinets.
+  // quick is the right click that moves an item straight into the station.
   var BAG_TABS = { tabs: '#bagTabs', pin: '#bagTabPinned', tab: 'bag-tab', tag: 'div', model: 'bag' };
   var CART_TABS = { tab: 'left-tab', tag: 'button', panel: '.cart', model: 'cart', quick: true };
   var STATION_PAGES = [
@@ -1448,6 +1450,7 @@
     withTabs({ kind: 'shredder', page: /Shredder\.html/, host: '.cart', scope: 'scopeShredder', tabs: '.cart > .left-tabs', pin: '#tabPinned' }, CART_TABS),
     withTabs({ kind: 'compressor', page: /Compressor\.html/, host: '.cart', scope: 'scopeCompressor', tabs: '#tabs', pin: null }, CART_TABS),
     { kind: 'trade', page: /TradeUI\.html/, host: '#app .cols', scope: 'scopeTrade', tabs: '.cols > .col > .bag-tabs', pin: '.bag-tab-pinned', tab: 'bag-tab', tag: 'button', panel: '.col', model: 'trade', quick: true },
+    { kind: 'workbench', page: /ToolTable\.html/, host: '.backpack-panel', scope: 'scopeWorkbench', tabs: '.backpack-panel > .left-tabs', pin: '.left-tab-pinned', tab: 'left-tab', tag: 'button', panel: '.backpack-panel', model: 'tooltable', quick: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
   var STATION_ASK_MS = 3000;
@@ -1765,7 +1768,8 @@
   }
 
   function gameTabSelector() {
-    return '.' + home.station.tab + ':not(.slmh-tab):not(.slmh-back)';
+    // Crafting Hub's bench tab shares the workbench's tab class but is not one of the game's storages.
+    return '.' + home.station.tab + ':not(.slmh-tab):not(.slmh-back):not(.cc-tab)';
   }
 
   function adoptPanel(doc, tabs, panel) {
@@ -2180,7 +2184,8 @@
     if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
       putInStation(storageId, itemId);
     } else {
-      send('take|' + item.cfg + '|' + storageId);
+      // At a station a click takes one unit, so a stack is not dragged out whole to feed it one at a time.
+      send((home.station.kind === 'inventory' ? 'take|' : 'takeOne|') + item.cfg + '|' + storageId);
     }
 
     askStationSoon();
@@ -2193,7 +2198,26 @@
   function pageCore() {
     var win = home.frame && home.frame.contentWindow;
 
-    return win && win.core && win.core.UnitySendEvent ? win.core : null;
+    if (!win) return null;
+
+    var core = win.core || pageGlobal(win, 'core');
+
+    if (core && core.UnitySendEvent) return core;
+
+    // The drone trade keeps its sender inside Vue. Root sends a message on to the game for the page it names, and a
+    // page's frame is named after it.
+    var pageId = home.frame.id;
+
+    return pageId ? { UnitySendEvent: function (type, data) { window.postMessage({ type: type, data: data, sourcePageId: pageId }, '*'); } } : null;
+  }
+
+  // A page's top-level let and const are not window properties, so they are read through the page's own scope.
+  function pageGlobal(win, name) {
+    try {
+      return win.eval('typeof ' + name + ' === "undefined" ? null : ' + name);
+    } catch (e) {
+      return null;
+    }
   }
 
   function switchTab(ownerId) {
@@ -2208,6 +2232,13 @@
       var index = cartTabs().map(function (t) { return String(t.ownerId); }).indexOf(ownerId);
 
       if (index >= 0) core.UnitySendEvent('TAB_SWITCH', { tab: index });
+    } else if (model === 'tooltable') {
+      var cabinet = toolTableTabs().map(function (t) { return String(t.ownerId); }).indexOf(ownerId);
+      var switchLeftTab = pageGlobal(home.frame.contentWindow, 'switchLeftTab');
+
+      if (cabinet < 0) return;
+      if (typeof switchLeftTab === 'function') switchLeftTab(2 + cabinet);
+      else core.UnitySendEvent('TAB_SWITCH', { tab: 2 + cabinet });
     } else {
       core.UnitySendEvent('SWITCH_BAG', { ownerId: Number(ownerId) });
     }
@@ -2249,6 +2280,12 @@
     askStationSoon();
   }
 
+  function toolTableTabs() {
+    var win = home.frame && home.frame.contentWindow;
+
+    return (win && (pageGlobal(win, 'lastBagMsg') || {}).cabinetTabs) || [];
+  }
+
   function cartTabs() {
     var win = home.frame && home.frame.contentWindow;
 
@@ -2261,14 +2298,21 @@
     var win = home.frame && home.frame.contentWindow;
     var tabClass = '.' + home.station.tab;
     // While the home tab shows, the game's chosen tab is marked slmh-was instead of active.
-    var tab = win && win.document.querySelector(tabClass + '.active:not(.slmh-tab):not(.slmh-back), ' + tabClass + '.slmh-was');
+    var tab = win && win.document.querySelector(tabClass + '.active:not(.slmh-tab):not(.slmh-back):not(.cc-tab), ' + tabClass + '.slmh-was');
 
     if (!win) return null;
     if (home.station.model === 'trade') return tab && tab.getAttribute('data-owner');
     if (home.station.model === 'cart') return win.State && win.State.cartOwnerId != null ? String(win.State.cartOwnerId) : null;
+    if (home.station.model === 'tooltable') return toolTableOwner(pageGlobal(win, 'activeLeftTab'));
     if (win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
 
     return tab && tab._ownerId != null ? String(tab._ownerId) : null;
+  }
+
+  function toolTableOwner(leftTab) {
+    var cabinet = typeof leftTab === 'number' && leftTab >= 2 ? toolTableTabs()[leftTab - 2] : null;
+
+    return cabinet ? String(cabinet.ownerId) : null;
   }
 
   function tabOwners() {
@@ -2278,6 +2322,10 @@
 
     if (home.station.model === 'trade') {
       return Array.prototype.map.call(win.document.querySelectorAll('.bag-tab[data-owner]'), function (t) { return t.getAttribute('data-owner'); });
+    }
+
+    if (home.station.model === 'tooltable') {
+      return toolTableTabs().filter(function (t) { return !t.isRack; }).map(function (t) { return String(t.ownerId); });
     }
 
     if (home.station.model === 'cart') {

@@ -256,6 +256,9 @@ internal sealed class HubSession
             case PageCommand.Take take:
                 Act("take", () => Take(stack => stack.ConfigId == take.ConfigId && stack.OwnerId == take.OwnerId));
                 break;
+            case PageCommand.TakeOne takeOne:
+                Act("take one", () => TakeOne(takeOne.ConfigId, takeOne.OwnerId));
+                break;
             case PageCommand.TakeAll takeAll:
                 Act("take all", () => Take(stack => stack.ConfigId == takeAll.ConfigId));
                 break;
@@ -366,6 +369,13 @@ internal sealed class HubSession
         if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         return Execute(StoragePlan.Take(_inventory, _inventory.Stacks.Where(wanted)), MoveAndLog);
+    }
+
+    private string TakeOne(int configId, long ownerId)
+    {
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
+
+        return Execute(StoragePlan.TakeOne(_inventory, configId, ownerId), MoveOneAndLog);
     }
 
     /// <summary>
@@ -544,6 +554,21 @@ internal sealed class HubSession
         _log($"  move {Describe(stack)} -> {_inventory.StorageName(targetOwnerId)}: {(isMoved ? "ok" : "refused")}");
 
         return isMoved;
+    }
+
+    private bool MoveOneAndLog(ItemStack stack, long targetOwnerId)
+    {
+        var moved = _game.MoveOne(stack, targetOwnerId);
+        var how = moved switch
+        {
+            UnitMove.One => "ok",
+            UnitMove.WholeStack => "ok, whole stack (Stacking is not installed or could not split it)",
+            _ => "refused",
+        };
+
+        _log($"  move one {Describe(stack)} -> {_inventory.StorageName(targetOwnerId)}: {how}");
+
+        return moved != UnitMove.Refused;
     }
 
     private bool PickUpAndLog(ItemStack stack, long targetOwnerId)

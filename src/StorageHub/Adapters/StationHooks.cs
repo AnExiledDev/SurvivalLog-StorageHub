@@ -20,8 +20,10 @@ namespace StorageHub.Adapters;
 /// barrel (RA_GetBrewBagList, 0x29F4870) and the dye vat (RA_GetDyeBagList, 0x29F5E20), and the tool cabinet list at
 /// the shredder (RA_GetShredderBagList, 0x29F6F40) and the ration press (RA_GetCompressorBagList, 0x29F4C50). The drone
 /// trade asks ItemManager.CollectTradeContainers (RVA 0x26C3D80) for its tabs, so that list gets them on the way out,
-/// which also lets an aid drop take items from those storages. Every target starts with plain stores, so all are safe
-/// to hook. Static because a Harmony patch has nowhere else to look.
+/// which also lets an aid drop take items from those storages. The workbench's reducer has no body of its own to hook,
+/// so its tool cabinet list is extended in Ac_Item_GetHandMadeBagList.SendAction (RVA 0x297E8B0) instead; the game fills
+/// a recipe from every tab it lists, so a home storage tab there also feeds crafting. Every target starts with plain
+/// stores, so all are safe to hook. Static because a Harmony patch has nowhere else to look.
 /// </summary>
 internal static class StationHooks
 {
@@ -38,6 +40,7 @@ internal static class StationHooks
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetShredderBagList", nameof(BeforeShredder), null, "the shredder");
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCompressorBagList", nameof(BeforeCompressor), null, "the ration press");
         Patch(harmony, typeof(ItemManager), nameof(ItemManager.CollectTradeContainers), null, nameof(AfterTradeContainers), "the drone trade");
+        Patch(harmony, typeof(Ac_Item_GetHandMadeBagList), nameof(Ac_Item_GetHandMadeBagList.SendAction), nameof(BeforeWorkbench), null, "the workbench");
     }
 
     private static void Patch(Harmony harmony, Type type, string method, string? prefix, string? postfix, string station)
@@ -103,6 +106,26 @@ internal static class StationHooks
             AddOwners(shown, ac.Fridges);
             ac.Cabinets = WithCabinetTabs(ac.Cabinets, StoragesToAdd(StationKind.Compressor, state, shown));
         });
+
+    // Parameters by position: OwnerId, TargetId and Cabinets of the static SendAction.
+    private static void BeforeWorkbench(long __0, long __1, ref Il2CppCabinets __5)
+    {
+        var cabinets = __5;
+
+        Guard(() =>
+        {
+            var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+
+            if (state == null) return;
+
+            var shown = new HashSet<long> { __0, __1 };
+
+            AddOwners(shown, cabinets);
+            cabinets = WithCabinetTabs(cabinets, StoragesToAdd(StationKind.Workbench, state, shown));
+        });
+
+        __5 = cabinets;
+    }
 
     private static void AfterTradeContainers(long droneOwnerId, ref Il2CppTradeContainers __result)
     {

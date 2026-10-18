@@ -17,6 +17,7 @@ public enum StationKind
     Shredder,
     Compressor,
     Trade,
+    Workbench,
 }
 
 /// <summary>
@@ -43,6 +44,7 @@ public static class StationView
         StationKind.Shredder => "shredder",
         StationKind.Compressor => "compressor",
         StationKind.Trade => "trade",
+        StationKind.Workbench => "workbench",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
     };
 
@@ -56,6 +58,7 @@ public static class StationView
         "shredder" => StationKind.Shredder,
         "compressor" => StationKind.Compressor,
         "trade" => StationKind.Trade,
+        "workbench" => StationKind.Workbench,
         _ => null,
     };
 

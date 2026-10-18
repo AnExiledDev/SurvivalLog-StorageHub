@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+- The "Home" tab and the home storage tabs now also show at the workbench, with a "For the workbench" filter for anything a recipe uses. The workbench takes recipe materials from every storage tab it lists, so a home storage tab there also feeds crafting.
+- At a station, clicking an item in the "Home" tab that goes to your bag now moves one unit instead of the whole stack. This needs Stacking 0.5.0 or later; without it the whole stack moves as before.
+- The "Open" button in the "Home" tab now works at the drone trade.
+
 ## 0.8.2
 
 - The "Home" tab and the home storage tabs now also show at the brewing barrel, dye vat, shredder, ration press and drone trade. Each has its own filter ("For brewing", "For dyeing", "For the shredder", "For the ration press", "For trading"). At the drone trade, clicking a tradable item puts it on your side of the trade. The trade's tabs only show when it has more than one, so the "Home" tab needs at least one storage tab there too.

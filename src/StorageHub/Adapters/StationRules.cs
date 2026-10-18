@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.ReduxUI;
 using StorageHub.Core;
@@ -8,7 +9,7 @@ namespace StorageHub.Adapters;
 /// <summary>
 /// What a station takes, asked of the game's own checks: the stove's ingredient rule, the rat cage's food rule
 /// (spoilage included) or a live mouse, the brewing and dyeing ingredient flags, the shredder's list, the ration press's
-/// food rule, and the drone trade's value. Read only, so the bag tab hooks may call it from inside a reducer.
+/// food rule, the drone trade's value, and the workbench's recipe materials. Read only, so the bag tab hooks may call it from inside a reducer.
 /// </summary>
 internal static class StationRules
 {
@@ -36,6 +37,7 @@ internal static class StationRules
                 StationKind.Shredder => config.IsShredableItem(item.ItemConfigId),
                 StationKind.Compressor => IsPressable(row, item.ItemConfigId),
                 StationKind.Trade => row.TradeValue > 0,
+                StationKind.Workbench => RecipeMaterials(config).Contains(item.ItemConfigId),
                 StationKind.Inventory => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
             };
@@ -50,6 +52,39 @@ internal static class StationRules
             }
 
             return false;
+        }
+    }
+
+    private static HashSet<int>? _recipeMaterials;
+    private static ConfigManager? _recipeMaterialsSource;
+
+    /// <summary>
+    /// Every item some usable recipe asks for. The recipe table never changes while the game runs, so it is read once
+    /// per config instance and kept.
+    /// </summary>
+    private static HashSet<int> RecipeMaterials(ConfigManager config)
+    {
+        lock (Gate)
+        {
+            if (_recipeMaterials != null && ReferenceEquals(_recipeMaterialsSource, config)) return _recipeMaterials;
+
+            var materials = new HashSet<int>();
+            var recipes = config._Config_ProductionList_Dict;
+
+            if (recipes != null)
+            {
+                foreach (var recipe in recipes.Values)
+                {
+                    if (recipe == null || !recipe.IsUseable || recipe.MaterialList == null) continue;
+
+                    for (var i = 0; i < recipe.MaterialList.Count; i++) materials.Add(recipe.MaterialList[i]);
+                }
+            }
+
+            _recipeMaterials = materials;
+            _recipeMaterialsSource = config;
+
+            return materials;
         }
     }
 

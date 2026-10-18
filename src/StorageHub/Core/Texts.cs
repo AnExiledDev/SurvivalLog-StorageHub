@@ -141,6 +141,7 @@ public static class Texts
         ("scopeShredder", new("For the shredder", "粉碎机可用")),
         ("scopeCompressor", new("For the ration press", "口粮压制机可用")),
         ("scopeTrade", new("For trading", "可交易")),
+        ("scopeWorkbench", new("For the workbench", "工作台可用")),
         ("scopeAll", new("Everything", "全部")),
         ("homeOpen", new("Open", "打开")),
         ("homeClose", new("Close", "关闭")),

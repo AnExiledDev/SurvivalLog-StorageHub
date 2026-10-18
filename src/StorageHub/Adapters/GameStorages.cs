@@ -204,6 +204,19 @@ internal sealed class GameStorages
     }
 
     /// <summary>
+    /// One unit of a stack. Splitting a stack is Stacking's work, so without it (or when it cannot split this one) the
+    /// whole stack moves, as a plain click always did.
+    /// </summary>
+    public UnitMove MoveOne(ItemStack stack, long targetOwnerId)
+    {
+        var split = StackingUnits.MoveOne(stack.ItemId, stack.OwnerId, targetOwnerId);
+
+        if (split.HasValue) return split.Value ? UnitMove.One : UnitMove.Refused;
+
+        return Move(stack, targetOwnerId) ? UnitMove.WholeStack : UnitMove.Refused;
+    }
+
+    /// <summary>
     /// Everything lying on the floor of the home map, as stacks owned by the floor. Wave loot is left out: the game's
     /// drone collects it and tracks it by id. Call after Read, which clears the spoil clocks this adds to.
     /// </summary>

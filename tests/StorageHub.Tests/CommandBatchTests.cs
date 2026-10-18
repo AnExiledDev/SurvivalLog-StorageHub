@@ -22,6 +22,14 @@ public class CommandBatchTests
     }
 
     [Fact]
+    public void Each_click_that_takes_one_unit_takes_another_unit()
+    {
+        var commands = new PageCommand[] { new PageCommand.TakeOne(1, 200), new PageCommand.TakeOne(1, 200) };
+
+        Assert.Equal(commands, CommandBatch.WithoutRepeatedMoves(commands));
+    }
+
+    [Fact]
     public void Focus_changes_are_never_dropped_so_the_last_one_wins()
     {
         var commands = new PageCommand[] { new PageCommand.Focus(true), new PageCommand.Focus(false), new PageCommand.Focus(true) };

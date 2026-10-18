@@ -47,4 +47,20 @@ public static class StoragePlan
             .Select(stack => new MoveStep(stack, new[] { bag.OwnerId }))
             .ToList();
     }
+
+    /// <summary>
+    /// One unit of an item from one storage into the bag. It comes off the smallest stack, so the big stacks stay whole.
+    /// </summary>
+    public static IReadOnlyList<MoveStep> TakeOne(Inventory inventory, int configId, long ownerId)
+    {
+        var bag = inventory.Bag;
+        var smallest = inventory.Stacks
+            .Where(stack => stack.ConfigId == configId && stack.OwnerId == ownerId && stack.Count > 0)
+            .OrderBy(stack => stack.Count)
+            .FirstOrDefault();
+
+        if (bag is null || smallest is null || ownerId == bag.OwnerId) return Array.Empty<MoveStep>();
+
+        return new[] { new MoveStep(smallest with { Count = 1 }, new[] { bag.OwnerId }) };
+    }
 }

@@ -58,8 +58,9 @@ internal sealed class WebPage
     /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
     public void Status(string text) => Call($"status({HubView.Str(text)})");
 
-    /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made.</summary>
-    public void CloseMenu() => Run("window.__slmodmenu&&window.__slmodmenu.close()");
+    /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made,
+    /// and the home storage window opened from it.</summary>
+    public void CloseMenu() => Run("window.__slmodmenu&&window.__slmodmenu.close();window.__storagehub&&window.__storagehub.closePop&&window.__storagehub.closePop()");
 
     private void Call(string expression) => Run($"{Words()}window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}");
 

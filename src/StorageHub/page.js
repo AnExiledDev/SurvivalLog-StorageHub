@@ -450,6 +450,9 @@
     menuPutAwayTip: 'Move everything in your bag into the storages whose tags want it',
     menuFloor: 'Put away floor',
     menuFloorTip: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag',
+    menuHomeTip: 'Search the storages at home and take items from them',
+    homeBag: 'Bag',
+    homeTab: 'Home',
     homeTitle: 'Home storage',
     homeSub: '{0} storages',
     homeSearch: 'Search every storage...',
@@ -1342,8 +1345,11 @@
   // A tag with its string hole, and an arrow lifting off the floor.
   var PUT_AWAY_ICON = 'M3 3h8l10 10-8 8L3 11zM7.5 6a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0-3z';
   var FLOOR_ICON = 'M3 19h18v2H3zM12 3l6 6h-4v7h-4V9H6z';
+  // A magnifier.
+  var HOME_ICON = 'M10 3a7 7 0 1 0 4.2 12.6l5.1 5.1 1.4-1.4-5.1-5.1A7 7 0 0 0 10 3zm0 2a5 5 0 1 1 0 10a5 5 0 1 1 0-10z';
 
   var menuEntries = [
+    { id: 'storagehub.home', labelWord: 'homeTitle', titleWord: 'menuHomeTip', icon: HOME_ICON, order: 90, run: function () { openPop(); } },
     { id: 'storagehub.putaway', labelWord: 'putAwayTag', titleWord: 'menuPutAwayTip', icon: PUT_AWAY_ICON, order: 100, run: function () { sendAction('putAwayBag'); } },
     { id: 'storagehub.floor', labelWord: 'menuFloor', titleWord: 'menuFloorTip', icon: FLOOR_ICON, order: 110, run: function () { sendAction('putAwayFloor'); } }
   ];
@@ -1403,20 +1409,24 @@
     var isWanted = !!bar && backpackTabWantsButton(doc);
 
     relabelMenu();
-    menuEntries.forEach(function (entry) { slmodMenu.setWanted(entry.id, isWanted); });
+    // The home list's entry waits for the plugin to say the list is turned on.
+    menuEntries.forEach(function (entry) { slmodMenu.setWanted(entry.id, isWanted && (entry.id !== 'storagehub.home' || !home.isOff)); });
     slmodMenu.place(doc);
   }
 
   menuEntries.forEach(function (entry) { slmodMenu.add(menuEntry(entry)); });
   menuWords = words();
-  // The game sends the page no keys, so the plugin holds the game's hotkeys back while the menu is open and closes
-  // it on Esc itself.
-  slmodMenu.watch('storagehub', function (isOpen) { send('menu|' + (isOpen ? '1' : '0')); });
+  slmodMenu.watch('storagehub', function (isOpen) {
+    home.isMenuOpen = isOpen;
+    holdKeys();
+  });
 
-  // The home storage list docked beside the stove, the rat cage and the inventory. The plugin sends the storages with
-  // an ok flag per item, decided by the station's own rules; the list is drawn inside the game's iframe, beside its
-  // panels. At a station, a usable item goes in the way the game's own click does it: its storage's bag tab is shown,
-  // then the item is clicked there. Anything else, or an item whose storage has no tab, is taken into the bag.
+  // The home storage list. At the stove and the rat cage it is a tab in the bag panel's own tab bar: choosing it
+  // shows the list in the bag grid's place, at the same size, so the page's layout and zoom never change. On the
+  // inventory screen it is a window opened from the Mods menu. The plugin sends the storages with an ok flag per
+  // item, decided by the station's own rules. At a station, a usable item goes in the way the game's own click does
+  // it: its storage's bag tab is shown underneath, then the item is clicked there. Anything else, or an item whose
+  // storage has no tab, is taken into the bag.
   var STATION_PAGES = [
     { kind: 'cooking', page: /Cooking\.html/, host: '.cooking-system' },
     { kind: 'ratcage', page: /RatCage\.html/, host: '.generator-system' },
@@ -1426,16 +1436,26 @@
   var STATION_AFTER_CLICK_MS = [400, 1200];
   var TAB_WAIT_MS = 2000;
   var TAB_POLL_MS = 80;
-  var HOME_WIDTH = 300;
-  var HOME_GAP = 24;
+  var PANE_TAB_GAP = 8;
+  var POP_WIDTH = 320;
+  var POP_GAP = 24;
+  var POP_EDGE = 16;
+  var POP_MIN_HEIGHT = 360;
   var SEARCH_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fcfcfc" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
   var HOME_CSS = [
-    '.slmh-home,.panel.slmh-home{position:relative;box-sizing:border-box;width:' + HOME_WIDTH + 'px;flex:none;padding:0}',
-    // The page zooms itself to fit its panels, so the list adds no height of its own: it fills the height the other panels set and scrolls.
-    '.slmh-body{position:absolute;top:15px;right:15px;bottom:15px;left:15px;display:flex;flex-direction:column;min-height:0}',
-    '.slmh-inv .slmh-body{top:14px;right:16px;bottom:12px;left:16px}',
-    '.slmh-home .panel-title{margin-bottom:10px}',
-    '.slmh-home .panel-title .sub{margin-left:8px;font-size:12px;font-weight:400;color:#c0c0c0;letter-spacing:0}',
+    '.slmh-host{position:relative}',
+    // While the list is shown the bag panel keeps its own content and size, only hidden, so nothing reflows.
+    '.slmh-on>:not(.panel-title):not(.bag-tabs):not(.slmh-pane){visibility:hidden}',
+    // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
+    '.slmh-forced .bag-tabs{display:flex!important}',
+    '.slmh-forced #bagPanelTitle{display:none!important}',
+    '.slmh-pane{position:absolute;z-index:5;display:flex;flex-direction:column;min-height:0}',
+    '.slmh-pop{position:fixed;z-index:50;box-sizing:border-box;display:flex;flex-direction:column;padding:14px 16px 12px;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.96),rgba(20,20,22,.98));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-head{display:flex;align-items:center;margin-bottom:10px}',
+    '.slmh-title{font-size:17px;font-weight:700;color:#ffe6a8;letter-spacing:.5px}',
+    '.slmh-sub{margin-left:8px;font-size:12px;color:#999}',
+    '.slmh-x{margin-left:auto;width:26px;height:26px;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(20,15,12,.55);color:#c0c0c0;font-size:16px;line-height:1;cursor:pointer;font-family:inherit}',
+    '.slmh-x:hover{border-color:rgba(251,176,52,.6);color:#fbb034}',
     '.slmh-search{position:relative}',
     '.slmh-search input{width:100%;box-sizing:border-box;padding:7px 10px 7px 30px;background:rgba(20,15,12,.85);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fcfcfc;font-size:13px;outline:none;font-family:inherit}',
     '.slmh-search input:focus{border-color:rgba(251,176,52,.7)}',
@@ -1463,13 +1483,11 @@
     '.slmh-tag.st{color:#9fe6a8;background:rgba(60,110,60,.35)}',
     '.slmh-tag.bag{color:#c0c0c0;background:rgba(255,255,255,.07)}',
     '.slmh-empty{padding:16px 6px;color:#c0c0c0;font-size:12.5px;text-align:center}',
-    '.slmh-hint{margin-top:8px;font-size:12px;color:#c0c0c0}',
-    '.slmh-inv{position:fixed;z-index:50;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.94),rgba(20,20,22,.96));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
-    '.slmh-inv .panel-title{font-size:17px;font-weight:700;color:#ffe6a8;letter-spacing:.5px}',
-    '.slmh-inv .panel-title .sub{font-size:12px;font-weight:400;color:#999;margin-left:6px}'
+    '.slmh-hint{margin-top:8px;font-size:12px;color:#c0c0c0}'
   ].join('');
 
-  var home = { data: null, isOff: false, station: null, frame: null, ui: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null };
+  // isShown: the station's home tab is chosen, or the inventory's window is open.
+  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false };
 
   function station(data) {
     if (data === null) {
@@ -1486,13 +1504,12 @@
 
     home.data = data;
 
+    if (!isInventory()) addHomeTab();
+
     // Redrawn only when something changed, so a click is never lost to a list rebuilt under the pointer.
     if (home.ui && json === home.shownJson) return;
 
     home.shownJson = json;
-
-    if (!home.ui) return mountHome(home.frame.contentDocument);
-
     renderHome();
   }
 
@@ -1507,17 +1524,23 @@
       return;
     }
 
-    // Mounted when the first list arrives, so a list turned off in the config never flashes up. The game can also
-    // redraw its panels and drop ours, which starts it over.
-    if (found.frame !== home.frame || (home.ui && !home.ui.root.isConnected)) {
+    if (found.doc !== home.doc) {
       dropHome();
       home.station = found.station;
       home.frame = found.frame;
+      home.doc = found.doc;
       home.askedAt = 0;
     }
 
-    if (home.ui && home.station.kind === 'inventory') placeInventoryHome(found.doc);
-    if (Date.now() - home.askedAt >= STATION_ASK_MS) askStation();
+    if (isInventory()) keepPop();
+    else keepHomeTab();
+
+    // One ask learns whether the list is turned off; after that the list is kept fresh only while it shows.
+    if (home.askedAt === 0 || (home.isShown && Date.now() - home.askedAt >= STATION_ASK_MS)) askStation();
+  }
+
+  function isInventory() {
+    return !!home.station && home.station.kind === 'inventory';
   }
 
   function findStation() {
@@ -1554,15 +1577,27 @@
   }
 
   function dropHome() {
-    if (home.ui && home.ui.root.parentNode) home.ui.root.parentNode.removeChild(home.ui.root);
-    if (home.ui && home.ui.isTyping) send('focus|0');
+    var wasPopOpen = isPopOpen();
 
-    home.ui = null;
+    removeHomeUi();
+    removeHomeTab();
     home.station = null;
     home.frame = null;
+    home.doc = null;
     home.data = null;
     home.shownJson = '';
     home.openId = null;
+    home.isShown = false;
+
+    if (wasPopOpen) holdKeys();
+  }
+
+  function removeHomeUi() {
+    if (!home.ui) return;
+    if (home.ui.root.parentNode) home.ui.root.parentNode.removeChild(home.ui.root);
+    if (home.ui.isTyping) send('focus|0');
+
+    home.ui = null;
   }
 
   function make(doc, tag, className, text) {
@@ -1574,45 +1609,6 @@
     return node;
   }
 
-  function mountHome(doc) {
-    var isInventory = home.station.kind === 'inventory';
-    var root = make(doc, 'div', isInventory ? 'slmh-home slmh-inv' : 'slmh-home panel');
-    var body = make(doc, 'div', 'slmh-body');
-    var title = make(doc, 'div', 'panel-title', say('homeTitle'));
-    var sub = make(doc, 'span', 'sub');
-    var search = make(doc, 'div', 'slmh-search');
-    var input = make(doc, 'input');
-    var scope = make(doc, 'div', 'slmh-scope');
-    var list = make(doc, 'div', 'slmh-list');
-    var hint = make(doc, 'div', 'slmh-hint', say(isInventory ? 'hintInv' : 'hintStation'));
-
-    addHomeStyle(doc);
-    // The inventory page passes clicks through to the game unless the element under the pointer is marked interactive.
-    root.setAttribute('data-interactive', '1');
-    title.appendChild(sub);
-    search.innerHTML = SEARCH_ICON;
-    input.placeholder = say('homeSearch');
-    input.value = home.query;
-    search.appendChild(input);
-    body.appendChild(title);
-    body.appendChild(search);
-
-    if (!isInventory) {
-      scope.appendChild(scopeButton(doc, say(home.station.kind === 'cooking' ? 'scopeCooking' : 'scopeRatCage'), false));
-      scope.appendChild(scopeButton(doc, say('scopeAll'), true));
-      body.appendChild(scope);
-    }
-
-    body.appendChild(list);
-    body.appendChild(hint);
-    root.appendChild(body);
-    home.ui = { root: root, sub: sub, input: input, scope: scope, list: list, isTyping: false };
-    watchHomeSearch(input);
-    list.addEventListener('click', onHomeClick);
-    (isInventory ? doc.body : doc.querySelector(home.station.host)).appendChild(root);
-    renderHome();
-  }
-
   function addHomeStyle(doc) {
     if (doc.getElementById('slmh-style')) return;
 
@@ -1620,6 +1616,36 @@
     style.id = 'slmh-style';
     style.textContent = HOME_CSS;
     doc.head.appendChild(style);
+  }
+
+  // The search, the scope buttons at a station, the list and the hint, added to box; returns the ui handles.
+  function buildHomeBody(doc, root, box, sub) {
+    var search = make(doc, 'div', 'slmh-search');
+    var input = make(doc, 'input');
+    var scope = make(doc, 'div', 'slmh-scope');
+    var list = make(doc, 'div', 'slmh-list');
+    var hint = make(doc, 'div', 'slmh-hint', say(isInventory() ? 'hintInv' : 'hintStation'));
+
+    addHomeStyle(doc);
+    // The inventory page passes clicks through to the game unless the element under the pointer is marked interactive.
+    root.setAttribute('data-interactive', '1');
+    search.innerHTML = SEARCH_ICON;
+    input.placeholder = say('homeSearch');
+    input.value = home.query;
+    search.appendChild(input);
+    box.appendChild(search);
+
+    if (!isInventory()) {
+      scope.appendChild(scopeButton(doc, say(home.station.kind === 'cooking' ? 'scopeCooking' : 'scopeRatCage'), false));
+      scope.appendChild(scopeButton(doc, say('scopeAll'), true));
+      box.appendChild(scope);
+    }
+
+    box.appendChild(list);
+    box.appendChild(hint);
+    home.ui = { root: root, sub: sub, input: input, scope: scope, list: list, isTyping: false };
+    watchHomeSearch(input);
+    list.addEventListener('click', onHomeClick);
   }
 
   function scopeButton(doc, text, isAll) {
@@ -1637,7 +1663,7 @@
   // The game sends keys to the page only while the plugin holds them, and its own hotkeys must not see the typing.
   function watchHomeSearch(input) {
     input.addEventListener('focus', function () {
-      home.ui.isTyping = true;
+      if (home.ui) home.ui.isTyping = true;
       send('focus|1');
     });
     input.addEventListener('blur', function () {
@@ -1655,22 +1681,261 @@
     });
   }
 
-  // Inside the inventory page the list floats left of the bag, matching the bag panel's top and height.
-  function placeInventoryHome(doc) {
-    var bag = doc.querySelector(home.station.host);
+  // ---- The station's home tab ----
+
+  // The game redraws its tabs whenever the bag or a storage changes, so the tab is put back on every redraw.
+  function keepHomeTab() {
+    if (!home.data) return;
+
+    addHomeTab();
+
+    if (!home.isShown) return;
+    if (!home.ui || !home.ui.root.isConnected) mountPane();
+
+    placePane();
+  }
+
+  function addHomeTab() {
+    var doc = home.doc;
+    var tabs = doc && doc.getElementById('bagTabs');
+    var pinned = doc && doc.getElementById('bagTabPinned');
+    var panel = tabs && tabs.closest('.panel');
+
+    if (!pinned || !panel) return;
+    if (panel !== home.panel) adoptPanel(doc, tabs, panel);
+
+    var hasGameTab = !!pinned.querySelector('.bag-tab:not(.slmh-tab):not(.slmh-back)');
+
+    panel.classList.toggle('slmh-forced', !hasGameTab);
+
+    if (hasGameTab && home.back.parentNode) home.back.parentNode.removeChild(home.back);
+    if (!hasGameTab) showBackTab(doc, pinned);
+    if (pinned.lastElementChild !== home.tab) pinned.appendChild(home.tab);
+
+    markActiveTab();
+  }
+
+  function adoptPanel(doc, tabs, panel) {
+    removeHomeTab();
+    addHomeStyle(doc);
+    home.panel = panel;
+    home.tab = make(doc, 'div', 'bag-tab slmh-tab', say('homeTab'));
+    home.back = make(doc, 'div', 'bag-tab slmh-back');
+    home.tab.addEventListener('click', showHome);
+    panel.classList.add('slmh-host');
+    // Any other tab leaves the list; the game's own click on that tab then does the rest.
+    tabs.addEventListener('click', function (e) {
+      var tab = e.target.closest('.bag-tab');
+
+      if (tab && !tab.classList.contains('slmh-tab') && !tab.classList.contains('locked')) hideHome();
+    }, true);
+    home.observer = new doc.defaultView.MutationObserver(function () {
+      try {
+        addHomeTab();
+      } catch (e) {}
+    });
+    home.observer.observe(tabs, { childList: true, subtree: true });
+  }
+
+  // Named after the panel's own title, which is the bag's name; set only on a change, as setting it is itself a redraw.
+  function showBackTab(doc, pinned) {
+    var title = doc.getElementById('bagTitleText') || doc.getElementById('bagPanelTitle');
+    var name = (title && title.textContent.trim()) || say('homeBag');
+
+    if (home.back.textContent !== name) home.back.textContent = name;
+    if (pinned.firstElementChild !== home.back) pinned.insertBefore(home.back, pinned.firstElementChild);
+  }
+
+  // While the list shows, the game's chosen tab is only marked, so the game still knows which bag sits underneath.
+  function markActiveTab() {
+    var tabs = home.panel.querySelectorAll('.bag-tab:not(.slmh-tab):not(.slmh-back)');
+
+    home.tab.classList.toggle('active', home.isShown);
+    home.back.classList.toggle('active', !home.isShown);
+    Array.prototype.forEach.call(tabs, function (tab) {
+      if (home.isShown && tab.classList.contains('active')) {
+        tab.classList.remove('active');
+        tab.classList.add('slmh-was');
+      } else if (!home.isShown && tab.classList.contains('slmh-was')) {
+        tab.classList.remove('slmh-was');
+        tab.classList.add('active');
+      }
+    });
+  }
+
+  function removeHomeTab() {
+    if (home.observer) home.observer.disconnect();
+    if (home.tab && home.tab.parentNode) home.tab.parentNode.removeChild(home.tab);
+    if (home.back && home.back.parentNode) home.back.parentNode.removeChild(home.back);
+
+    if (home.panel) {
+      home.panel.classList.remove('slmh-host', 'slmh-on', 'slmh-forced');
+      Array.prototype.forEach.call(home.panel.querySelectorAll('.slmh-was'), function (tab) {
+        tab.classList.remove('slmh-was');
+        tab.classList.add('active');
+      });
+    }
+
+    home.observer = null;
+    home.tab = null;
+    home.back = null;
+    home.panel = null;
+  }
+
+  function showHome() {
+    if (home.isShown || !home.panel) return;
+
+    home.isShown = true;
+    mountPane();
+    placePane();
+    markActiveTab();
+    askStation();
+  }
+
+  function hideHome() {
+    if (!home.isShown) return;
+
+    home.isShown = false;
+    removeHomeUi();
+
+    if (!home.panel) return;
+
+    home.panel.classList.remove('slmh-on');
+    markActiveTab();
+  }
+
+  function mountPane() {
+    var doc = home.doc;
+    var root = make(doc, 'div', 'slmh-pane');
+
+    removeHomeUi();
+    buildHomeBody(doc, root, root, make(doc, 'span'));
+    home.panel.appendChild(root);
+    home.panel.classList.add('slmh-on');
+    renderHome();
+  }
+
+  // The pane covers the panel below its tab bar, inside the panel's padding.
+  function placePane() {
+    var root = home.ui.root;
+    var tabs = home.doc.getElementById('bagTabs');
+    var style = home.doc.defaultView.getComputedStyle(home.panel);
+    var place = {
+      top: tabs.offsetTop + tabs.offsetHeight + PANE_TAB_GAP + 'px',
+      left: style.paddingLeft,
+      right: style.paddingRight,
+      bottom: style.paddingBottom
+    };
+
+    Object.keys(place).forEach(function (side) {
+      if (root.style[side] !== place[side]) root.style[side] = place[side];
+    });
+  }
+
+  // ---- The inventory's window ----
+
+  function isPopOpen() {
+    return home.isShown && isInventory();
+  }
+
+  // The game sends the page no keys, so the plugin holds the game's hotkeys back while the Mods menu or the window
+  // is open, and closes both on Esc itself.
+  function holdKeys() {
+    send('menu|' + (home.isMenuOpen || isPopOpen() ? '1' : '0'));
+  }
+
+  function openPop() {
+    if (!isInventory() || home.isShown) return;
+
+    home.isShown = true;
+    holdKeys();
+    mountPop();
+    askStation();
+    home.ui.input.focus();
+  }
+
+  function closePop() {
+    if (!isPopOpen()) return;
+
+    home.isShown = false;
+    removeHomeUi();
+    holdKeys();
+  }
+
+  // Shown on the bag side's item tab only, the same rule as the menu entry that opens it.
+  function keepPop() {
+    if (!home.isShown) return;
+
+    if (!home.doc.querySelector('.bag-slot .toolbar') || !backpackTabWantsButton(home.doc)) {
+      closePop();
+
+      return;
+    }
+
+    if (!home.ui || !home.ui.root.isConnected) mountPop();
+
+    placePop();
+  }
+
+  function mountPop() {
+    var doc = home.doc;
+    var root = make(doc, 'div', 'slmh-pop');
+    var head = make(doc, 'div', 'slmh-head');
+    var sub = make(doc, 'span', 'slmh-sub');
+    var shut = make(doc, 'button', 'slmh-x', TIMES);
+
+    removeHomeUi();
+    shut.addEventListener('click', closePop);
+    head.appendChild(make(doc, 'span', 'slmh-title', say('homeTitle')));
+    head.appendChild(sub);
+    head.appendChild(shut);
+    root.appendChild(head);
+    buildHomeBody(doc, root, root, sub);
+    doc.body.appendChild(root);
+    placePop();
+    renderHome();
+  }
+
+  // Beside the inventory's panels, the open storage's included: left if there is room, else right, else at the edge.
+  function placePop() {
+    var win = home.doc.defaultView;
+    var box = panelsBox(home.doc);
+    var height = Math.min(win.innerHeight - 2 * POP_EDGE, Math.max(POP_MIN_HEIGHT, box.bottom - box.top));
+    var top = Math.max(POP_EDGE, Math.min(box.top, win.innerHeight - POP_EDGE - height));
+    var left = POP_EDGE;
+
+    if (box.left - POP_GAP - POP_WIDTH >= POP_EDGE) left = box.left - POP_GAP - POP_WIDTH;
+    else if (box.right + POP_GAP + POP_WIDTH <= win.innerWidth - POP_EDGE) left = box.right + POP_GAP;
+
+    var place = { left: left + 'px', top: top + 'px', width: POP_WIDTH + 'px', height: height + 'px' };
     var root = home.ui.root;
 
-    root.style.display = backpackTabWantsButton(doc) ? '' : 'none';
-
-    if (!bag) return;
-
-    var box = bag.getBoundingClientRect();
-
-    root.style.width = HOME_WIDTH + 'px';
-    root.style.top = box.top + 'px';
-    root.style.height = box.height + 'px';
-    root.style.left = Math.max(8, box.left - HOME_WIDTH - HOME_GAP) + 'px';
+    Object.keys(place).forEach(function (side) {
+      if (root.style[side] !== place[side]) root.style[side] = place[side];
+    });
   }
+
+  function panelsBox(doc) {
+    var win = doc.defaultView;
+    var box = { left: win.innerWidth / 2, right: win.innerWidth / 2, top: POP_EDGE, bottom: win.innerHeight - POP_EDGE };
+    var isFirst = true;
+
+    Array.prototype.forEach.call(doc.querySelectorAll('.bag-slot .panel'), function (panel) {
+      var rect = panel.getBoundingClientRect();
+
+      if (!rect.width) return;
+
+      box.left = isFirst ? rect.left : Math.min(box.left, rect.left);
+      box.right = isFirst ? rect.right : Math.max(box.right, rect.right);
+      box.top = isFirst ? rect.top : Math.min(box.top, rect.top);
+      box.bottom = isFirst ? rect.bottom : Math.max(box.bottom, rect.bottom);
+      isFirst = false;
+    });
+
+    return box;
+  }
+
+  // ---- The list ----
 
   function renderHome() {
     if (!home.ui) return;
@@ -1879,7 +2144,8 @@
   // The rat cage keeps its tabs in State; the stove keeps the owner on each tab element.
   function activeOwner() {
     var win = home.frame && home.frame.contentWindow;
-    var tab = win && win.document.querySelector('.bag-tab.active');
+    // While the home tab shows, the game's chosen tab is marked slmh-was instead of active.
+    var tab = win && win.document.querySelector('.bag-tab.active:not(.slmh-tab):not(.slmh-back), .bag-tab.slmh-was');
 
     if (win && win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
 
@@ -1900,99 +2166,6 @@
     }).map(function (t) { return String(t._ownerId); });
   }
 
-  // The rat cage zooms its whole page down to fit the screen, so a big cage or a big storage tab shrinks everything.
-  // Its two grids scroll instead, each capped to the height its panel has left. The game's drag and drop measures
-  // the grid's own on-screen box, so it keeps working inside a scrolled box.
-  var CAGE_GRIDS = ['backpackGrid', 'foodGrid'];
-  var CAGE_FIT_MARGIN = 48;
-  var CAGE_MIN_GRID = 160;
-  var CAGE_STYLE = [
-    '.slmh-gscroll{flex:none;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}',
-    '.slmh-gscroll::-webkit-scrollbar{width:6px}',
-    '.slmh-gscroll::-webkit-scrollbar-thumb{background:rgba(251,176,52,.35);border-radius:3px}'
-  ].join('');
-
-  function patchCageGrids() {
-    var found = findStation();
-
-    if (!found || found.station.kind !== 'ratcage') return;
-
-    var doc = found.doc;
-    var win = found.frame.contentWindow;
-    var system = doc.querySelector('.generator-system');
-    var isChanged = false;
-
-    addStyle(doc, 'slmh-cage-style', CAGE_STYLE);
-    CAGE_GRIDS.forEach(function (id) {
-      if (capGrid(doc, win, system, id)) isChanged = true;
-    });
-
-    // The page refits its zoom on resize, so a new cap takes effect at once.
-    if (isChanged) win.dispatchEvent(new win.Event('resize'));
-  }
-
-  function capGrid(doc, win, system, id) {
-    var grid = doc.getElementById(id);
-    var panel = grid && grid.closest('.panel');
-
-    if (!panel) return false;
-
-    var box = scrollBoxFor(doc, grid);
-    // Floored so the zoom's fractional measures cannot nudge the cap and refit the page on every poll.
-    var cap = Math.floor(Math.max(CAGE_MIN_GRID, win.innerHeight - CAGE_FIT_MARGIN - verticalEdges(win, system) - (panelContentHeight(win, panel) - box.offsetHeight)));
-    var maxHeight = cap + 'px';
-
-    if (box.style.maxHeight === maxHeight) return false;
-
-    box.style.maxHeight = maxHeight;
-
-    return true;
-  }
-
-  function scrollBoxFor(doc, grid) {
-    if (grid.parentNode.classList.contains('slmh-gscroll')) return grid.parentNode;
-
-    var box = doc.createElement('div');
-
-    box.className = 'slmh-gscroll';
-    // A drag measures the grid once when it starts, so scrolling mid-drag would drop the item in the wrong cell.
-    box.addEventListener('wheel', function (e) {
-      if (e.buttons) e.preventDefault();
-    }, { passive: false });
-    grid.parentNode.insertBefore(box, grid);
-    box.appendChild(grid);
-
-    return box;
-  }
-
-  // The panels stretch to the tallest one, so a panel's own height is read from where its last child ends.
-  function panelContentHeight(win, panel) {
-    var last = panel.lastElementChild;
-    var style = win.getComputedStyle(panel);
-
-    if (!last) return 0;
-
-    return last.offsetTop + last.offsetHeight + parseFloat(win.getComputedStyle(last).marginBottom) - panel.offsetTop +
-      parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
-  }
-
-  function verticalEdges(win, el) {
-    var style = win.getComputedStyle(el);
-
-    return parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderTopWidth) +
-      parseFloat(style.borderBottomWidth);
-  }
-
-  function addStyle(doc, id, css) {
-    if (doc.getElementById(id)) return;
-
-    var style = doc.createElement('style');
-
-    style.id = id;
-    style.textContent = css;
-    doc.head.appendChild(style);
-  }
-
   setInterval(function () {
     try {
       patchBackpack();
@@ -2001,12 +2174,8 @@
     try {
       patchStations();
     } catch (e) {}
-
-    try {
-      patchCageGrids();
-    } catch (e) {}
   }, 400);
 
-  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station };
+  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, closePop: closePop };
   send('ready');
 })();

@@ -20,7 +20,7 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `HomeStorageList` | `true` | Show a searchable list of your home storages beside your bag on the inventory screen, the stove and the rat cage. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. |
+| `HomeStorageList` | `true` | Add a searchable list of your home storages: a "Home" tab on the bag panel at the stove and the rat cage, and a "Home storage" window in the Mods menu on the inventory screen. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. |
 | `StorageTabs` | `true` | At the stove and the rat cage, add a bag tab for every home storage holding something the station takes, next to the game's own fridge tabs. |
 
 ## Delivery

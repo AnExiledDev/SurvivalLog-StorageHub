@@ -21,8 +21,6 @@ The panel, the Mods menu entries and every message follow the game's language: E
 
 Storage Hub keeps nothing of its own in your save and does not edit game files. The items it moves stay where it put them, so removing the mod undoes nothing.
 
-**Back up your saves before trying a new version of this mod.** It moves real items around in your save, and a new version can have new bugs.
-
 ## The panel
 
 `F8` opens and closes it (the key can be changed in the settings). `Esc` and the `x` in the top-right corner close it too. While the panel is open, the game's hotkeys are paused, so typing in the search box does not also open a game menu.
@@ -137,8 +135,6 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 
 ## Known issues and limits
 
-Moving items around is finicky. The mod checks every move and puts things back when the game refuses one, but if an item ends up somewhere strange, goes missing or doubles, please tell me (see [Feedback](#feedback-and-bug-reports)), even if you are not sure the mod caused it. If one piece misbehaves, turn just that one off in the settings.
-
 - "Take all into bag" takes from every place listed for the item, a drone included. Check where an item sits before taking all of it if a drone holds trade goods.
 - Material racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags (the vehicle trunk and boxes, the workbench drawer, the shredder and compressor trays, the trap store) are never tidied, because the game places items in them by its own rules.
 - A storage whose grid on screen differs from its real grid is left alone, with one line in the log. So is a storage whose mold cannot be read.
@@ -147,7 +143,6 @@ Moving items around is finicky. The mod checks every move and puts things back w
 - A delivered stack that topped up a stack already in the hub moves whole, including what was there before.
 - When the hub is full, the game leaves the cargo in the drone. Anything the game moves out of the drone later is not put away.
 - The keep list is one list for all saves.
-- `BepInEx\storage-hub.log` is never trimmed. Delete it now and then if it grows large.
 
 ## Requirements
 

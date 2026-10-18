@@ -20,19 +20,17 @@ The game can't split a stack, so the keep list keeps whole stacks: the smallest 
 
 The list is saved in [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it, and a file this version can't understand is copied aside with a .broken- name before starting fresh.
 
-Storage Hub keeps nothing of its own in your save and does not edit game files. [b]Back up your saves before trying a new version[/b], since it moves real items around.
+Storage Hub keeps nothing of its own in your save and does not edit game files.
 
 Works in English and Chinese.
 
 [size=5]Known issues[/size]
 [list]
-[*]Moving items is finicky. If anything ends up somewhere strange, goes missing or doubles, turn that piece off and tell me.[/*]
 [*]No put-away ever fills a drone or the workbench drawer. "Take all into bag" does take from a drone, so check before taking all of something a drone is carrying.[/*]
 [*]Racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags are never tidied.[/*]
 [*]After Sort, the game's own layout shows for one frame before the compact one replaces it.[/*]
 [*]Drone deliveries and stack merging only start after the prologue.[/*]
 [/list]
-If you run into anything strange, please tell me (see Feedback below).
 
 [size=5]Requirements[/size]
 [list]
@@ -81,17 +79,15 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 
 清单保存在 [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]。[b]目前所有存档共用同一个清单。[/b]如果这个文件读不出来，模组会拒绝收纳背包和修改清单，而不是覆盖它；当前版本无法识别的文件会被另存为带 .broken- 的名字，然后重新开始一个空清单。
 
-Storage Hub 不在你的存档里保存任何自己的数据，也不修改游戏文件。[b]试用新版本前请先备份存档[/b]，因为它会移动真实的物品。
+Storage Hub 不在你的存档里保存任何自己的数据，也不修改游戏文件。
 
 [size=5]已知问题[/size]
 [list]
-[*]移动物品比较容易出问题。如果有物品跑到奇怪的地方、丢失或变多，请关闭对应的功能并告诉我。[/*]
 [*]任何收纳都不会把物品放进无人机或工作台抽屉。「全部收进背包」会从无人机里取东西，所以在全部取出无人机正在运送的物品之前请先确认。[/*]
 [*]架子、烹饪家具、堆肥箱、火锅、上锁的包和游戏的特殊背包永远不会被整理。[/*]
 [*]点击「整理」后，游戏自己的排列会先显示一帧，然后才被紧凑的排列替换。[/*]
 [*]无人机送货和合并堆叠要在序章结束后才会开始工作。[/*]
 [/list]
-如果遇到任何奇怪的情况，请告诉我（见下方反馈）。
 
 [size=5]前置要求[/size]
 [list]

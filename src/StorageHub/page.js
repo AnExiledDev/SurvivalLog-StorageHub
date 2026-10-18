@@ -1900,6 +1900,99 @@
     }).map(function (t) { return String(t._ownerId); });
   }
 
+  // The rat cage zooms its whole page down to fit the screen, so a big cage or a big storage tab shrinks everything.
+  // Its two grids scroll instead, each capped to the height its panel has left. The game's drag and drop measures
+  // the grid's own on-screen box, so it keeps working inside a scrolled box.
+  var CAGE_GRIDS = ['backpackGrid', 'foodGrid'];
+  var CAGE_FIT_MARGIN = 48;
+  var CAGE_MIN_GRID = 160;
+  var CAGE_STYLE = [
+    '.slmh-gscroll{flex:none;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}',
+    '.slmh-gscroll::-webkit-scrollbar{width:6px}',
+    '.slmh-gscroll::-webkit-scrollbar-thumb{background:rgba(251,176,52,.35);border-radius:3px}'
+  ].join('');
+
+  function patchCageGrids() {
+    var found = findStation();
+
+    if (!found || found.station.kind !== 'ratcage') return;
+
+    var doc = found.doc;
+    var win = found.frame.contentWindow;
+    var system = doc.querySelector('.generator-system');
+    var isChanged = false;
+
+    addStyle(doc, 'slmh-cage-style', CAGE_STYLE);
+    CAGE_GRIDS.forEach(function (id) {
+      if (capGrid(doc, win, system, id)) isChanged = true;
+    });
+
+    // The page refits its zoom on resize, so a new cap takes effect at once.
+    if (isChanged) win.dispatchEvent(new win.Event('resize'));
+  }
+
+  function capGrid(doc, win, system, id) {
+    var grid = doc.getElementById(id);
+    var panel = grid && grid.closest('.panel');
+
+    if (!panel) return false;
+
+    var box = scrollBoxFor(doc, grid);
+    // Floored so the zoom's fractional measures cannot nudge the cap and refit the page on every poll.
+    var cap = Math.floor(Math.max(CAGE_MIN_GRID, win.innerHeight - CAGE_FIT_MARGIN - verticalEdges(win, system) - (panelContentHeight(win, panel) - box.offsetHeight)));
+    var maxHeight = cap + 'px';
+
+    if (box.style.maxHeight === maxHeight) return false;
+
+    box.style.maxHeight = maxHeight;
+
+    return true;
+  }
+
+  function scrollBoxFor(doc, grid) {
+    if (grid.parentNode.classList.contains('slmh-gscroll')) return grid.parentNode;
+
+    var box = doc.createElement('div');
+
+    box.className = 'slmh-gscroll';
+    // A drag measures the grid once when it starts, so scrolling mid-drag would drop the item in the wrong cell.
+    box.addEventListener('wheel', function (e) {
+      if (e.buttons) e.preventDefault();
+    }, { passive: false });
+    grid.parentNode.insertBefore(box, grid);
+    box.appendChild(grid);
+
+    return box;
+  }
+
+  // The panels stretch to the tallest one, so a panel's own height is read from where its last child ends.
+  function panelContentHeight(win, panel) {
+    var last = panel.lastElementChild;
+    var style = win.getComputedStyle(panel);
+
+    if (!last) return 0;
+
+    return last.offsetTop + last.offsetHeight + parseFloat(win.getComputedStyle(last).marginBottom) - panel.offsetTop +
+      parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
+  }
+
+  function verticalEdges(win, el) {
+    var style = win.getComputedStyle(el);
+
+    return parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderTopWidth) +
+      parseFloat(style.borderBottomWidth);
+  }
+
+  function addStyle(doc, id, css) {
+    if (doc.getElementById(id)) return;
+
+    var style = doc.createElement('style');
+
+    style.id = id;
+    style.textContent = css;
+    doc.head.appendChild(style);
+  }
+
   setInterval(function () {
     try {
       patchBackpack();
@@ -1907,6 +2000,10 @@
 
     try {
       patchStations();
+    } catch (e) {}
+
+    try {
+      patchCageGrids();
     } catch (e) {}
   }, 400);
 

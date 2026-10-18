@@ -13,6 +13,7 @@ Survival Log makes you open storage after storage to find something, and again t
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
 - **Home storage list**: on the inventory screen, the stove and the rat cage, a searchable list of everything in your home storages sits beside your bag. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. On the inventory screen, "Open" shows a storage beside your bag.
 - **Storage tabs at stations**: the stove and the rat cage get a bag tab for every home storage holding something they can use, next to the fridge tabs.
+- **Scrolling rat cage grids**: the rat cage's bag and food grids scroll when they get tall, instead of the whole screen shrinking to fit.
 - **Drone deliveries**: when a drone comes home, what it brought is put away into the storages tagged for it.
 - **Tidy storages**: opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
 - **A log file**: what the mod did and anything that went wrong is written to `BepInEx\storage-hub.log`.

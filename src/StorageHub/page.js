@@ -449,7 +449,25 @@
     kindDrawer: 'Drawer',
     menuPutAwayTip: 'Move everything in your bag into the storages whose tags want it',
     menuFloor: 'Put away floor',
-    menuFloorTip: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag'
+    menuFloorTip: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag',
+    homeTitle: 'Home storage',
+    homeSub: '{0} storages',
+    homeSearch: 'Search every storage...',
+    scopeCooking: 'For cooking',
+    scopeRatCage: 'For the rat cage',
+    scopeAll: 'Everything',
+    homeOpen: 'Open',
+    homeClose: 'Close',
+    homeUsable: '{0} usable',
+    homeItems: '{0} items',
+    tagUse: 'Use',
+    tagBag: 'To bag',
+    hintStation: 'Click: usable items go into the station, anything else into your bag.',
+    hintInv: 'Click an item to take it into your bag, or Open a storage beside your bag.',
+    homeNoMatch: 'Nothing in your storages matches that search.',
+    homeNone: 'No storage holds anything for this station.',
+    homeEmpty: 'Your home storages are empty.',
+    homeLoading: 'Reading your storages...'
   };
 
   function words() {
@@ -1395,12 +1413,498 @@
   // it on Esc itself.
   slmodMenu.watch('storagehub', function (isOpen) { send('menu|' + (isOpen ? '1' : '0')); });
 
+  // The home storage list docked beside the stove, the rat cage and the inventory. The plugin sends the storages with
+  // an ok flag per item, decided by the station's own rules; the list is drawn inside the game's iframe, beside its
+  // panels. At a station, a usable item goes in the way the game's own click does it: its storage's bag tab is shown,
+  // then the item is clicked there. Anything else, or an item whose storage has no tab, is taken into the bag.
+  var STATION_PAGES = [
+    { kind: 'cooking', page: /Cooking\.html/, host: '.cooking-system' },
+    { kind: 'ratcage', page: /RatCage\.html/, host: '.generator-system' },
+    { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
+  ];
+  var STATION_ASK_MS = 3000;
+  var STATION_AFTER_CLICK_MS = [400, 1200];
+  var TAB_WAIT_MS = 2000;
+  var TAB_POLL_MS = 80;
+  var HOME_WIDTH = 300;
+  var HOME_GAP = 24;
+  var SEARCH_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fcfcfc" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+  var HOME_CSS = [
+    '.slmh-home{display:flex;flex-direction:column;width:' + HOME_WIDTH + 'px;min-height:0;flex:none}',
+    '.slmh-home .panel-title{margin-bottom:10px}',
+    '.slmh-home .panel-title .sub{margin-left:8px;font-size:12px;font-weight:400;color:#c0c0c0;letter-spacing:0}',
+    '.slmh-search{position:relative}',
+    '.slmh-search input{width:100%;box-sizing:border-box;padding:7px 10px 7px 30px;background:rgba(20,15,12,.85);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fcfcfc;font-size:13px;outline:none;font-family:inherit}',
+    '.slmh-search input:focus{border-color:rgba(251,176,52,.7)}',
+    '.slmh-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.6}',
+    '.slmh-scope{display:flex;gap:4px;margin-top:8px}',
+    '.slmh-scope button{flex:1;padding:5px 8px;font-size:12.5px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(20,15,12,.55);color:#c0c0c0;cursor:pointer;font-family:inherit}',
+    '.slmh-scope button.on{border-color:rgba(251,176,52,.7);color:#fbb034;background:linear-gradient(180deg,rgba(90,70,30,.55),rgba(60,45,20,.6))}',
+    '.slmh-list{flex:1;min-height:0;overflow-y:auto;margin-top:8px;padding-right:4px}',
+    '.slmh-list::-webkit-scrollbar{width:6px}',
+    '.slmh-list::-webkit-scrollbar-thumb{background:rgba(251,176,52,.35);border-radius:3px}',
+    '.slmh-store{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:5px;background:rgba(20,15,12,.6);border:1px solid rgba(255,255,255,.12);border-radius:6px;cursor:pointer;font-size:13px;color:#fcfcfc;user-select:none}',
+    '.slmh-store:hover{border-color:rgba(251,176,52,.45)}',
+    '.slmh-store.on{border-color:rgba(251,176,52,.75)}',
+    '.slmh-car{width:10px;font-size:9px;color:#fbb034}',
+    '.slmh-store .cnt{margin-left:auto;color:#c0c0c0;font-size:12px}',
+    '.slmh-open{padding:2px 9px;font-size:12px;border-radius:5px;border:1px solid rgba(251,176,52,.55);background:linear-gradient(180deg,rgba(90,70,30,.85),rgba(60,45,20,.9));color:#ffd77a;cursor:pointer;font-family:inherit}',
+    '.slmh-open.on{background:rgba(251,176,52,.85);color:#2a1d08}',
+    '.slmh-row{display:flex;align-items:center;gap:8px;padding:3px 6px 3px 16px;cursor:pointer;border-radius:5px;font-size:12.5px;color:#e8e8e8}',
+    '.slmh-row:hover{background:rgba(251,176,52,.14)}',
+    '.slmh-ic{width:32px;height:32px;flex:none;background:linear-gradient(135deg,rgba(70,60,55,.95),rgba(45,38,34,.95));border:1px solid rgba(255,255,255,.14);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#c0c0c0;font-size:13px}',
+    '.slmh-ic img{max-width:28px;max-height:28px}',
+    '.slmh-row .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.slmh-row .x{color:#c0c0c0;font-size:12px;flex:none}',
+    '.slmh-tag{margin-left:auto;flex:none;font-size:11px;padding:1px 6px;border-radius:4px}',
+    '.slmh-tag.st{color:#9fe6a8;background:rgba(60,110,60,.35)}',
+    '.slmh-tag.bag{color:#c0c0c0;background:rgba(255,255,255,.07)}',
+    '.slmh-empty{padding:16px 6px;color:#c0c0c0;font-size:12.5px;text-align:center}',
+    '.slmh-hint{margin-top:8px;font-size:12px;color:#c0c0c0}',
+    '.slmh-inv{position:fixed;z-index:50;box-sizing:border-box;padding:14px 16px 12px;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.94),rgba(20,20,22,.96));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-inv .panel-title{font-size:17px;font-weight:700;color:#ffe6a8;letter-spacing:.5px}',
+    '.slmh-inv .panel-title .sub{font-size:12px;font-weight:400;color:#999;margin-left:6px}'
+  ].join('');
+
+  var home = { data: null, isOff: false, station: null, frame: null, ui: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null };
+
+  function station(data) {
+    if (data === null) {
+      home.isOff = true;
+      dropHome();
+
+      return;
+    }
+
+    if (!data || !home.station || data.kind !== home.station.kind) return;
+
+    // The tabs decide which storages get an Open button, so a change of tabs redraws too.
+    var json = JSON.stringify(data) + '|' + tabOwners().join(',');
+
+    home.data = data;
+
+    // Redrawn only when something changed, so a click is never lost to a list rebuilt under the pointer.
+    if (home.ui && json === home.shownJson) return;
+
+    home.shownJson = json;
+
+    if (!home.ui) return mountHome(home.frame.contentDocument);
+
+    renderHome();
+  }
+
+  function patchStations() {
+    if (home.isOff) return;
+
+    var found = findStation();
+
+    if (!found) {
+      dropHome();
+
+      return;
+    }
+
+    // Mounted when the first list arrives, so a list turned off in the config never flashes up. The game can also
+    // redraw its panels and drop ours, which starts it over.
+    if (found.frame !== home.frame || (home.ui && !home.ui.root.isConnected)) {
+      dropHome();
+      home.station = found.station;
+      home.frame = found.frame;
+      home.askedAt = 0;
+    }
+
+    if (home.ui && home.station.kind === 'inventory') placeInventoryHome(found.doc);
+    if (Date.now() - home.askedAt >= STATION_ASK_MS) askStation();
+  }
+
+  function findStation() {
+    var frames = document.querySelectorAll('iframe');
+
+    for (var i = 0; i < frames.length; i++) {
+      for (var s = 0; s < STATION_PAGES.length; s++) {
+        if (!STATION_PAGES[s].page.test(frames[i].src || '')) continue;
+
+        var doc = null;
+
+        try {
+          doc = frames[i].contentDocument;
+        } catch (e) {}
+
+        if (doc && doc.querySelector(STATION_PAGES[s].host)) return { station: STATION_PAGES[s], frame: frames[i], doc: doc };
+      }
+    }
+
+    return null;
+  }
+
+  function askStation() {
+    home.askedAt = Date.now();
+    send('station|' + home.station.kind);
+  }
+
+  function askStationSoon() {
+    STATION_AFTER_CLICK_MS.forEach(function (delay) {
+      setTimeout(function () {
+        if (home.station) askStation();
+      }, delay);
+    });
+  }
+
+  function dropHome() {
+    if (home.ui && home.ui.root.parentNode) home.ui.root.parentNode.removeChild(home.ui.root);
+    if (home.ui && home.ui.isTyping) send('focus|0');
+
+    home.ui = null;
+    home.station = null;
+    home.frame = null;
+    home.data = null;
+    home.shownJson = '';
+    home.openId = null;
+  }
+
+  function make(doc, tag, className, text) {
+    var node = doc.createElement(tag);
+
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+
+    return node;
+  }
+
+  function mountHome(doc) {
+    var isInventory = home.station.kind === 'inventory';
+    var root = make(doc, 'div', isInventory ? 'slmh-home slmh-inv' : 'slmh-home panel');
+    var title = make(doc, 'div', 'panel-title', say('homeTitle'));
+    var sub = make(doc, 'span', 'sub');
+    var search = make(doc, 'div', 'slmh-search');
+    var input = make(doc, 'input');
+    var scope = make(doc, 'div', 'slmh-scope');
+    var list = make(doc, 'div', 'slmh-list');
+    var hint = make(doc, 'div', 'slmh-hint', say(isInventory ? 'hintInv' : 'hintStation'));
+
+    addHomeStyle(doc);
+    // The inventory page passes clicks through to the game unless the element under the pointer is marked interactive.
+    root.setAttribute('data-interactive', '1');
+    title.appendChild(sub);
+    search.innerHTML = SEARCH_ICON;
+    input.placeholder = say('homeSearch');
+    input.value = home.query;
+    search.appendChild(input);
+    root.appendChild(title);
+    root.appendChild(search);
+
+    if (!isInventory) {
+      scope.appendChild(scopeButton(doc, say(home.station.kind === 'cooking' ? 'scopeCooking' : 'scopeRatCage'), false));
+      scope.appendChild(scopeButton(doc, say('scopeAll'), true));
+      root.appendChild(scope);
+    }
+
+    root.appendChild(list);
+    root.appendChild(hint);
+    home.ui = { root: root, sub: sub, input: input, scope: scope, list: list, isTyping: false };
+    watchHomeSearch(input);
+    list.addEventListener('click', onHomeClick);
+    (isInventory ? doc.body : doc.querySelector(home.station.host)).appendChild(root);
+    renderHome();
+  }
+
+  function addHomeStyle(doc) {
+    if (doc.getElementById('slmh-style')) return;
+
+    var style = make(doc, 'style');
+    style.id = 'slmh-style';
+    style.textContent = HOME_CSS;
+    doc.head.appendChild(style);
+  }
+
+  function scopeButton(doc, text, isAll) {
+    var node = make(doc, 'button', isAll === home.isAllScope ? 'on' : '', text);
+
+    node.addEventListener('click', function () {
+      home.isAllScope = isAll;
+      home.folds = {};
+      renderHome();
+    });
+
+    return node;
+  }
+
+  // The game sends keys to the page only while the plugin holds them, and its own hotkeys must not see the typing.
+  function watchHomeSearch(input) {
+    input.addEventListener('focus', function () {
+      home.ui.isTyping = true;
+      send('focus|1');
+    });
+    input.addEventListener('blur', function () {
+      if (home.ui) home.ui.isTyping = false;
+      send('focus|0');
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') input.blur();
+      e.stopPropagation();
+    });
+    input.addEventListener('input', function () {
+      home.query = input.value;
+      home.folds = {};
+      renderHome();
+    });
+  }
+
+  // Inside the inventory page the list floats left of the bag, matching the bag panel's top and height.
+  function placeInventoryHome(doc) {
+    var bag = doc.querySelector(home.station.host);
+    var root = home.ui.root;
+
+    root.style.display = backpackTabWantsButton(doc) ? '' : 'none';
+
+    if (!bag) return;
+
+    var box = bag.getBoundingClientRect();
+
+    root.style.width = HOME_WIDTH + 'px';
+    root.style.top = box.top + 'px';
+    root.style.height = box.height + 'px';
+    root.style.left = Math.max(8, box.left - HOME_WIDTH - HOME_GAP) + 'px';
+  }
+
+  function renderHome() {
+    if (!home.ui) return;
+
+    var ui = home.ui;
+    var doc = ui.root.ownerDocument;
+    var scrollTop = ui.list.scrollTop;
+    var shown = home.data ? homeStorages() : [];
+
+    ui.sub.textContent = home.data ? say('homeSub', home.data.storages.length) : '';
+    Array.prototype.forEach.call(ui.scope.children, function (node, index) { node.className = (index === 1) === home.isAllScope ? 'on' : ''; });
+    ui.list.innerHTML = '';
+
+    if (!shown.length) ui.list.appendChild(make(doc, 'div', 'slmh-empty', homeEmptyLine()));
+
+    shown.forEach(function (entry) { ui.list.appendChild(storageNode(doc, entry)); });
+    ui.list.scrollTop = scrollTop;
+  }
+
+  function homeEmptyLine() {
+    if (!home.data) return say('homeLoading');
+    if (home.query.trim()) return say('homeNoMatch');
+    if (isUsableScope()) return say('homeNone');
+
+    return say('homeEmpty');
+  }
+
+  function isUsableScope() {
+    return home.station.kind !== 'inventory' && !home.isAllScope;
+  }
+
+  // Each storage with the rows the scope and the search leave; one with none left is not shown.
+  function homeStorages() {
+    var query = home.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var isUsableOnly = isUsableScope();
+    var tabs = home.station.kind === 'inventory' ? [] : tabOwners();
+
+    return home.data.storages.map(function (storage) {
+      var rows = storage.items.filter(function (item) {
+        var name = String(item.name).toLowerCase();
+
+        return (!isUsableOnly || item.ok) && query.every(function (word) { return name.indexOf(word) >= 0; });
+      });
+
+      return { storage: storage, rows: rows, hasTab: tabs.indexOf(storage.id) >= 0 };
+    }).filter(function (entry) {
+      return entry.rows.length > 0 || (!query.length && !isUsableOnly && home.station.kind === 'inventory');
+    });
+  }
+
+  function isFolded(entry) {
+    var choice = home.folds[entry.storage.id];
+
+    if (choice !== undefined) return choice;
+
+    return !(home.query.trim() || isUsableScope());
+  }
+
+  function storageNode(doc, entry) {
+    var box = make(doc, 'div');
+    var head = make(doc, 'div', 'slmh-store' + (home.openId === entry.storage.id ? ' on' : ''));
+    var isFold = isFolded(entry);
+    var isInventory = home.station.kind === 'inventory';
+
+    head.setAttribute('data-fold', entry.storage.id);
+    head.appendChild(make(doc, 'span', 'slmh-car', isFold ? '\u25b6' : '\u25bc'));
+    head.appendChild(make(doc, 'span', '', entry.storage.name));
+    head.appendChild(make(doc, 'span', 'cnt', isUsableScope() ? say('homeUsable', entry.rows.length) : say('homeItems', entry.rows.length)));
+
+    if (isInventory || entry.hasTab) head.appendChild(openButton(doc, entry.storage.id));
+
+    box.appendChild(head);
+
+    if (!isFold) entry.rows.forEach(function (item) { box.appendChild(homeRow(doc, entry.storage.id, item)); });
+
+    return box;
+  }
+
+  function openButton(doc, id) {
+    var isOpenHere = home.openId === id;
+    var node = make(doc, 'button', 'slmh-open' + (isOpenHere ? ' on' : ''), say(isOpenHere ? 'homeClose' : 'homeOpen'));
+
+    node.setAttribute('data-open', id);
+
+    return node;
+  }
+
+  function homeRow(doc, storageId, item) {
+    var row = make(doc, 'div', 'slmh-row');
+    var box = make(doc, 'div', 'slmh-ic');
+
+    row.setAttribute('data-storage', storageId);
+    row.setAttribute('data-item', item.item);
+
+    if (item.icon) {
+      var img = make(doc, 'img');
+      img.src = new URL(item.icon, location.href).href;
+      box.appendChild(img);
+    } else {
+      box.textContent = String(item.name || '?').charAt(0).toUpperCase();
+    }
+
+    row.appendChild(box);
+    row.appendChild(make(doc, 'span', 'n', item.name));
+    row.appendChild(make(doc, 'span', 'x', TIMES + item.count));
+
+    if (home.station.kind !== 'inventory') row.appendChild(make(doc, 'span', 'slmh-tag ' + (item.ok ? 'st' : 'bag'), say(item.ok ? 'tagUse' : 'tagBag')));
+
+    return row;
+  }
+
+  function onHomeClick(e) {
+    var open = e.target.closest('[data-open]');
+    var row = e.target.closest('[data-item]');
+    var fold = e.target.closest('[data-fold]');
+
+    if (open) {
+      e.stopPropagation();
+      openStorage(open.getAttribute('data-open'));
+    } else if (row) {
+      clickHomeItem(row.getAttribute('data-storage'), row.getAttribute('data-item'));
+    } else if (fold) {
+      var id = fold.getAttribute('data-fold');
+      home.folds[id] = !isFolded({ storage: { id: id } });
+      renderHome();
+    }
+  }
+
+  // On the inventory screen the storage opens beside the bag, the way walking up to it does; at a station its tab is shown.
+  function openStorage(id) {
+    if (home.station.kind !== 'inventory') {
+      switchTab(id);
+
+      return;
+    }
+
+    home.openId = home.openId === id ? null : id;
+    send('openStorage|' + (home.openId === null ? '-1' : id));
+    renderHome();
+  }
+
+  function clickHomeItem(storageId, itemId) {
+    var storage = findHomeStorage(storageId);
+    var item = storage && storage.items.filter(function (it) { return it.item === itemId; })[0];
+
+    if (!item) return;
+
+    if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
+      putInStation(storageId, itemId);
+    } else {
+      send('take|' + item.cfg + '|' + storageId);
+    }
+
+    askStationSoon();
+  }
+
+  function findHomeStorage(id) {
+    return home.data ? home.data.storages.filter(function (storage) { return storage.id === id; })[0] : null;
+  }
+
+  function pageCore() {
+    var win = home.frame && home.frame.contentWindow;
+
+    return win && win.core && win.core.UnitySendEvent ? win.core : null;
+  }
+
+  function switchTab(ownerId) {
+    var core = pageCore();
+
+    if (core && activeOwner() !== ownerId) core.UnitySendEvent('SWITCH_BAG', { ownerId: Number(ownerId) });
+  }
+
+  function putInStation(ownerId, itemId) {
+    var startedAt = Date.now();
+
+    switchTab(ownerId);
+
+    (function clickWhenShown() {
+      if (!home.station) return;
+      if (activeOwner() === ownerId) return clickInStation(itemId);
+      if (Date.now() - startedAt < TAB_WAIT_MS) setTimeout(clickWhenShown, TAB_POLL_MS);
+    })();
+  }
+
+  // The same events the station's own item click sends, a live mouse going into a free mouse slot included.
+  function clickInStation(itemId) {
+    var core = pageCore();
+    var pageState = home.frame.contentWindow.State;
+
+    if (!core) return;
+
+    if (home.station.kind === 'ratcage' && pageState && pageState.bagItems && pageState.mice) {
+      var held = pageState.bagItems.filter(function (it) { return String(it.id) === itemId; })[0];
+
+      if (held && held.isMouse && pageState.mice.length < pageState.mouseSlotCount) {
+        core.UnitySendEvent('MOUSE_ADD', { itemId: Number(itemId) });
+
+        return;
+      }
+    }
+
+    core.UnitySendEvent('ITEM_CLICK', { itemId: Number(itemId), rightClick: false });
+    askStationSoon();
+  }
+
+  // The rat cage keeps its tabs in State; the stove keeps the owner on each tab element.
+  function activeOwner() {
+    var win = home.frame && home.frame.contentWindow;
+    var tab = win && win.document.querySelector('.bag-tab.active');
+
+    if (win && win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
+
+    return tab && tab._ownerId != null ? String(tab._ownerId) : null;
+  }
+
+  function tabOwners() {
+    var win = home.frame && home.frame.contentWindow;
+
+    if (!win) return [];
+
+    if (win.State && win.State.bagTabs) {
+      return win.State.bagTabs.filter(function (t) { return !t.locked; }).map(function (t) { return String(t.ownerId); });
+    }
+
+    return Array.prototype.filter.call(win.document.querySelectorAll('.bag-tab'), function (t) {
+      return t._ownerId != null && !t.classList.contains('locked');
+    }).map(function (t) { return String(t._ownerId); });
+  }
+
   setInterval(function () {
     try {
       patchBackpack();
     } catch (e) {}
+
+    try {
+      patchStations();
+    } catch (e) {}
   }, 400);
 
-  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog };
+  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station };
   send('ready');
 })();

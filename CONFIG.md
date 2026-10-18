@@ -16,6 +16,13 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 | --- | --- | --- |
 | `Enabled` | `true` | When you put your bag away, leave the amounts on the "Keep in bag" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. |
 
+## Stations
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `HomeStorageList` | `true` | Show a searchable list of your home storages beside your bag on the inventory screen, the stove and the rat cage. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. |
+| `StorageTabs` | `true` | At the stove and the rat cage, add a bag tab for every home storage holding something the station takes, next to the game's own fridge tabs. |
+
 ## Delivery
 
 | Setting | Default | What it does |

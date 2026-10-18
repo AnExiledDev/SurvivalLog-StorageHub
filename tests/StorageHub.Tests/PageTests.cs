@@ -63,6 +63,22 @@ public class PageCommandTests
     }
 
     [Theory]
+    [InlineData("cooking", StationKind.Cooking)]
+    [InlineData("ratcage", StationKind.RatCage)]
+    [InlineData("inventory", StationKind.Inventory)]
+    public void The_home_list_names_the_station_it_sits_beside(string name, StationKind kind)
+    {
+        Assert.Equal(new PageCommand.StationList(kind), PageCommand.Parse("slmod|storagehub|station|" + name));
+    }
+
+    [Fact]
+    public void Open_names_the_storage_to_show_beside_the_bag_and_minus_one_closes_it()
+    {
+        Assert.Equal(new PageCommand.OpenStorage(9_007_199_254_740_993), PageCommand.Parse("slmod|storagehub|openStorage|9007199254740993"));
+        Assert.Equal(new PageCommand.OpenStorage(-1), PageCommand.Parse("slmod|storagehub|openStorage|-1"));
+    }
+
+    [Theory]
     [InlineData("slmod|storagehub|take|apple|200")]
     [InlineData("slmod|storagehub|take|1")]
     [InlineData("slmod|storagehub|explode")]
@@ -77,6 +93,10 @@ public class PageCommandTests
     [InlineData("slmod|storagehub|keepRemove")]
     [InlineData("slmod|storagehub|keepRemove|apple")]
     [InlineData("slmod|storagehub|catalog|all")]
+    [InlineData("slmod|storagehub|station")]
+    [InlineData("slmod|storagehub|station|workbench")]
+    [InlineData("slmod|storagehub|openStorage")]
+    [InlineData("slmod|storagehub|openStorage|box")]
     public void A_malformed_command_is_never_acted_on(string message)
     {
         Assert.IsType<PageCommand.Unknown>(PageCommand.Parse(message));

@@ -39,6 +39,12 @@ public abstract record PageCommand
     /// <summary>The keep list's search wants every item in the game, not just the ones the player owns.</summary>
     public sealed record SendCatalog : PageCommand;
 
+    /// <summary>The home storage list beside a station wants its storages and items.</summary>
+    public sealed record StationList(StationKind Kind) : PageCommand;
+
+    /// <summary>Open one home storage beside the bag on the inventory screen; -1 closes it again.</summary>
+    public sealed record OpenStorage(long OwnerId) : PageCommand;
+
     public sealed record Close : PageCommand;
 
     /// <summary>The search box gained or lost focus, so the game should send keys to the page or stop.</summary>
@@ -74,6 +80,8 @@ public abstract record PageCommand
             ("keepSet", 3) when TryInt(parts[1], out var configId) && TryInt(parts[2], out var amount) => new SetKeep(configId, amount),
             ("keepRemove", 2) when TryInt(parts[1], out var configId) => new RemoveKeep(configId),
             ("catalog", 1) => new SendCatalog(),
+            ("station", 2) when StationView.Parse(parts[1]) is { } kind => new StationList(kind),
+            ("openStorage", 2) when TryLong(parts[1], out var ownerId) => new OpenStorage(ownerId),
             ("close", 1) => new Close(),
             ("focus", 2) when parts[1] is "0" or "1" => new Focus(parts[1] == "1"),
             ("menu", 2) when parts[1] is "0" or "1" => new Menu(parts[1] == "1"),

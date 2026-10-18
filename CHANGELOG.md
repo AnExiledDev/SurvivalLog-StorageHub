@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0
+
+- A searchable home storage list sits beside your bag on the inventory screen, the stove and the rat cage. At a station, "For cooking" or "For the rat cage" shows only what it can use, and clicking a usable item puts it into the station; anything else goes to your bag. On the inventory screen, "Open" shows a storage beside your bag. New setting `HomeStorageList`.
+- The stove and the rat cage get a bag tab for every home storage holding something they can use. New setting `StorageTabs`.
+
 ## 0.7.4
 
 Changes since 0.3.2:

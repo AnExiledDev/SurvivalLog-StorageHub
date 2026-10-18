@@ -13,7 +13,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.7.4";
+    private const string Version = "0.8.0";
 
     public override void Load()
     {
@@ -26,15 +26,25 @@ public sealed class Plugin : BasePlugin
         var isKeepOn = Config.Bind("Keep", "Enabled", true,
             "When you put your bag away, leave the amounts on the panel's \"Keep in bag\" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
             "收纳背包时，按面板上「留在背包」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。").Value;
+        var isHomeListOn = Config.Bind("Stations", "HomeStorageList", true,
+            "Show a searchable list of your home storages beside your bag on the inventory screen, the stove and the rat cage. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. Default: on.\n" +
+            "在背包界面、灶台和鼠笼旁边显示一个可搜索的家中储物家具列表。在灶台或鼠笼旁，点击这里能用的物品会直接放进去，其他物品放进背包。默认开启。").Value;
+        var isStorageTabsOn = Config.Bind("Stations", "StorageTabs", true,
+            "At the stove and the rat cage, add a bag tab for every home storage holding something the station takes, next to the game's own fridge tabs. Default: on.\n" +
+            "在灶台和鼠笼的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的冰箱标签并列。默认开启。").Value;
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 
-        log.Write($"===== Storage Hub {Version} started, toggle key {toggleKey}, verbose {isVerbose}, keep list {isKeepOn}");
+        log.Write($"===== Storage Hub {Version} started, toggle key {toggleKey}, verbose {isVerbose}, keep list {isKeepOn}, home storage list {isHomeListOn}, storage tabs {isStorageTabsOn}");
+        StationRules.UseLog(log.Write);
+
+        if (isStorageTabsOn) StationHooks.Apply(harmony, log.Write);
+
         InputGate.Apply(harmony, log.Write);
         PageMessages.Apply(harmony, log.Write);
         var page = new WebPage(log.Write, toggleKey.ToString());
         var keep = new KeepListKeeper(new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json")), () => DateTime.Now, log.Write);
-        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keep, isKeepOn);
+        StoragePanel.Session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), toggleKey, isVerbose, log.Write, keep, isKeepOn, isHomeListOn);
         StoragePanel.Log = log.Write;
         AddComponent<StoragePanel>();
         StartOrganizer(harmony, log);

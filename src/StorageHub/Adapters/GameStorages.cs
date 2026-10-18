@@ -324,7 +324,8 @@ internal sealed class GameStorages
         return NonEmpty(item?.WebIcon) ?? NonEmpty(item?.Icon);
     }
 
-    private IEnumerable<Storage> HomeStorages(AgentManager agents, ConfigManager config)
+    /// <summary>Every piece of home furniture with a bag that counts as the player's storage; read only, so a hook may call it.</summary>
+    public static List<Furniture> HomeFurnitures(AgentManager agents)
     {
         var found = agents.GetFurnituresWithBag(agents.GetHomeMapId(), true, true);
         var homes = new List<Furniture>();
@@ -336,6 +337,39 @@ internal sealed class GameStorages
             if (furniture != null && !ItemManager.IsExcludedFromCostPool(furniture.InstanceId)) homes.Add(furniture);
         }
 
+        return homes;
+    }
+
+    /// <summary>
+    /// Whether a station takes each stack from the last Read, by the game's own checks on the item the UI cache holds.
+    /// A stack the cache no longer has is not taken.
+    /// </summary>
+    public Func<ItemStack, bool> Usable(StationKind kind)
+    {
+        var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+        var cache = state?.OwnerCache;
+        var config = GameSingleton.Existing<ConfigManager>();
+
+        if (kind == StationKind.Inventory || state == null || cache == null || config == null) return _ => false;
+
+        return stack => cache.TryGetValue(stack.OwnerId, out var held) && held != null && held.TryGetValue(stack.ItemId, out var item) && item != null && StationRules.Takes(kind, item, state, config);
+    }
+
+    /// <summary>The game's own "open a storage beside the bag", as walking up to it does; -1 shows the bag alone.</summary>
+    public bool OpenBesideBag(long ownerId)
+    {
+        var player = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager?.GetLeadingRole();
+
+        if (player == null) return false;
+
+        Ac_Item_GetBagList.SendAction(player.InstanceId, ownerId, false);
+
+        return true;
+    }
+
+    private IEnumerable<Storage> HomeStorages(AgentManager agents, ConfigManager config)
+    {
+        var homes = HomeFurnitures(agents);
         var names = StorageNames.Distinct(homes.Select(furniture => FurnitureName(config, furniture)).ToList());
 
         for (var i = 0; i < homes.Count; i++)

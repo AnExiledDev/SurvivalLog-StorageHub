@@ -22,6 +22,7 @@ internal sealed class HubSession
     private readonly Action<string> _log;
     private readonly KeepListKeeper _keep;
     private readonly bool _isKeepOn;
+    private readonly bool _isHomeListOn;
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
 
@@ -32,7 +33,7 @@ internal sealed class HubSession
     private bool _isOpen;
     private bool _hasLoggedIcons;
 
-    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, KeepListKeeper keep, bool isKeepOn)
+    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, KeepListKeeper keep, bool isKeepOn, bool isHomeListOn)
     {
         _game = game;
         _page = page;
@@ -42,6 +43,7 @@ internal sealed class HubSession
         _log = log;
         _keep = keep;
         _isKeepOn = isKeepOn;
+        _isHomeListOn = isHomeListOn;
     }
 
     public void Update()
@@ -272,6 +274,12 @@ internal sealed class HubSession
             case PageCommand.SendCatalog:
                 SendCatalog();
                 break;
+            case PageCommand.StationList stationList:
+                SendStation(stationList.Kind);
+                break;
+            case PageCommand.OpenStorage openStorage:
+                OpenBesideBag(openStorage.OwnerId);
+                break;
             case PageCommand.Close:
                 Close();
                 break;
@@ -430,6 +438,38 @@ internal sealed class HubSession
             _log($"reading the item catalog failed, the page will ask again: {ex}");
             _page.Catalog("[]");
         }
+    }
+
+    /// <summary>
+    /// The home storage list beside a station, read fresh since the page asks after every click. An inventory that
+    /// cannot be read yet sends nothing, and the page asks again.
+    /// </summary>
+    private void SendStation(StationKind kind)
+    {
+        if (!_isHomeListOn)
+        {
+            _page.Station("null");
+
+            return;
+        }
+
+        try
+        {
+            if (!RefreshInventory(out _)) return;
+
+            _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath));
+        }
+        finally
+        {
+            _game.Forget();
+        }
+    }
+
+    private void OpenBesideBag(long ownerId)
+    {
+        _log(ownerId == -1 ? "close the storage beside the bag" : $"open {_inventory.StorageName(ownerId)} beside the bag");
+
+        if (!_game.OpenBesideBag(ownerId)) _page.Status(_status.Result(NotAvailable(Texts.NoWorld.Pick(IsChinese))));
     }
 
     /// <summary>Floor items are not in the storage read, so their names are added before anything is logged.</summary>

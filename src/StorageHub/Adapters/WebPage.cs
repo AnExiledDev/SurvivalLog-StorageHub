@@ -52,6 +52,9 @@ internal sealed class WebPage
     /// <summary>Every named item in the game, for the keep list's search; sent when the page asks, once per page load.</summary>
     public void Catalog(string catalogJson) => Call($"catalog({catalogJson})");
 
+    /// <summary>The home storage list beside a station; "null" tells the page the list is turned off.</summary>
+    public void Station(string stationJson) => Call($"station({stationJson})");
+
     /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
     public void Status(string text) => Call($"status({HubView.Str(text)})");
 

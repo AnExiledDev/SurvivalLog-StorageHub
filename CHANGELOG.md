@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Stack merging works again for items that never spoil, such as wire, dyes, fuel and seeds. They merge whenever they were picked up and whether they were found on the map, made or bought.
+- Food found on the map no longer differs from other food by the shelf factor it came with; the time left decides, as before.
+- When partial stacks of one item stay apart, the log says why (which trait differs, or freshness or uses), once per item per session.
+
 ## 0.8.0
 
 - A searchable home storage list. At the stove and the rat cage it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At a station, "For cooking" or "For the rat cage" shows only what it can use, and clicking a usable item puts it into the station; anything else goes to your bag. In the window, "Open" shows a storage beside your bag. `Esc` or the close button shuts it. New setting `HomeStorageList`.

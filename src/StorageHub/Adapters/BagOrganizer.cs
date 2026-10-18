@@ -29,6 +29,7 @@ internal sealed class BagOrganizer
     private readonly bool _mergeStacks;
     private readonly Action<string> _log;
     private readonly HashSet<string> _reported = new();
+    private readonly HashSet<int> _keptApartLogged = new();
 
     public BagOrganizer(Func<OrganizeRequest?> takeDue, PackOptions options, bool mergeStacks, Action<string> log)
     {
@@ -104,6 +105,8 @@ internal sealed class BagOrganizer
 
             var steps = StackMerge.Plan(stacks, NowHours(world));
 
+            LogKeptApart(config, StackMerge.WhyKeptApart(stacks, steps));
+
             if (steps.Count == 0) return false;
 
             var report = StackMerge.Run(steps, new GameStackCounts(items, request.OwnerId));
@@ -118,6 +121,17 @@ internal sealed class BagOrganizer
             ReportOnce(request.OwnerId, $"merging stacks failed: {ex.Message}");
 
             return true;
+        }
+    }
+
+    /// <summary>Says once per kind per session why its stacks stay apart, so a kind that never merges can be traced.</summary>
+    private void LogKeptApart(ConfigManager config, IReadOnlyList<(int ConfigId, string Why)> reasons)
+    {
+        foreach (var (configId, why) in reasons)
+        {
+            if (!_keptApartLogged.Add(configId)) continue;
+
+            _log($"organize, item {configId} ({config.Get_Config_Item(configId)?.ItemName}): {why}");
         }
     }
 
@@ -143,22 +157,16 @@ internal sealed class BagOrganizer
             if (row == null || !request.ShownGrid.Holds(at, size.x, size.y)) continue;
 
             var freshness = new StackFreshness(data.StartTime, data.TimeLeft, data.TimeLeftFrac, data.TimeScale, data.UseTimes, data.MaxUseTimes);
-            var neverSpoils = MergeRule.IsNeverSpoiling(row.Category, row.Life);
+            var neverSpoils = MergeRule.IsNeverSpoiling(row.Life);
 
-            stacks.Add(new MergeStack(data.InstanceId, data.ItemConfigId, data.ItemCount, row.StackLimit, freshness, Traits(data), neverSpoils, Covers(moldy, at, size.x, size.y)));
+            stacks.Add(new MergeStack(data.InstanceId, data.ItemConfigId, data.ItemCount, row.StackLimit, freshness, Traits(data).Key(neverSpoils), neverSpoils, Covers(moldy, at, size.x, size.y)));
         }
 
         return stacks;
     }
 
-    /// <summary>
-    /// Everything else an item carries that a merge would flatten: mold, the map-preset and packaging flags, burn value,
-    /// weight, the shelf factor it came with and its per-item value arrays. Stacks merge only when all of it matches.
-    /// </summary>
-    private static string Traits(ItemData data) =>
-        string.Join("|",
-            data.Polluted, data.IsMapPreset, data.NoPackage, data.InstanceBurnValue, data.InstanceWeight,
-            data.PresetShelfScale.ToString("R", CultureInfo.InvariantCulture), Floats(data.InstanceVD), Floats(data.InstanceEffectEnd));
+    private static ItemTraits Traits(ItemData data) =>
+        new(data.Polluted, data.IsMapPreset, data.NoPackage, data.InstanceBurnValue, data.InstanceWeight, Floats(data.InstanceVD), Floats(data.InstanceEffectEnd));
 
     private static string Floats(Il2CppStructArray<float>? values)
     {

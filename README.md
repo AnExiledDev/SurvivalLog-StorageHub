@@ -130,8 +130,9 @@ This is how tidying works with the default settings. You can turn off the tidy o
 Before a tidy, partial stacks of the same item are topped up from each other. A storage holding 7, 5 and 4 berries with a stack limit of 10 ends up with 10 and 6.
 
 - Food merges only when the two stacks spoil within an hour of each other, the same rule the Stacking mod uses. The food poured in takes the spoil time of the stack it joins, so it can end up as much as an hour older or fresher than it was.
-- Items that never spoil merge when their uses left match.
+- Items that never spoil merge when their uses left match, whenever they were picked up and whether they were found on the map, made or bought.
 - Stacks also have to match on everything else the item carries (mold, packaging, burn value, weight).
+- When partial stacks of one item stay apart, the log says why, once per item per session.
 - The stack limit is the game's own, so a limit raised by the Stacking mod is used. Works with or without Stacking installed.
 - A stack sitting on a moldy cell is never merged.
 - Merging only happens after the prologue.

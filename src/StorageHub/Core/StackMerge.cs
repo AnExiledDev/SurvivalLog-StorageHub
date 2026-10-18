@@ -23,8 +23,8 @@ public readonly record struct StackFreshness(int StartTime, int TimeLeft, float 
 
 /// <summary>
 /// Stacking's rule for which stacks may become one, mirrored from StackIdentity in sl-stacking
-/// src/Stacking/Core/Freshness.cs (CanShareStack, CanJoin, HaveSameUses, ShelfHoursLeft) and the seed exception in
-/// src/Stacking/Core/StackLimits.cs (NeverSpoiling). Keep the two in step: a change there is a change here.
+/// src/Stacking/Core/Freshness.cs (CanShareStack, CanJoin, HaveSameUses, ShelfHoursLeft) and the never-spoiling exception
+/// in src/Stacking/Core/StackLimits.cs (NeverSpoiling). Keep the two in step: a change there is a change here.
 /// </summary>
 public static class MergeRule
 {
@@ -34,10 +34,8 @@ public static class MergeRule
     /// </summary>
     public const float ToleranceHours = 1f;
 
-    /// <summary>Stacking's seed category: a seed kind whose Life is 0 or less never spoils, so its stacks have no freshness to lose.</summary>
-    public const int SeedCategory = 10;
-
-    public static bool IsNeverSpoiling(int category, int life) => category == SeedCategory && life <= 0;
+    /// <summary>A kind whose Life is 0 or less never spoils, in any category, so its stacks have no freshness to lose.</summary>
+    public static bool IsNeverSpoiling(int life) => life <= 0;
 
     public static bool CanShareStack(StackFreshness incoming, StackFreshness stack, float nowHours)
     {
@@ -54,8 +52,8 @@ public static class MergeRule
     }
 
     /// <summary>
-    /// Whether one stack may pour into another. A never-spoiling seed only needs matching uses; anything else needs the
-    /// game clock to be known and the freshness rule to hold. Food keeps the freshness rule even when it never spoils.
+    /// Whether one stack may pour into another. A never-spoiling kind only needs matching uses, whatever hour each stack
+    /// was picked up; anything else needs the game clock to be known and the freshness rule to hold.
     /// </summary>
     public static bool CanMerge(StackFreshness source, StackFreshness target, float? nowHours, bool neverSpoils)
     {
@@ -78,8 +76,7 @@ public static class MergeRule
 
 /// <summary>
 /// One stack in a bag as the merge planner sees it. Cap is the game's stack limit for the kind. Traits carries every
-/// per-item value the freshness rule does not cover (mold, durability-like instance values, the shelf factor it was
-/// made with); two stacks only merge when their traits match exactly. TouchesMold is true when any cell under the
+/// per-item value the freshness rule does not cover (see ItemTraits.Key); two stacks only merge when their traits match exactly. TouchesMold is true when any cell under the
 /// stack is moldy, and such a stack is never touched, the same way the tidy keeps mold cells to the game.
 /// </summary>
 public sealed record MergeStack(long Id, int ConfigId, int Count, int Cap, StackFreshness Freshness, string Traits, bool NeverSpoils, bool TouchesMold);
@@ -163,6 +160,38 @@ public static class StackMerge
         }
 
         return steps;
+    }
+
+    /// <summary>
+    /// For each kind with two or more stacks that could take part, why some of them stay apart after the plan: the
+    /// traits that differ, or, when the traits match, that their freshness or uses do. Kinds the plan joins fully are
+    /// left out. Each line starts with the kind's config id, so the caller can log a kind once.
+    /// </summary>
+    public static IReadOnlyList<(int ConfigId, string Why)> WhyKeptApart(IReadOnlyList<MergeStack> stacks, IReadOnlyList<MergeStep> steps)
+    {
+        var count = stacks.ToDictionary(stack => stack.Id, stack => stack.Count);
+
+        foreach (var step in steps)
+        {
+            count[step.SourceId] -= step.Units;
+            count[step.TargetId] += step.Units;
+        }
+
+        var reasons = new List<(int, string)>();
+
+        foreach (var kind in stacks.Where(CanTakePart).GroupBy(stack => stack.ConfigId))
+        {
+            var partial = kind.Where(stack => count[stack.Id] > 0 && count[stack.Id] < stack.Cap).ToList();
+
+            if (partial.Count < 2) continue;
+
+            var differing = ItemTraits.Differing(partial.Select(stack => stack.Traits));
+            var why = differing.Count > 0 ? $"{string.Join(", ", differing)} differ" : "freshness or uses differ";
+
+            reasons.Add((kind.Key, $"{partial.Count} part stacks stay apart: {why}"));
+        }
+
+        return reasons;
     }
 
     /// <summary>

@@ -53,12 +53,17 @@ public class MergeRuleTests
     }
 
     [Fact]
-    public void Never_spoiling_seeds_merge_whatever_their_clocks_say_and_even_when_the_clock_is_unknown()
+    public void Never_spoiling_items_merge_whatever_their_clocks_say_and_even_when_the_clock_is_unknown()
     {
         Assert.True(MergeRule.CanMerge(Fresh(10f), Fresh(500f), nowHours: null, neverSpoils: true));
-        Assert.True(MergeRule.IsNeverSpoiling(MergeRule.SeedCategory, life: 0));
-        Assert.False(MergeRule.IsNeverSpoiling(MergeRule.SeedCategory, life: 48));
-        Assert.False(MergeRule.IsNeverSpoiling(category: 2, life: 0));
+    }
+
+    [Fact]
+    public void Any_kind_without_a_shelf_life_never_spoils_whatever_its_category()
+    {
+        Assert.True(MergeRule.IsNeverSpoiling(life: 0));
+        Assert.True(MergeRule.IsNeverSpoiling(life: -1));
+        Assert.False(MergeRule.IsNeverSpoiling(life: 48));
     }
 
     internal static StackFreshness Fresh(float expiresAtHour) => new(0, (int)expiresAtHour, expiresAtHour - (int)expiresAtHour, 1f, 1, 1);
@@ -134,6 +139,84 @@ public class StackMergePlanTests
 
     internal static MergeStack Food(long id, int configId, int count, int cap = 10) =>
         new(id, configId, count, cap, MergeRuleTests.Fresh(130f), "", NeverSpoils: false, TouchesMold: false);
+}
+
+public class ItemTraitsTests
+{
+    private static readonly ItemTraits Plain = new(Polluted: false, IsMapPreset: false, NoPackage: false, BurnValue: 0, Weight: 100, Values: "-", EffectEnds: "-");
+
+    [Fact]
+    public void A_never_spoiling_item_found_on_the_map_shares_a_key_with_one_made_or_bought()
+    {
+        Assert.Equal(Plain.Key(neverSpoils: true), (Plain with { IsMapPreset = true }).Key(neverSpoils: true));
+    }
+
+    [Fact]
+    public void Food_found_on_the_map_keeps_its_own_key_because_the_flag_sets_how_fast_it_spoils()
+    {
+        Assert.NotEqual(Plain.Key(neverSpoils: false), (Plain with { IsMapPreset = true }).Key(neverSpoils: false));
+    }
+
+    [Fact]
+    public void Mold_packaging_burn_weight_and_item_values_always_keep_stacks_apart()
+    {
+        var changed = new[]
+        {
+            Plain with { Polluted = true },
+            Plain with { NoPackage = true },
+            Plain with { BurnValue = 5 },
+            Plain with { Weight = 90 },
+            Plain with { Values = "0.5" },
+            Plain with { EffectEnds = "12" },
+        };
+
+        Assert.All(changed, traits => Assert.NotEqual(Plain.Key(neverSpoils: true), traits.Key(neverSpoils: true)));
+    }
+
+    [Fact]
+    public void Differing_names_only_the_pieces_whose_values_differ()
+    {
+        var keys = new[] { Plain.Key(false), (Plain with { Weight = 90, IsMapPreset = true }).Key(false), Plain.Key(false) };
+
+        Assert.Equal(new[] { "mapPreset", "weight" }, ItemTraits.Differing(keys));
+    }
+}
+
+public class KeptApartTests
+{
+    private const float Now = 100f;
+
+    [Fact]
+    public void Stacks_kept_apart_by_traits_are_explained_by_the_differing_trait_names()
+    {
+        var plain = new ItemTraits(false, false, false, 0, 100, "-", "-");
+        var stacks = new[] { Stack(1, Apple, 4, plain.Key(false)), Stack(2, Apple, 3, (plain with { Polluted = true }).Key(false)) };
+
+        var reasons = StackMerge.WhyKeptApart(stacks, StackMerge.Plan(stacks, Now));
+
+        Assert.Equal(new[] { (Apple, "2 part stacks stay apart: polluted differ") }, reasons);
+    }
+
+    [Fact]
+    public void Stacks_with_matching_traits_kept_apart_are_put_down_to_freshness_or_uses()
+    {
+        var stacks = new[] { Stack(1, Apple, 4, ""), Stack(2, Apple, 3, "") with { Freshness = MergeRuleTests.Fresh(160f) } };
+
+        var reasons = StackMerge.WhyKeptApart(stacks, StackMerge.Plan(stacks, Now));
+
+        Assert.Equal(new[] { (Apple, "2 part stacks stay apart: freshness or uses differ") }, reasons);
+    }
+
+    [Fact]
+    public void Kinds_the_plan_joins_and_kinds_that_cannot_stack_say_nothing()
+    {
+        var stacks = new[] { Stack(1, Apple, 4, ""), Stack(2, Apple, 3, ""), Stack(3, Rope, 1, "", cap: 1), Stack(4, Rope, 1, "", cap: 1) };
+
+        Assert.Empty(StackMerge.WhyKeptApart(stacks, StackMerge.Plan(stacks, Now)));
+    }
+
+    private static MergeStack Stack(long id, int configId, int count, string traits, int cap = 10) =>
+        new(id, configId, count, cap, MergeRuleTests.Fresh(130f), traits, NeverSpoils: false, TouchesMold: false);
 }
 
 public class StackMergeRunTests

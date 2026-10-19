@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- At the shredder, clicking an item in the Home tab puts one unit in the hopper, not the whole stack. Without Stacking installed it still moves the whole stack.
+
 ## 0.9.0
 
 - The Mods screen links this changelog.

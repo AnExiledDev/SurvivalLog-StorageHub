@@ -2181,7 +2181,12 @@
 
     if (!item) return;
 
-    if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
+    var hopper = shredderHopper();
+
+    if (hopper && item.ok && tabOwners().indexOf(storageId) >= 0) {
+      // The shredder's own click puts a whole stack in its hopper; a Home click feeds it one unit at a time.
+      send('putOne|' + item.cfg + '|' + storageId + '|' + hopper);
+    } else if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
       putInStation(storageId, itemId);
     } else {
       // At a station a click takes one unit, so a stack is not dragged out whole to feed it one at a time.
@@ -2189,6 +2194,14 @@
     }
 
     askStationSoon();
+  }
+
+  // The shredder page's own record of its hopper; owner ids stay well inside what a page number holds exactly.
+  function shredderHopper() {
+    var pageState = home.station.kind === 'shredder' && home.frame && home.frame.contentWindow && home.frame.contentWindow.State;
+    var id = pageState && pageState.hopperOwnerId;
+
+    return id ? String(id) : null;
   }
 
   function findHomeStorage(id) {

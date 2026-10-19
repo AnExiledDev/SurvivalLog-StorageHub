@@ -31,6 +31,14 @@ public class PageCommandTests
     }
 
     [Fact]
+    public void Put_one_names_the_item_the_storage_it_comes_from_and_the_station_container_it_goes_to()
+    {
+        Assert.Equal(new PageCommand.PutOne(Apple, Fridge.OwnerId, 900), PageCommand.Parse("slmod|storagehub|putOne|1|200|900"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|putOne|1|200"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|putOne|1|200|hopper"));
+    }
+
+    [Fact]
     public void Storage_ids_beyond_the_int_range_survive_the_round_trip()
     {
         Assert.Equal(new PageCommand.Take(7, 9_007_199_254_740_993), PageCommand.Parse("slmod|storagehub|take|7|9007199254740993"));

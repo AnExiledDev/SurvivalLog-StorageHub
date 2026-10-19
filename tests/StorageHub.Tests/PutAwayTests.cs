@@ -256,6 +256,27 @@ public class PutAwayTests
         Assert.Equal(new[] { (small with { Count = 1 }, Bag.OwnerId) }, steps.Select(s => (s.Stack, s.Targets.Single())));
     }
 
+    /// <summary>The bug report: a Home click on a stack beside the shredder moved the entire stack.</summary>
+    [Fact]
+    public void Putting_one_in_a_station_moves_a_single_unit_off_the_smallest_stack_in_that_storage()
+    {
+        const long hopper = 900;
+        var big = Stack(1, Rope, 9, Box);
+        var small = Stack(2, Rope, 3, Box);
+        var elsewhere = Stack(3, Rope, 1, Fridge);
+
+        var steps = StoragePlan.PutOne(Home(big, small, elsewhere), Rope, Box.OwnerId, hopper);
+
+        Assert.Equal(new[] { (small with { Count = 1 }, hopper) }, steps.Select(s => (s.Stack, s.Targets.Single())));
+    }
+
+    [Fact]
+    public void Putting_one_with_none_of_the_item_in_that_storage_plans_nothing()
+    {
+        Assert.Empty(StoragePlan.PutOne(Home(Stack(1, Rope, 4, Fridge)), Rope, Box.OwnerId, 900));
+        Assert.Empty(StoragePlan.PutOne(Home(Stack(1, Rope, 4, Box)), Rope, Box.OwnerId, Box.OwnerId));
+    }
+
     [Fact]
     public void Taking_one_from_the_bag_or_without_a_bag_plans_nothing()
     {

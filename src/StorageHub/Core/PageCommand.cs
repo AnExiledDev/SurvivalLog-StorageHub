@@ -21,6 +21,9 @@ public abstract record PageCommand
     /// <summary>Move one unit of an item from one storage into the bag.</summary>
     public sealed record TakeOne(int ConfigId, long OwnerId) : PageCommand;
 
+    /// <summary>Move one unit of an item from one storage straight into a station's own container, such as the shredder's hopper.</summary>
+    public sealed record PutOne(int ConfigId, long OwnerId, long TargetOwnerId) : PageCommand;
+
     /// <summary>Move every stack of one item from every storage into the bag.</summary>
     public sealed record TakeAll(int ConfigId) : PageCommand;
 
@@ -77,6 +80,7 @@ public abstract record PageCommand
         {
             ("take", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new Take(configId, ownerId),
             ("takeOne", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new TakeOne(configId, ownerId),
+            ("putOne", 4) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) && TryLong(parts[3], out var targetId) => new PutOne(configId, ownerId, targetId),
             ("takeAll", 2) when TryInt(parts[1], out var configId) => new TakeAll(configId),
             ("putAway", 2) when TryInt(parts[1], out var configId) => new PutAway(configId),
             ("putAwayBag", 1) => new PutAwayBag(),

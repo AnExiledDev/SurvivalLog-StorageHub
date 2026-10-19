@@ -268,6 +268,9 @@ internal sealed class HubSession
             case PageCommand.TakeOne takeOne:
                 Act("take one", () => TakeOne(takeOne.ConfigId, takeOne.OwnerId));
                 break;
+            case PageCommand.PutOne putOne:
+                Act("put one", () => PutOne(putOne.ConfigId, putOne.OwnerId, putOne.TargetOwnerId));
+                break;
             case PageCommand.TakeAll takeAll:
                 Act("take all", () => Take(stack => stack.ConfigId == takeAll.ConfigId));
                 break;
@@ -385,6 +388,13 @@ internal sealed class HubSession
         if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         return Execute(StoragePlan.TakeOne(_inventory, configId, ownerId), MoveOneAndLog);
+    }
+
+    private string PutOne(int configId, long ownerId, long targetOwnerId)
+    {
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
+
+        return Execute(StoragePlan.PutOne(_inventory, configId, ownerId, targetOwnerId), MoveOneAndLog);
     }
 
     /// <summary>

@@ -54,13 +54,28 @@ public static class StoragePlan
     public static IReadOnlyList<MoveStep> TakeOne(Inventory inventory, int configId, long ownerId)
     {
         var bag = inventory.Bag;
-        var smallest = inventory.Stacks
-            .Where(stack => stack.ConfigId == configId && stack.OwnerId == ownerId && stack.Count > 0)
-            .OrderBy(stack => stack.Count)
-            .FirstOrDefault();
+        var smallest = Smallest(inventory, configId, ownerId);
 
         if (bag is null || smallest is null || ownerId == bag.OwnerId) return Array.Empty<MoveStep>();
 
         return new[] { new MoveStep(smallest with { Count = 1 }, new[] { bag.OwnerId }) };
     }
+
+    /// <summary>
+    /// One unit of an item from one storage into a station's own container. It comes off the smallest stack, as taking
+    /// one does.
+    /// </summary>
+    public static IReadOnlyList<MoveStep> PutOne(Inventory inventory, int configId, long ownerId, long targetOwnerId)
+    {
+        var smallest = Smallest(inventory, configId, ownerId);
+
+        if (smallest is null || ownerId == targetOwnerId) return Array.Empty<MoveStep>();
+
+        return new[] { new MoveStep(smallest with { Count = 1 }, new[] { targetOwnerId }) };
+    }
+
+    private static ItemStack? Smallest(Inventory inventory, int configId, long ownerId) => inventory.Stacks
+        .Where(stack => stack.ConfigId == configId && stack.OwnerId == ownerId && stack.Count > 0)
+        .OrderBy(stack => stack.Count)
+        .FirstOrDefault();
 }

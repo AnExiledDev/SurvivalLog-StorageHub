@@ -2,9 +2,12 @@
 
 ## 0.9.0
 
+- The Mods screen links this changelog.
+- On the Mods screen, settings that only matter while another setting is on stay hidden until it is.
+- On the Mods screen, the diagnostics settings sit in the folded Advanced group.
 - Settings changed on the Mod Manager's Mods screen take effect at once.
 - The Mods screen shows the mod's name, description, category and links, and lists Stacking as an optional companion.
-- Needs Exiled's Toolkit 0.4.0 or newer.
+- Exiled's Toolkit 0.4.0 or newer is optional. With it, settings changed on the Mods screen take effect without a restart; without it, at the next game start.
 
 ## 0.8.3
 

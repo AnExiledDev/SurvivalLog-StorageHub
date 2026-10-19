@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.2
+
+- At the workbench, clicking an item in the Home tab puts one unit on the bench, not the whole stack, the same as at the shredder. Without Stacking installed it still moves the whole stack.
+
 ## 0.9.1
 
 - At the shredder, clicking an item in the Home tab puts one unit in the hopper, not the whole stack. Without Stacking installed it still moves the whole stack.

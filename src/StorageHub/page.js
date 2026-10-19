@@ -2181,11 +2181,11 @@
 
     if (!item) return;
 
-    var hopper = shredderHopper();
+    var container = stationContainer();
 
-    if (hopper && item.ok && tabOwners().indexOf(storageId) >= 0) {
-      // The shredder's own click puts a whole stack in its hopper; a Home click feeds it one unit at a time.
-      send('putOne|' + item.cfg + '|' + storageId + '|' + hopper);
+    if (container && item.ok && tabOwners().indexOf(storageId) >= 0) {
+      // The shredder's and workbench's own clicks put a whole stack in; a Home click feeds them one unit at a time.
+      send('putOne|' + item.cfg + '|' + storageId + '|' + container);
     } else if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
       putInStation(storageId, itemId);
     } else {
@@ -2196,10 +2196,15 @@
     askStationSoon();
   }
 
-  // The shredder page's own record of its hopper; owner ids stay well inside what a page number holds exactly.
-  function shredderHopper() {
-    var pageState = home.station.kind === 'shredder' && home.frame && home.frame.contentWindow && home.frame.contentWindow.State;
-    var id = pageState && pageState.hopperOwnerId;
+  // The station's own container that a Home click feeds one unit at a time, as the page records it: the shredder's
+  // hopper, or the workbench's grid in its last bag message. Owner ids stay well inside what a page number holds exactly.
+  function stationContainer() {
+    var win = home.frame && home.frame.contentWindow;
+    var id = null;
+
+    if (!win) return null;
+    if (home.station.kind === 'shredder') id = win.State && win.State.hopperOwnerId;
+    if (home.station.kind === 'workbench') id = (pageGlobal(win, 'lastBagMsg') || {}).workbenchOwnerId;
 
     return id ? String(id) : null;
   }

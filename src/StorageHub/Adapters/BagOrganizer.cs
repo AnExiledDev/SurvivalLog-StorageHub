@@ -25,18 +25,23 @@ internal sealed class BagOrganizer
     private const float SecondsPerHour = 3600f;
 
     private readonly Func<OrganizeRequest?> _takeDue;
-    private readonly PackOptions _options;
-    private readonly bool _mergeStacks;
     private readonly Action<string> _log;
     private readonly HashSet<string> _reported = new();
     private readonly HashSet<int> _keptApartLogged = new();
+    private PackOptions _options = new();
+    private bool _mergeStacks;
 
-    public BagOrganizer(Func<OrganizeRequest?> takeDue, PackOptions options, bool mergeStacks, Action<string> log)
+    public BagOrganizer(Func<OrganizeRequest?> takeDue, Action<string> log)
     {
         _takeDue = takeDue;
+        _log = log;
+    }
+
+    /// <summary>Called on the main thread at start and after each change. The next tidy goes by them.</summary>
+    public void Use(PackOptions options, bool mergeStacks)
+    {
         _options = options;
         _mergeStacks = mergeStacks;
-        _log = log;
     }
 
     /// <summary>Called every frame; does nothing unless the bag screen asked for a tidy on an earlier frame.</summary>

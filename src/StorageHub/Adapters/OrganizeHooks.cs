@@ -16,13 +16,39 @@ internal static class OrganizeHooks
     private static readonly OrganizeRequests Requests = new();
     private static Action<string> _log = _ => { };
     private static bool _hasReportedHookFailure;
+    private static bool _isOrganizeOnOpen;
+    private static bool _isCompactSort;
+    private static bool _isOpenHooked;
+    private static bool _isSortHooked;
+    private static bool _isCloseHooked;
 
-    public static void Apply(Harmony harmony, bool organizeOnOpen, bool compactSort, Action<string> log)
+    /// <summary>
+    /// Called on the main thread at start and after each change. Each hook goes in the first time its setting is turned
+    /// on and stays in; turned off, it records nothing, so the game's opening and its Sort button work as they always did.
+    /// </summary>
+    public static void Use(Harmony harmony, bool organizeOnOpen, bool compactSort, Action<string> log)
     {
         _log = log;
+        _isOrganizeOnOpen = organizeOnOpen;
+        _isCompactSort = compactSort;
 
-        if (organizeOnOpen) Patch(harmony, "RA_OpenUI", nameof(AfterOpen), done: "storages are tidied when opened", consequence: "storages will not be tidied when opened");
-        if (compactSort) Patch(harmony, "RA_Sort", nameof(AfterSort), done: "the Sort button packs small items into a square", consequence: "the Sort button stays as the game made it");
+        if (organizeOnOpen && !_isOpenHooked)
+        {
+            _isOpenHooked = true;
+
+            Patch(harmony, "RA_OpenUI", nameof(AfterOpen), done: "storages are tidied when opened", consequence: "storages will not be tidied when opened");
+        }
+
+        if (compactSort && !_isSortHooked)
+        {
+            _isSortHooked = true;
+
+            Patch(harmony, "RA_Sort", nameof(AfterSort), done: "the Sort button packs small items into a square", consequence: "the Sort button stays as the game made it");
+        }
+
+        if ((!organizeOnOpen && !compactSort) || _isCloseHooked) return;
+
+        _isCloseHooked = true;
 
         // RA_Close is compiled into Trigger_RA_Close, so a patch on RA_Close itself would never run.
         Patch(harmony, "Trigger_RA_Close", nameof(AfterClose), done: "closing the bag screen is noticed", consequence: "a storage is tidied only on its first opening");
@@ -51,13 +77,13 @@ internal static class OrganizeHooks
     private static void AfterOpen(State_Web_BackpackUI __result) =>
         Record(() =>
         {
-            if (__result != null) Requests.Opened(ReadScreen(__result));
+            if (_isOrganizeOnOpen && __result != null) Requests.Opened(ReadScreen(__result));
         });
 
     private static void AfterSort(Ac_BackpackUI_Sort ac, State_Web_BackpackUI __result) =>
         Record(() =>
         {
-            if (__result != null) Requests.Sorted(ac?.Side, ReadScreen(__result));
+            if (_isCompactSort && __result != null) Requests.Sorted(ac?.Side, ReadScreen(__result));
         });
 
     private static void AfterClose() => Record(() => Requests.Closed());

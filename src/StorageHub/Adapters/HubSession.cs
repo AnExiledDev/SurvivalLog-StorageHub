@@ -17,12 +17,8 @@ internal sealed class HubSession
     private readonly GameStorages _game;
     private readonly WebPage _page;
     private readonly WebKeyboard _keyboard;
-    private readonly KeyCode _toggleKey;
-    private readonly bool _isVerbose;
     private readonly Action<string> _log;
     private readonly KeepListKeeper _keep;
-    private readonly bool _isKeepOn;
-    private readonly bool _isHomeListOn;
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
 
@@ -33,18 +29,31 @@ internal sealed class HubSession
     private float _nextRefreshAt;
     private bool _isOpen;
     private bool _hasLoggedIcons;
+    private KeyCode _toggleKey = KeyCode.F8;
+    private bool _isVerbose;
+    private bool _isKeepOn;
+    private bool _isHomeListOn;
 
-    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, KeyCode toggleKey, bool isVerbose, Action<string> log, KeepListKeeper keep, bool isKeepOn, bool isHomeListOn)
+    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, Action<string> log, KeepListKeeper keep)
     {
         _game = game;
         _page = page;
         _keyboard = keyboard;
-        _toggleKey = toggleKey;
-        _isVerbose = isVerbose;
         _log = log;
         _keep = keep;
+    }
+
+    /// <summary>
+    /// Called on the main thread at start and after each change. The page names the new key from its next call, an open panel
+    /// shows the keep list's state at its next refresh, and a station asks for its home list after every click.
+    /// </summary>
+    public void Use(KeyCode toggleKey, bool isVerbose, bool isKeepOn, bool isHomeListOn)
+    {
+        _toggleKey = toggleKey;
+        _isVerbose = isVerbose;
         _isKeepOn = isKeepOn;
         _isHomeListOn = isHomeListOn;
+        _page.UseToggleKey(toggleKey.ToString());
     }
 
     public void Update()

@@ -23,22 +23,24 @@ internal sealed class DeliveryPutAway
     private readonly DroneRetrieves _retrieves;
     private readonly WebPage _page;
     private readonly Action<string> _log;
-    private readonly bool _skipRobotPutOff;
 
     private List<Landing> _waiting = new();
     private LandingGroup? _group;
     private float _startedAt;
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
+    private bool _skipRobotPutOff;
 
-    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log, bool skipRobotPutOff)
+    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log)
     {
-        _skipRobotPutOff = skipRobotPutOff;
         _takeNext = takeNext;
         _game = game;
         _retrieves = retrieves;
         _page = page;
         _log = log;
     }
+
+    /// <summary>Called on the main thread at start and after each change. The next delivery put away goes by it.</summary>
+    public void Use(bool skipRobotPutOff) => _skipRobotPutOff = skipRobotPutOff;
 
     /// <summary>
     /// Called every frame; watches one group of landings at a time until its cargo has settled, then puts it away. A

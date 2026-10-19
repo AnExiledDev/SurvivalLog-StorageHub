@@ -29,10 +29,22 @@ internal static class StationHooks
 {
     private static Action<string> _log = _ => { };
     private static bool _hasReportedHookFailure;
+    private static bool _isOn;
+    private static bool _isHooked;
 
-    public static void Apply(Harmony harmony, Action<string> log)
+    /// <summary>
+    /// Called on the main thread at start and after each change. The hooks go in the first time the tabs are turned on;
+    /// turned off, they leave every station's list as the game made it from the next opening on.
+    /// </summary>
+    public static void Use(Harmony harmony, bool isOn, Action<string> log)
     {
         _log = log;
+        _isOn = isOn;
+
+        if (!isOn || _isHooked) return;
+
+        _isHooked = true;
+
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCookingBagList", nameof(BeforeCooking), null, "the stove");
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetRatCageBagList", nameof(BeforeRatCage), null, "the rat cage");
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetBrewBagList", nameof(BeforeBrew), null, "the brewing barrel");
@@ -247,6 +259,8 @@ internal static class StationHooks
     /// <summary>An exception must never escape into the game's code, so a failing hook logs once and leaves the tabs alone.</summary>
     private static void Guard(Action addTabs)
     {
+        if (!_isOn) return;
+
         try
         {
             addTabs();

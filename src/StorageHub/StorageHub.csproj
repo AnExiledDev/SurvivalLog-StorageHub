@@ -12,6 +12,7 @@
     <GameDir Condition="'$(GameDir)' == ''">D:\Games\Survival Log\Survival Log</GameDir>
     <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
     <Interop>$(GameDir)\BepInEx\interop</Interop>
+    <ToolkitDll Condition="'$(ToolkitDll)' == ''">D:\devnew\game-mods\SurvivalLog\mods\sl-exiled-toolkit\src\ExiledToolkit\bin\Release\ExiledToolkit.dll</ToolkitDll>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,10 +29,22 @@
     <Reference Include="$(Interop)\UnityEngine.UI.dll" Private="false" />
     <Reference Include="$(Interop)\UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="$(Interop)\Vuplex.WebView.dll" Private="false" />
+    <Reference Include="$(ToolkitDll)" Private="false" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="page.js" LogicalName="StorageHub.page.js" />
+  </ItemGroup>
+
+  <!-- What the Mod Manager's Mods screen shows about this mod. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="ModManager.Name" Value="Storage Hub&#10;储物中心" />
+    <AssemblyMetadata Include="ModManager.Description" Value="One searchable list of everything in your bag and storages (F8), with buttons that put your bag away into the storages whose tags fit. Keep chosen items in your bag, see what rots soonest, get tidier storages and have drone deliveries put themselves away.&#10;一个可搜索的列表，列出背包和家里储物家具里的所有物品（F8），还有按钮可以把背包里的物品按标签收纳到对应的储物家具。可以把选定的物品留在背包里，查看最快腐败的食物，让储物家具更整齐，并让无人机送回的物资自动收纳。" />
+    <AssemblyMetadata Include="ModManager.Author" Value="AnExiledDev" />
+    <AssemblyMetadata Include="ModManager.Category" Value="QualityOfLife" />
+    <AssemblyMetadata Include="ModManager.GameVersion" Value="1.1.18902" />
+    <AssemblyMetadata Include="ModManager.Settings" Value="Live" />
+    <AssemblyMetadata Include="ModManager.GitHub" Value="AnExiledDev/SurvivalLog-StorageHub" />
   </ItemGroup>
 
 </Project>

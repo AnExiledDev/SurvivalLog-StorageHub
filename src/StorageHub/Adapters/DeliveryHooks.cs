@@ -20,10 +20,21 @@ internal static class DeliveryHooks
     private static readonly Queue<Landing> Landings = new();
     private static Action<string> _log = _ => { };
     private static bool _hasReportedHookFailure;
+    private static bool _isOn;
+    private static bool _isHooked;
 
-    public static void Apply(Harmony harmony, Action<string> log)
+    /// <summary>
+    /// Called on the main thread at start and after each change. The hook goes in the first time the put-away is turned
+    /// on; turned off, it records no more landings, and one already recorded is still put away.
+    /// </summary>
+    public static void Use(Harmony harmony, bool isOn, Action<string> log)
     {
         _log = log;
+        _isOn = isOn;
+
+        if (!isOn || _isHooked) return;
+
+        _isHooked = true;
 
         try
         {
@@ -45,6 +56,8 @@ internal static class DeliveryHooks
     /// <summary>Reads only, and an exception never escapes into the game's settle: a failing hook logs once and records nothing.</summary>
     private static void BeforeSettle(StrangerTradeActiveManager __instance, Furniture drone, DroneTripComponent trip)
     {
+        if (!_isOn) return;
+
         try
         {
             var items = GameSingleton.Existing<BattleLogicWorld>()?._ItemManager;

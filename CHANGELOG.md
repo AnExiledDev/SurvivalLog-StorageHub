@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- Settings changed on the Mod Manager's Mods screen take effect at once.
+- The Mods screen shows the mod's name, description, category and links, and lists Stacking as an optional companion.
+- Needs Exiled's Toolkit 0.4.0 or newer.
+
 ## 0.8.3
 
 - The "Home" tab and the home storage tabs now also show at the workbench, with a "For the workbench" filter for anything a recipe uses. The workbench takes recipe materials from every storage tab it lists, so a home storage tab there also feeds crafting.

@@ -19,16 +19,18 @@ internal sealed class WebPage
     private const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
 
     private readonly Action<string> _log;
-    private readonly string _toggleKey;
+    private string _toggleKey = "F8";
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
 
-    public WebPage(Action<string> log, string toggleKey)
+    public WebPage(Action<string> log)
     {
         _log = log;
-        _toggleKey = toggleKey;
     }
+
+    /// <summary>The page's words name the panel key, and every call sends them again.</summary>
+    public void UseToggleKey(string toggleKey) => _toggleKey = toggleKey;
 
     public void KeepInstalled(float now)
     {

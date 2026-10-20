@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace StorageHub.Core;
 
 /// <summary>What the game's bag screen shows: the left side (A), and for a storage the right side (B), with the grid size each was drawn at.</summary>
@@ -11,9 +13,13 @@ public enum OrganizeReason
 
 /// <summary>
 /// One bag to tidy. PartnerId is the bag shown beside it, and both are redrawn afterwards. ShownGrid is the size the
-/// screen drew the bag at, so a bag whose drawn grid differs from its real one can be left alone.
+/// screen drew the bag at, so a bag whose drawn grid differs from its real one can be left alone. OnOffer lists the
+/// stacks offered in the trade window, which keep their count.
 /// </summary>
-public sealed record OrganizeRequest(long OwnerId, long PartnerId, GridSize ShownGrid, OrganizeReason Reason);
+public sealed record OrganizeRequest(long OwnerId, long PartnerId, GridSize ShownGrid, OrganizeReason Reason, IReadOnlySet<long>? OnOffer = null)
+{
+    public bool IsOnOffer(long stackId) => OnOffer?.Contains(stackId) == true;
+}
 
 /// <summary>
 /// Turns what the bag screen did into at most one tidy, handed out a frame later, because the hooks that report it
@@ -54,6 +60,17 @@ public sealed class OrganizeRequests
         var partner = screen.IsDual && screen.OwnerB != 0 ? screen.OwnerB : screen.OwnerA;
 
         Ask(new OrganizeRequest(screen.OwnerA, partner, screen.GridA, OrganizeReason.Sorted));
+    }
+
+    /// <summary>
+    /// The trade window's sort button was pressed and the game has packed the bag shown there. Its offered stacks are
+    /// laid out with the rest but never merged.
+    /// </summary>
+    public void TradeSorted(long ownerId, GridSize shownGrid, IReadOnlySet<long> onOffer)
+    {
+        if (ownerId == 0) return;
+
+        Ask(new OrganizeRequest(ownerId, ownerId, shownGrid, OrganizeReason.Sorted, onOffer));
     }
 
     public void Closed()

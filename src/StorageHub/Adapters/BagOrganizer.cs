@@ -159,7 +159,7 @@ internal sealed class BagOrganizer
             var size = data.ItemSize;
             var at = new Cell(data.BagPos.x, data.BagPos.y);
 
-            if (row == null || !request.ShownGrid.Holds(at, size.x, size.y)) continue;
+            if (row == null || !request.ShownGrid.Holds(at, size.x, size.y) || request.IsOnOffer(data.InstanceId)) continue;
 
             var freshness = new StackFreshness(data.StartTime, data.TimeLeft, data.TimeLeftFrac, data.TimeScale, data.UseTimes, data.MaxUseTimes);
             var neverSpoils = MergeRule.IsNeverSpoiling(row.Life);

@@ -11,7 +11,7 @@ Survival Log makes you open storage after storage to find something, and again t
 [*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
 [*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
-[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way.[/*]
+[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
 [/list]
 The keep list, deliveries, tidying and stack merging can each be turned off in the config.
 
@@ -74,7 +74,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 [*][b]留在背包[/b]：按名称选择物品并设定保留数量。收纳背包时会在背包里留下这么多，其余的收纳起来。[/*]
 [*][b]即将腐败[/b]：列出所有会腐败的食物，最快腐败的排在前面，并显示所在位置和剩余时间。[/*]
 [*][b]无人机送货[/b]：无人机回家时，它带回的物资会被放进对应标签的储物家具。卸空的无人机不会再提示你取回物资，这次送货也会计入要求取回物资的事件。有一个设置可以跳过机器人放置开关关闭的材料架。[/*]
-[*][b]整理储物家具[/b]：打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列。[/*]
+[*][b]整理储物家具[/b]：打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列，无人机交易里的「一键整理」也一样（已交出的堆叠数量不变）。[/*]
 [/list]
 「留在背包」清单、无人机送货、整理和合并堆叠都可以在配置中单独关闭。
 

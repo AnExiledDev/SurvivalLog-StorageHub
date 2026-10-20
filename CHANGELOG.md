@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4
+
+- The Auto Organize button in the drone trade tidies your bag the same way as the inventory's Sort button, and tops up partial stacks of the same item. Stacks you have offered keep their count.
+
 ## 0.9.3
 
 - In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. With Stacking installed, Shift or Ctrl held while you let go takes back only part of it. Clicking a stack in the Home tab offers one unit (with Stacking installed).

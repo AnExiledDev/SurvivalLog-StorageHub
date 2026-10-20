@@ -6,7 +6,7 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// Notices the bag screen opening, the game's Sort button and the screen closing, and only records them: these run
+/// Notices the bag screen opening, the game's Sort button there and in the trade window, and the screen closing, and only records them: these run
 /// inside the game's UI reducers, where changing items is unsafe, so BagOrganizer does the work on a later frame.
 /// Static because a Harmony patch has nowhere else to look.
 /// </summary>
@@ -44,6 +44,7 @@ internal static class OrganizeHooks
             _isSortHooked = true;
 
             Patch(harmony, "RA_Sort", nameof(AfterSort), done: "the Sort button packs small items into a square", consequence: "the Sort button stays as the game made it");
+            Patch(harmony, typeof(Reducer_Web_TradeUI), "RA_Sort", nameof(AfterTradeSort), done: "the trade window's Sort button tidies the bag too", consequence: "the trade window's Sort button stays as the game made it");
         }
 
         if ((!organizeOnOpen && !compactSort) || _isCloseHooked) return;
@@ -61,16 +62,19 @@ internal static class OrganizeHooks
         lock (Gate) return Requests.TakeDue();
     }
 
-    private static void Patch(Harmony harmony, string method, string postfix, string done, string consequence)
+    private static void Patch(Harmony harmony, string method, string postfix, string done, string consequence) =>
+        Patch(harmony, typeof(Reducer_Web_BackpackUI), method, postfix, done, consequence);
+
+    private static void Patch(Harmony harmony, Type reducer, string method, string postfix, string done, string consequence)
     {
         try
         {
-            harmony.Patch(AccessTools.Method(typeof(Reducer_Web_BackpackUI), method), postfix: new HarmonyMethod(typeof(OrganizeHooks), postfix));
+            harmony.Patch(AccessTools.Method(reducer, method), postfix: new HarmonyMethod(typeof(OrganizeHooks), postfix));
             _log(done);
         }
         catch (Exception ex)
         {
-            _log($"could not hook {nameof(Reducer_Web_BackpackUI)}.{method}, {consequence}: {ex.Message}");
+            _log($"could not hook {reducer.Name}.{method}, {consequence}: {ex.Message}");
         }
     }
 
@@ -84,6 +88,22 @@ internal static class OrganizeHooks
         Record(() =>
         {
             if (_isCompactSort && __result != null) Requests.Sorted(ac?.Side, ReadScreen(__result));
+        });
+
+    /// <summary>The trade window shows one bag tab at a time; an offer list that cannot be read leaves it as the game sorted it.</summary>
+    private static void AfterTradeSort(State_Web_TradeUI __result) =>
+        Record(() =>
+        {
+            if (!_isCompactSort || __result == null) return;
+
+            if (OfferedStacks.Read(__result.GiveJson) is not { } onOffer)
+            {
+                _log("the trade window's offer list could not be read, so its Sort button only sorts the game's way");
+
+                return;
+            }
+
+            Requests.TradeSorted(__result.BagOwnerId, new GridSize(__result.BagW, __result.BagH), onOffer);
         });
 
     private static void AfterClose() => Record(() => Requests.Closed());

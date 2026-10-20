@@ -144,6 +144,41 @@ public class OrganizeRequestsTests
         Assert.Equal(PlayerBag, NextFrame(requests)?.OwnerId);
     }
 
+    [Fact]
+    public void The_trade_sort_button_tidies_the_bag_shown_and_keeps_offered_stacks_whole()
+    {
+        var requests = new OrganizeRequests();
+
+        requests.TradeSorted(PlayerBag, BagGrid, new HashSet<long> { 7, 9 });
+
+        var request = NextFrame(requests);
+
+        Assert.NotNull(request);
+        Assert.Equal((PlayerBag, PlayerBag, BagGrid, OrganizeReason.Sorted), (request.OwnerId, request.PartnerId, request.ShownGrid, request.Reason));
+        Assert.True(request.IsOnOffer(9));
+        Assert.False(request.IsOnOffer(8));
+    }
+
+    [Fact]
+    public void A_trade_sort_with_no_bag_shown_tidies_nothing()
+    {
+        var requests = new OrganizeRequests();
+
+        requests.TradeSorted(0, BagGrid, new HashSet<long>());
+
+        Assert.Null(NextFrame(requests));
+    }
+
+    [Fact]
+    public void Outside_the_trade_window_no_stack_counts_as_offered()
+    {
+        var requests = new OrganizeRequests();
+
+        requests.Sorted(null, BagAlone);
+
+        Assert.False(NextFrame(requests)?.IsOnOffer(PlayerBag));
+    }
+
     /// <summary>Runs the two frame ticks it takes for a request to come due and returns what the second one hands out.</summary>
     private static OrganizeRequest? NextFrame(OrganizeRequests requests)
     {

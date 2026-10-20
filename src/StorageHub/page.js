@@ -1796,6 +1796,50 @@
     });
     // Classes too: the drone trade's Vue rewrites a tab's class when the chosen tab changes, without a redraw.
     home.observer.observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+
+    // The same function every time, so a page adopted again does not add a second listener. Capture on the document
+    // runs before the trade page's own mouseup listener on its window.
+    if (home.station.model === 'trade') doc.addEventListener('mouseup', takeBackOnHomeDrop, true);
+  }
+
+  // A drag off the drone let go over the Home list takes that offer back, as a right click on the drone does, and
+  // Stacking turns a Shift or Ctrl held then into taking back part of it.
+  function takeBackOnHomeDrop(e) {
+    var drag = home.isShown && home.ui ? tradeDrag() : null;
+    var core;
+
+    if (e.button !== 0 || !drag || !drag.dragging || !drag.moved || drag.fromGrid !== 'drone' || !drag.item) return;
+    if (!isOverHomePane(e)) return;
+
+    core = pageCore();
+
+    if (!core) return;
+
+    leaveDragOffGrids();
+    core.UnitySendEvent('CLICK_ITEM', { itemKey: String(drag.item.id), fromGrid: 'drone', rightClick: true });
+    askStationSoon();
+  }
+
+  // The trade page keeps its drag in Vue setup state; the mounted app is reached through its container.
+  function tradeDrag() {
+    var app = home.doc && home.doc.querySelector('#app');
+    var instance = app && app._vnode && app._vnode.component;
+
+    return instance && instance.setupState ? instance.setupState.dragState : null;
+  }
+
+  function isOverHomePane(e) {
+    var rect = home.ui.root.getBoundingClientRect();
+
+    return e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+  }
+
+  // The bag grid is only hidden under the list, so the trade page would drop the item on it. A last move far off
+  // every grid leaves the drop nowhere, and the page puts the item back where it was and ends the drag itself.
+  function leaveDragOffGrids() {
+    var win = home.doc.defaultView;
+
+    win.dispatchEvent(new win.MouseEvent('mousemove', { clientX: -100000, clientY: -100000 }));
   }
 
   function makeTab(doc, marker, text) {

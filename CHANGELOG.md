@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3
+
+- In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. With Stacking installed, Shift or Ctrl held while you let go takes back only part of it. Clicking a stack in the Home tab offers one unit (with Stacking installed).
+
 ## 0.9.2
 
 - At the workbench, clicking an item in the Home tab puts one unit on the bench, not the whole stack, the same as at the shredder. Without Stacking installed it still moves the whole stack.

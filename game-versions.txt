@@ -1,0 +1,4 @@
+# Game versions each version of Storage Hub is known to work on.
+# mod version = game versions, separated by commas
+0.9.4 = 1.1.18902, 1.1.19131
+0.9.5 = 1.1.19131

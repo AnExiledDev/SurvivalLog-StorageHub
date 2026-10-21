@@ -27,7 +27,7 @@ internal static class PageMessages
         }
         catch (Exception ex)
         {
-            log("could not listen for panel messages, its buttons will do nothing: " + ex.Message);
+            log("could not hook panel messages, its buttons will do nothing: " + ex.Message);
         }
     }
 

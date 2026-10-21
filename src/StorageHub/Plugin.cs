@@ -35,11 +35,11 @@ public sealed class Plugin : BasePlugin
             "When you put your bag away, leave the amounts on the panel's \"Keep in bag\" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
             "收纳背包时，按面板上「留在背包」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。");
         var isHomeListOn = Config.Bind("Stations", "HomeStorageList", true,
-            "Add a searchable list of your home storages: a \"Home\" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press and drone trade, and a \"Home storage\" window in the Mods menu on the inventory screen. At a station, clicking an item the station takes puts it into the station (at the drone trade, into your side of the trade), and anything else goes to your bag. Default: on.\n" +
-            "加入一个可搜索的家中储物家具列表：灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机和无人机交易的背包面板上多一个「家中」标签，背包界面的模组菜单里多一个「家中储物」窗口。在这些地方，点击这里能用的物品会直接放进去（无人机交易时放进你这一方的交易栏），其他物品放进背包。默认开启。");
+            "Add a searchable list of your home storages: a \"Home\" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and a \"Home storage\" window in the Mods menu on the inventory screen. At a station, clicking an item the station takes puts it into the station (at the drone trade, into your side of the trade), and anything else goes to your bag. Default: on.\n" +
+            "加入一个可搜索的家中储物家具列表：灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包面板上多一个「家中」标签，背包界面的模组菜单里多一个「家中储物」窗口。在这些地方，点击这里能用的物品会直接放进去（无人机交易时放进你这一方的交易栏），其他物品放进背包。默认开启。");
         var isStorageTabsOn = Config.Bind("Stations", "StorageTabs", true,
-            "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press and drone trade, add a bag tab for every home storage holding something the station takes, next to the game's own storage tabs. Default: on.\n" +
-            "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机和无人机交易的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的储物标签并列。默认开启。");
+            "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station takes, next to the game's own storage tabs. Default: on.\n" +
+            "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的储物标签并列。默认开启。");
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 

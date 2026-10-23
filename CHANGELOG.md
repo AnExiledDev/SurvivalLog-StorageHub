@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.2
+
+- The storage tabs at home and at the basket are smaller and sit in one bar, with the open tab filled gold, so more storages fit before the row scrolls.
+- Made for Survival Log 1.1.19611.
+
 ## 0.14.1
 
 - Fixed: the Storage Hub window (F4) did not open. This broke in 0.13.1.

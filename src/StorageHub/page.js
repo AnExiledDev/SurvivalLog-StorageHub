@@ -2059,8 +2059,26 @@
     '.bag-slot.is-anchored .header{width:0;min-width:100%;box-sizing:border-box}',
     '.bag-slot.is-anchored .bag-tabs{min-width:0;overflow-x:auto;scrollbar-width:none}',
     '.bag-slot.is-anchored .bag-tabs::-webkit-scrollbar{display:none}',
-    '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:1 0 auto;white-space:nowrap}'
+    '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:1 0 auto;white-space:nowrap}',
+    // One segmented bar: small tabs split by hairlines, the chosen one filled gold, so more storages fit.
+    '.bag-slot.is-anchored .bag-tabs{gap:0;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
+    '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:0 0 auto;padding:4px 11px 5px;font-size:13px;letter-spacing:.3px;background:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;color:rgba(255,255,255,.55)}',
+    '.bag-slot.is-anchored .bag-tabs>.bag-tab:hover{color:#fff;background-color:rgba(255,255,255,.06)}',
+    '.bag-slot.is-anchored .bag-tabs>.bag-tab.active{color:#1a1408;background-color:#FFC83A;text-shadow:none;font-weight:700}',
+    // The pinned tabs cover the storage tabs scrolling behind them with their own solid fill. The ::before cover would
+    // paint over the Home icon and the gold of a chosen pinned tab, since a sticky tab is its own stacking context.
+    '.bag-slot.is-anchored .bag-tabs>.slmh-pin::before{display:none}',
+    '.bag-slot.is-anchored .bag-tabs>.slmh-pin{background-color:#111113}',
+    '.bag-slot.is-anchored .bag-tabs>.slmh-pin:not(.active):hover{background-color:#1c1c1f}',
+    '.bag-slot.is-anchored .bag-tabs>.slmh-tab{padding-left:28px;color:#FFC83A;background-image:url("' + homeIcon('#FFC83A') + '");background-repeat:no-repeat;background-position:10px 50%;background-size:13px}',
+    '.bag-slot.is-anchored .bag-tabs>.slmh-tab.active{color:#1a1408;background-image:url("' + homeIcon('#1a1408') + '")}',
+    '.bag-slot.is-anchored .bag-tabs>.slmh-arrow{width:22px;border:0;border-radius:0;background:#111113;font-size:15px}'
   ].join('');
+
+  function homeIcon(colour) {
+    return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + colour +
+      '" stroke-width="2.6" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/></svg>');
+  }
   var STATION_ASK_MS = 3000;
   var STATION_AFTER_CLICK_MS = [400, 1200];
   var TAB_WAIT_MS = 2000;

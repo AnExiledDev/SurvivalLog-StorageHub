@@ -2050,7 +2050,10 @@
     { kind: 'storage', page: /BackpackUI\.html/, host: '.bag-panel.is-storage', scope: 'scopeStorage', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
-  var TAB_SCROLL_STEP = 160;
+  // A wheel notch moves the storage tabs one tab; an arrow pages to the first tab not wholly shown.
+  var WHEEL_NOTCH = 50;
+  // How long a smooth scroll to a tab runs; until then the next step counts from where it is going.
+  var TAB_SCROLL_MS = 600;
   // The bag panel beside the basket or a storage is sized by its widest child, so a long row of storage tabs widened it past the screen
   // and pushed the grid to the middle of it. The header gets no say in the width, the same way the game keeps a long
   // tag name from widening a panel, and the tabs scroll inside it. Added as soon as the screen is found, so it holds
@@ -2469,6 +2472,141 @@
     if (tabs.lastElementChild !== home.arrows.on) tabs.appendChild(home.arrows.on);
 
     showArrows(tabs);
+    padLastStop(tabs);
+    showArrows(tabs);
+    revealChosenTab(tabs);
+  }
+
+  // The storage tabs scroll by whole tabs. Each stop lines one tab's left edge up with the back arrow, so no tab is
+  // cut at the start; only the end of the row is cut. Offsets between siblings ignore the page's own scaling.
+  function scrollingTabs(tabs) {
+    return Array.prototype.filter.call(tabs.children, function (tab) {
+      return tab.matches(gameTabSelector()) && !tab.classList.contains('slmh-pin');
+    });
+  }
+
+  function tabStops(list) {
+    return list.map(function (tab) { return tab.offsetLeft - list[0].offsetLeft; });
+  }
+
+  function arrowWidth(arrow, gap) {
+    return arrow.classList.contains('on') ? arrow.offsetWidth + gap : 0;
+  }
+
+  function gapOf(tabs) {
+    return parseFloat(tabs.ownerDocument.defaultView.getComputedStyle(tabs).columnGap) || 0;
+  }
+
+  // The width that shows storage tabs: the bar less the pinned tabs and both arrows.
+  function tabView(tabs) {
+    var gap = gapOf(tabs);
+    var first = tabs.querySelector(gameTabSelector());
+
+    return tabs.clientWidth - first.offsetWidth - home.tab.offsetWidth - 2 * gap -
+      arrowWidth(home.arrows.back, gap) - arrowWidth(home.arrows.on, gap);
+  }
+
+  // Room after the last tab so the farthest scroll is a stop as well, and the last tab can show whole.
+  function padLastStop(tabs) {
+    var list = scrollingTabs(tabs);
+    var now = parseFloat(home.arrows.on.style.marginLeft) || 0;
+    var pad = 0;
+
+    if (list.length && home.arrows.on.classList.contains('on')) {
+      var end = tabs.scrollWidth - tabs.clientWidth - now;
+      var stops = tabStops(list);
+
+      for (var i = 0; end > 0 && i < stops.length; i++) {
+        if (stops[i] >= end - 1) {
+          pad = Math.max(0, stops[i] - end);
+          break;
+        }
+      }
+    }
+
+    setStyle(home.arrows.on, 'marginLeft', pad ? pad + 'px' : '');
+  }
+
+  // Where the bar is, or where it is still sliding to after a step.
+  function tabScrollAt(tabs) {
+    return Date.now() < (tabs.slmhUntil || 0) ? tabs.slmhTarget : tabs.scrollLeft;
+  }
+
+  function scrollTabsTo(tabs, x) {
+    var end = Math.max(0, tabs.scrollWidth - tabs.clientWidth);
+
+    tabs.slmhTarget = Math.max(0, Math.min(end, x));
+    tabs.slmhUntil = Date.now() + TAB_SCROLL_MS;
+    tabs.scrollLeft = tabs.slmhTarget;
+  }
+
+  function stepTabs(tabs, by) {
+    var list = scrollingTabs(tabs);
+
+    if (!list.length) return;
+
+    var stops = tabStops(list);
+    var near = nearestStop(stops, tabScrollAt(tabs));
+
+    scrollTabsTo(tabs, stops[Math.max(0, Math.min(stops.length - 1, near + by))]);
+  }
+
+  // Forward to the first tab cut off on the right; back as far as keeps the tab now at the start in view. At least
+  // one tab either way, so a tab wider than the view is not stuck on.
+  function pageTabs(tabs, way) {
+    var list = scrollingTabs(tabs);
+
+    if (!list.length) return;
+
+    var stops = tabStops(list);
+    var at = tabScrollAt(tabs);
+    var view = tabView(tabs);
+    var near = nearestStop(stops, at);
+    var to = near + way;
+    var i;
+
+    if (way > 0) {
+      for (i = near + 1; i < list.length && stops[i] + list[i].offsetWidth <= at + view + 1; i++) to = i + 1;
+    } else {
+      for (i = near - 1; i >= 0 && stops[near] + list[near].offsetWidth - stops[i] <= view + 1; i--) to = i;
+    }
+
+    scrollTabsTo(tabs, stops[Math.max(0, Math.min(stops.length - 1, to))]);
+  }
+
+  function nearestStop(stops, at) {
+    var near = 0;
+
+    for (var i = 1; i < stops.length; i++) {
+      if (Math.abs(stops[i] - at) < Math.abs(stops[near] - at)) near = i;
+    }
+
+    return near;
+  }
+
+  // A and D move the game's chosen tab, maybe off the visible part of the row, so the row follows it to the
+  // nearest stop that shows it whole. Only a new choice moves the row, so the player can still scroll away from it.
+  function revealChosenTab(tabs) {
+    var list = scrollingTabs(tabs);
+    var chosen = list.filter(function (tab) {
+      return tab.classList.contains('active') || tab.classList.contains('slmh-was');
+    })[0];
+
+    if (!chosen || chosen === tabs.slmhChosen) return;
+
+    tabs.slmhChosen = chosen;
+
+    var stops = tabStops(list);
+    var index = list.indexOf(chosen);
+    var at = tabScrollAt(tabs);
+    var right = stops[index] + chosen.offsetWidth - tabView(tabs);
+
+    if (stops[index] < at - 1) return scrollTabsTo(tabs, stops[index]);
+    if (right <= at + 1) return;
+
+    for (var i = 0; i <= index; i++) {
+      if (stops[i] >= right - 1) return scrollTabsTo(tabs, stops[i]);
+    }
   }
 
   function makeArrows(doc, tabs) {
@@ -2477,8 +2615,8 @@
 
     tipFor(back, say('tabsBackTip'));
     tipFor(on, say('tabsOnTip'));
-    back.addEventListener('click', function () { tabs.scrollLeft -= TAB_SCROLL_STEP; });
-    on.addEventListener('click', function () { tabs.scrollLeft += TAB_SCROLL_STEP; });
+    back.addEventListener('click', function () { pageTabs(tabs, -1); });
+    on.addEventListener('click', function () { pageTabs(tabs, 1); });
     if (tabs.slmhScrolls) return { back: back, on: on };
 
     // The bar outlives its arrows when Home is taken off and put back, so it is hooked only once.
@@ -2488,7 +2626,11 @@
       if (!home.arrows || tabs.scrollWidth <= tabs.clientWidth + 1) return;
 
       e.preventDefault();
-      tabs.scrollLeft += e.deltaY || e.deltaX;
+      // A notch is one tab; a touchpad's small deltas add up to one.
+      tabs.slmhWheel = (tabs.slmhWheel || 0) + (e.deltaY || e.deltaX);
+      if (Math.abs(tabs.slmhWheel) < WHEEL_NOTCH) return;
+      stepTabs(tabs, tabs.slmhWheel > 0 ? 1 : -1);
+      tabs.slmhWheel = 0;
     }, { passive: false });
 
     return { back: back, on: on };

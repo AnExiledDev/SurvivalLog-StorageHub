@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.3
+
+- Switching storages with A and D scrolls the tab row to the chosen tab.
+- The tab row scrolls by whole tabs, so the first tab after the arrow is never cut in half. The arrows move to the next tabs not fully shown, and each mouse wheel notch moves one tab.
+- Made for Survival Log 1.1.19611.
+
 ## 0.14.2
 
 - The storage tabs at home and at the basket are smaller and sit in one bar, with the open tab filled gold, so more storages fit before the row scrolls.

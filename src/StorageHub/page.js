@@ -493,6 +493,7 @@
     scopeTrade: 'For trading',
     scopeWorkbench: 'For the workbench',
     scopeBasket: 'For the basket',
+    scopeStorage: 'For this storage',
     scopeAll: 'Everything',
     homeOpen: 'Open',
     homeClose: 'Close',
@@ -503,6 +504,7 @@
     tagWish: 'Wanted',
     hintStation: 'Use goes into the station. To bag goes into your bag.',
     hintBasket: 'Use and Wanted go into the basket. Wanted is what she asks for now. To bag goes into your bag.',
+    hintStorage: 'Click an item to put it in the open storage. Its own tab is beside Home.',
     hintInv: 'Click an item to take it into your bag, or Open a storage beside your bag.',
     homeNoMatch: 'Nothing in your storages matches that search.',
     homeNone: 'No storage holds anything for this station.',
@@ -2043,10 +2045,13 @@
     // side's tabs ('atab') are Vue's, switched by index; the plugin names the storage behind each, and Home goes after
     // the bag's tab with the storage tabs scrolling past it.
     { kind: 'basket', page: /BackpackUI\.html/, host: '.bag-panel.is-basket-panel', scope: 'scopeBasket', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
+    // Any other storage open beside the bag works the same way at home. Out exploring the plugin answers that it is
+    // away, and the screen keeps the inventory's window instead of a Home tab.
+    { kind: 'storage', page: /BackpackUI\.html/, host: '.bag-panel.is-storage', scope: 'scopeStorage', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
   var TAB_SCROLL_STEP = 160;
-  // The bag panel at the basket is sized by its widest child, so a long row of storage tabs widened it past the screen
+  // The bag panel beside the basket or a storage is sized by its widest child, so a long row of storage tabs widened it past the screen
   // and pushed the grid to the middle of it. The header gets no say in the width, the same way the game keeps a long
   // tag name from widening a panel, and the tabs scroll inside it. Added as soon as the screen is found, so it holds
   // even before the plugin answers.
@@ -2139,7 +2144,7 @@
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
   // switchingUntil: a Home click is switching the game's tab until then, so that switch does not close the list.
-  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, isMenuOpen: false, reopen: null };
+  var home = { data: null, isOff: false, isAway: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -2150,6 +2155,12 @@
     }
 
     if (!data || !home.station || data.kind !== home.station.kind) return;
+
+    // Out exploring the Home tab goes, and the inventory's window takes its place.
+    if (!!data.away !== home.isAway) {
+      home.isAway = !!data.away;
+      removeHomeTab();
+    }
 
     // The tabs decide which storages get an Open button, so a change of tabs redraws too.
     var json = JSON.stringify(data) + '|' + tabOwners().join(',');
@@ -2176,7 +2187,8 @@
       return;
     }
 
-    if (found.doc !== home.doc) {
+    // The bag screen stays one page while it moves between the bag alone, a storage and the basket.
+    if (found.doc !== home.doc || found.station !== home.station) {
       dropHome();
       home.station = found.station;
       home.frame = found.frame;
@@ -2184,7 +2196,7 @@
       home.askedAt = 0;
     }
 
-    if (home.station.scrollTabs) addStyle(home.doc, 'slmh-tabcap', TAB_CAP_CSS);
+    if (home.station.scrollTabs && !home.isAway) addStyle(home.doc, 'slmh-tabcap', TAB_CAP_CSS);
     if (isInventory()) keepPop();
     else keepHomeTab();
 
@@ -2194,8 +2206,9 @@
     if (home.askedAt === 0 || (home.isShown && Date.now() - home.askedAt >= STATION_ASK_MS)) askStation();
   }
 
+  // Out exploring, a storage beside the bag gets the inventory's window, as before there were storage tabs.
   function isInventory() {
-    return !!home.station && home.station.kind === 'inventory';
+    return !!home.station && (home.station.kind === 'inventory' || home.isAway);
   }
 
   function withTabs(own, shared) {
@@ -2252,6 +2265,7 @@
     home.shownJson = '';
     home.openId = null;
     home.isShown = false;
+    home.isAway = false;
 
     if (wasPopOpen) holdKeys();
   }
@@ -2292,7 +2306,7 @@
     var input = make(doc, 'input');
     var scope = make(doc, 'div', 'slmh-scope');
     var list = make(doc, 'div', 'slmh-list');
-    var hint = make(doc, 'div', 'slmh-hint', say(isInventory() ? 'hintInv' : home.station.kind === 'basket' ? 'hintBasket' : 'hintStation'));
+    var hint = make(doc, 'div', 'slmh-hint', say(isInventory() ? 'hintInv' : home.station.kind === 'basket' ? 'hintBasket' : home.station.kind === 'storage' ? 'hintStorage' : 'hintStation'));
 
     addHomeStyle(doc);
     // The inventory page passes clicks through to the game unless the element under the pointer is marked interactive.
@@ -2925,21 +2939,21 @@
   }
 
   function isUsableScope() {
-    return home.station.kind !== 'inventory' && !home.isAllScope;
+    return !isInventory() && !home.isAllScope;
   }
 
   // Each storage with the rows the scope and the search leave; one with none left is not shown.
   function homeStorages() {
     var query = homeQuery();
     var isUsableOnly = isUsableScope();
-    var tabs = home.station.kind === 'inventory' ? [] : tabOwners();
+    var tabs = isInventory() ? [] : tabOwners();
 
     return home.data.storages.map(function (storage) {
       var rows = storage.items.filter(function (item) { return (!isUsableOnly || item.ok) && matchesHome(item, query); });
 
       return { storage: storage, rows: rows, hasTab: tabs.indexOf(storage.id) >= 0 };
     }).filter(function (entry) {
-      return entry.rows.length > 0 || (!query.length && !isUsableOnly && home.station.kind === 'inventory');
+      return entry.rows.length > 0 || (!query.length && !isUsableOnly && isInventory());
     });
   }
 
@@ -2955,14 +2969,14 @@
     var box = make(doc, 'div');
     var head = make(doc, 'div', 'slmh-store' + (home.openId === entry.storage.id ? ' on' : ''));
     var isFold = isFolded(entry);
-    var isInventory = home.station.kind === 'inventory';
+    var isInventoryList = isInventory();
 
     head.setAttribute('data-fold', entry.storage.id);
     head.appendChild(make(doc, 'span', 'slmh-car', isFold ? '\u25b6' : '\u25bc'));
     head.appendChild(make(doc, 'span', '', entry.storage.name));
     head.appendChild(make(doc, 'span', 'cnt', isUsableScope() ? say('homeUsable', entry.rows.length) : say('homeItems', entry.rows.length)));
 
-    if (isInventory || entry.hasTab) head.appendChild(openButton(doc, entry.storage.id));
+    if (isInventoryList || entry.hasTab) head.appendChild(openButton(doc, entry.storage.id));
 
     box.appendChild(head);
 
@@ -3004,7 +3018,7 @@
     row.appendChild(make(doc, 'span', 'n', item.name));
     row.appendChild(make(doc, 'span', 'x', TIMES + item.count));
 
-    if (home.station.kind !== 'inventory') row.appendChild(rowTag(doc, item));
+    if (!isInventory()) row.appendChild(rowTag(doc, item));
 
     return row;
   }
@@ -3036,7 +3050,7 @@
   // On the inventory screen the storage opens beside the bag, the way walking up to it does; at a station the list
   // makes way for the storage's own tab.
   function openStorage(id) {
-    if (home.station.kind !== 'inventory') {
+    if (!isInventory()) {
       hideHome();
       switchTab(id);
 
@@ -3060,11 +3074,11 @@
     if (container && item.ok && tabOwners().indexOf(storageId) >= 0) {
       // The shredder's and workbench's own clicks put a whole stack in; a Home click feeds them one unit at a time.
       send('putOne|' + item.cfg + '|' + storageId + '|' + container);
-    } else if (home.station.kind !== 'inventory' && item.ok && tabOwners().indexOf(storageId) >= 0) {
+    } else if (!isInventory() && item.ok && tabOwners().indexOf(storageId) >= 0) {
       putInStation(storageId, itemId);
     } else {
       // At a station a click takes one unit, so a stack is not dragged out whole to feed it one at a time.
-      send((home.station.kind === 'inventory' ? 'take|' : 'takeOne|') + item.cfg + '|' + storageId);
+      send((isInventory() ? 'take|' : 'takeOne|') + item.cfg + '|' + storageId);
     }
 
     askStationSoon();

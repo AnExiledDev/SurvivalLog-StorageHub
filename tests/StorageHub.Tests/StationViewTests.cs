@@ -116,6 +116,17 @@ public class StationViewTests
     }
 
     [Fact]
+    public void Out_exploring_the_storage_view_says_it_is_away_so_the_page_keeps_its_inventory_window()
+    {
+        using var away = JsonDocument.Parse(StationView.Build(Home(), StationKind.Storage, _ => false, _ => null, tabs: new long[] { 100 }, isAway: true));
+        using var atHome = JsonDocument.Parse(StationView.Build(Home(), StationKind.Storage, _ => true, _ => null, tabs: new long[] { 100, 200 }));
+
+        Assert.Equal("storage", away.RootElement.GetProperty("kind").GetString());
+        Assert.True(away.RootElement.GetProperty("away").GetBoolean());
+        Assert.False(atHome.RootElement.TryGetProperty("away", out _));
+    }
+
+    [Fact]
     public void Every_station_the_view_names_is_one_the_page_can_ask_for_by_that_name()
     {
         foreach (var kind in Enum.GetValues<StationKind>()) Assert.Equal(kind, StationView.Parse(StationView.KindName(kind)));

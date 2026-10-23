@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+
+- At home, opening any storage, the neighbor's basket or the trunk puts every home storage in a row of tabs above your bag, with Home after the bag's tab, the way the crafting bench and other stations show them. Clicking an item in Home puts it in the storage that is open.
+- At the basket every storage gets a tab, whether or not she has asked for anything yet.
+- Out exploring, looting looks the same as before.
+- Made for Survival Log 1.1.19611.
+
 ## 0.13.1
 
 - Fixed: at the neighbor's basket, a long row of storage tabs widened the bag panel past the left edge of the screen and left a wide gap between the bag and the basket. The tab row now stays as wide as the bag panel and scrolls.

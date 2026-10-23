@@ -39,6 +39,7 @@ internal static class StationRules
                 StationKind.Trade => row.TradeValue > 0,
                 StationKind.Workbench => RecipeMaterials(config).Contains(item.ItemConfigId),
                 StationKind.Basket => !NeighborRules.IsBasketForbidItem(item.ItemConfigId),
+                StationKind.Storage => true,
                 StationKind.Inventory => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
             };

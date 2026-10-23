@@ -616,6 +616,12 @@ internal sealed class HubSession
 
                 _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish), tabs));
             }
+            else if (kind == StationKind.Storage)
+            {
+                var isAway = GameStorages.IsExploring();
+
+                _page.Station(StationView.Build(_inventory, kind, isAway ? _ => false : _game.Usable(kind), IconPath, tabs: _game.ReadLootScreen(), isAway: isAway));
+            }
             else
             {
                 _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath));

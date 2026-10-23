@@ -19,6 +19,7 @@ public enum StationKind
     Trade,
     Workbench,
     Basket,
+    Storage,
 }
 
 /// <summary>
@@ -28,17 +29,20 @@ public enum StationKind
 /// </summary>
 /// <remarks>
 /// At the neighbor's basket the rows she wishes for today are marked and come first, and the storages the screen shows
-/// as tabs are named, since the basket screen does not tell the page which storage each of its tabs is.
+/// as tabs are named, since the basket screen does not tell the page which storage each of its tabs is. The looting
+/// screen beside an opened storage names its tabs the same way; out exploring it is marked away, and the page keeps
+/// its inventory window there instead of a Home tab.
 /// </remarks>
 public static class StationView
 {
-    public static string Build(Inventory inventory, StationKind kind, Func<ItemStack, bool> isUsable, Func<int, string?> iconOf, Func<int, bool>? isWished = null, IReadOnlyList<long>? tabs = null)
+    public static string Build(Inventory inventory, StationKind kind, Func<ItemStack, bool> isUsable, Func<int, string?> iconOf, Func<int, bool>? isWished = null, IReadOnlyList<long>? tabs = null, bool isAway = false)
     {
         var wished = isWished ?? (_ => false);
         var storages = inventory.Storages.Where(IsListed).Select(storage => StorageJson(inventory, storage, isUsable, iconOf, wished));
         var json = new StringBuilder(4096).Append("{\"kind\":").Append(HubView.Str(KindName(kind))).Append(",\"storages\":[").AppendJoin(',', storages).Append(']');
 
         if (tabs != null) json.Append(",\"tabs\":[").AppendJoin(',', tabs.Select(Id)).Append(']');
+        if (isAway) json.Append(",\"away\":true");
 
         return json.Append('}').ToString();
     }
@@ -55,6 +59,7 @@ public static class StationView
         StationKind.Trade => "trade",
         StationKind.Workbench => "workbench",
         StationKind.Basket => "basket",
+        StationKind.Storage => "storage",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
     };
 
@@ -70,6 +75,7 @@ public static class StationView
         "trade" => StationKind.Trade,
         "workbench" => StationKind.Workbench,
         "basket" => StationKind.Basket,
+        "storage" => StationKind.Storage,
         _ => null,
     };
 

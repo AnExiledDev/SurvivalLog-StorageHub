@@ -398,6 +398,25 @@ internal sealed class GameStorages
     }
 
     /// <summary>
+    /// The looting screen's bag side tabs, in the game's order: the bag, any car boxes, then the home storages. Empty
+    /// when the bag screen is not open beside a storage.
+    /// </summary>
+    public List<long> ReadLootScreen()
+    {
+        var tabs = new List<long>();
+        var screen = BackpackScreen();
+
+        if (screen == null || !screen.IsDualBag) return tabs;
+
+        for (var i = 0; screen.ATabOwnerIds != null && i < screen.ATabOwnerIds.Count; i++) tabs.Add(screen.ATabOwnerIds[i]);
+
+        return tabs;
+    }
+
+    /// <summary>Out on an exploration map rather than at home, where looting keeps the game's own screen.</summary>
+    public static bool IsExploring() => VehicleConfig.IsInExploreInstance();
+
+    /// <summary>
     /// The open basket screen's storage tabs, in the game's order, and what she wishes for, read off the screen's own
     /// state. No tabs and no wish when the bag screen is not open on the basket.
     /// </summary>

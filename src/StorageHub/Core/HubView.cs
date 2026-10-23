@@ -103,6 +103,7 @@ public static class HubView
         StorageKind.Bag => "bag",
         StorageKind.Furniture => "storage",
         StorageKind.Drawer => "drawer",
+        StorageKind.Basket => "basket",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown storage kind"),
     };
 }

@@ -384,7 +384,7 @@
   // Styled inline, so the tip looks the same in any page it is drawn in, the Home tab's station pages included.
   var TIP_STYLE = 'position:fixed;z-index:2147483600;display:none;max-width:320px;padding:8px 12px;border-radius:4px;border:1px solid rgba(255,200,58,.45);background:linear-gradient(180deg,#3a3129,#241e18);box-shadow:0 8px 24px rgba(0,0,0,.6);font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:13px;line-height:1.45;color:#f0e8d8;white-space:pre-line;text-align:left;pointer-events:none';
   var TIP_TITLE_STYLE = 'display:block;margin-bottom:2px;font-size:14px;font-weight:700;color:#FFC83A';
-  var KIND_WORD = { bag: 'kindBag', storage: 'kindStorage', drawer: 'kindDrawer' };
+  var KIND_WORD = { bag: 'kindBag', storage: 'kindStorage', drawer: 'kindDrawer', basket: 'kindBasket' };
   var BUSY_TIMEOUT_MS = 5000;
 
   var TIMES = '\u00d7';
@@ -474,6 +474,7 @@
     kindBag: 'Bag',
     kindStorage: 'Storage',
     kindDrawer: 'Drawer',
+    kindBasket: 'Basket',
     menuPutAwayTip: 'Move everything in your bag into the storages whose tags want it',
     menuFloor: 'Put away floor',
     menuFloorTip: 'Move everything lying on the floor at home into the storages whose tags want it, and the rest into your bag',
@@ -491,6 +492,7 @@
     scopeCompressor: 'For the ration press',
     scopeTrade: 'For trading',
     scopeWorkbench: 'For the workbench',
+    scopeBasket: 'For the basket',
     scopeAll: 'Everything',
     homeOpen: 'Open',
     homeClose: 'Close',
@@ -498,7 +500,9 @@
     homeItems: '{0} items',
     tagUse: 'Use',
     tagBag: 'To bag',
+    tagWish: 'Wanted',
     hintStation: 'Use goes into the station. To bag goes into your bag.',
+    hintBasket: 'Use and Wanted go into the basket. Wanted is what she asks for now. To bag goes into your bag.',
     hintInv: 'Click an item to take it into your bag, or Open a storage beside your bag.',
     homeNoMatch: 'Nothing in your storages matches that search.',
     homeNone: 'No storage holds anything for this station.',
@@ -528,6 +532,8 @@
     homeCloseTip: 'Close this storage again',
     homeShutTip: 'Close the home storage list',
     scopeUsableTip: 'Show only what this station can use',
+    tabsBackTip: 'Scroll the tabs back',
+    tabsOnTip: 'Scroll to more tabs',
     scopeAllTip: 'Show everything in your storages',
     homeItemTip: '{0} in {1}'
   };
@@ -1353,7 +1359,7 @@
     return tipFor(el('span', 'sh-chip' + (kept.held < amount ? ' sh-none' : ''), say('storedNone')), say('storedNoneTip'));
   }
 
-  // Units in home storages, which is where Fill takes from: not the bag, and never a drone.
+  // Units in home storages, which is where Fill takes from: not the bag, never a drone, and never the neighbor's basket.
   function storedCount(id) {
     var item = findItem(id);
 
@@ -1362,7 +1368,7 @@
     return item.at.reduce(function (sum, at) {
       var storage = storageOf(at[0]);
 
-      return storage.kind === 'bag' || storage.drone ? sum : sum + at[1];
+      return storage.kind === 'bag' || storage.kind === 'basket' || storage.drone ? sum : sum + at[1];
     }, 0);
   }
 
@@ -2033,8 +2039,13 @@
     withTabs({ kind: 'compressor', page: /Compressor\.html/, host: '.cart', scope: 'scopeCompressor', tabs: '#tabs', pin: null }, CART_TABS),
     { kind: 'trade', page: /TradeUI\.html/, host: '#app .cols', scope: 'scopeTrade', tabs: '.cols > .col > .bag-tabs', pin: '.bag-tab-pinned', tab: 'bag-tab', tag: 'button', panel: '.col', model: 'trade', quick: true },
     { kind: 'workbench', page: /ToolTable\.html/, host: '.backpack-panel', scope: 'scopeWorkbench', tabs: '.backpack-panel > .left-tabs', pin: '.left-tab-pinned', tab: 'left-tab', tag: 'button', panel: '.backpack-panel', model: 'tooltable', quick: true },
+    // The basket screen is the bag screen with the basket beside the bag, so it is matched before the inventory. Its bag
+    // side's tabs ('atab') are Vue's, switched by index; the plugin names the storage behind each, and Home goes after
+    // the bag's tab with the storage tabs scrolling past it.
+    { kind: 'basket', page: /BackpackUI\.html/, host: '.bag-panel.is-basket-panel', scope: 'scopeBasket', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
+  var TAB_SCROLL_STEP = 160;
   var STATION_ASK_MS = 3000;
   var STATION_AFTER_CLICK_MS = [400, 1200];
   var TAB_WAIT_MS = 2000;
@@ -2055,6 +2066,19 @@
     // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
     '.slmh-forced .bag-tabs{display:flex!important}',
     '.slmh-forced #bagPanelTitle{display:none!important}',
+    // The basket screen keeps its tab bar in a header the list would otherwise hide.
+    '.slmh-on>.header-slot{visibility:visible}',
+    // Many storage tabs scroll sideways behind the bag's tab, Home and the arrows, as the stove's tabs do.
+    '.slmh-scroll{min-width:0;overflow-x:hidden;scroll-behavior:smooth}',
+    '.slmh-scroll>.bag-tab{flex:1 0 auto;white-space:nowrap}',
+    '.slmh-scroll>.slmh-pin{position:sticky;z-index:2}',
+    '.slmh-scroll>.slmh-pin::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:8px;background:#141416}',
+    '.slmh-arrow{position:sticky;z-index:3;flex:none;width:26px;display:none;align-items:center;justify-content:center;background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:6px;color:rgba(255,255,255,.75);font-size:18px;font-weight:bold;cursor:pointer;user-select:none}',
+    '.slmh-arrow.on{display:flex}',
+    '.slmh-arrow.off{opacity:.3;cursor:default}',
+    '.slmh-arrow.r{right:0}',
+    '.slmh-tag.wish{color:#FFC83A}',
+    '.slmh-tag.wish::before{background:#FFC83A;box-shadow:0 0 6px rgba(255,200,58,.6)}',
     '.slmh-pane{position:absolute;z-index:5;display:flex;flex-direction:column;min-height:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
     '.slmh-pop{position:fixed;z-index:50;box-sizing:border-box;display:flex;flex-direction:column;padding:14px 16px 12px;border-radius:4px;background:radial-gradient(ellipse at 15% 0%,rgba(150,100,40,.28),transparent 55%),linear-gradient(180deg,#3a3129 0%,#2b241d 55%,#241e18 100%);border:1px solid rgba(220,188,120,.28);box-shadow:0 12px 40px rgba(0,0,0,.6);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
     '.slmh-pop::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,#FFC83A 50%,transparent 90%);opacity:.6}',
@@ -2104,7 +2128,8 @@
   ].join('');
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
-  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, isMenuOpen: false, reopen: null };
+  // switchingUntil: a Home click is switching the game's tab until then, so that switch does not close the list.
+  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -2252,7 +2277,7 @@
     var input = make(doc, 'input');
     var scope = make(doc, 'div', 'slmh-scope');
     var list = make(doc, 'div', 'slmh-list');
-    var hint = make(doc, 'div', 'slmh-hint', say(isInventory() ? 'hintInv' : 'hintStation'));
+    var hint = make(doc, 'div', 'slmh-hint', say(isInventory() ? 'hintInv' : home.station.kind === 'basket' ? 'hintBasket' : 'hintStation'));
 
     addHomeStyle(doc);
     // The inventory page passes clicks through to the game unless the element under the pointer is marked interactive.
@@ -2353,10 +2378,90 @@
 
     if (hasGameTab && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (!hasGameTab) showBackTab(doc, pinned);
-    if (pinned.lastElementChild !== home.tab) pinned.appendChild(home.tab);
+    placeHomeTab(pinned);
     if (isSwitchedByKey()) leaveForSwitchedTab();
 
     markActiveTab();
+
+    if (home.station.scrollTabs) keepTabScroll(doc, tabs);
+  }
+
+  // After the pinned tabs, or right after the bag's own tab where the storage tabs follow in the same bar.
+  function placeHomeTab(pinned) {
+    var first = home.station.homeAfterFirst ? pinned.querySelector(gameTabSelector()) : null;
+
+    if (!first) {
+      if (pinned.lastElementChild !== home.tab) pinned.appendChild(home.tab);
+
+      return;
+    }
+
+    if (first.nextElementSibling !== home.tab) pinned.insertBefore(home.tab, first.nextElementSibling);
+  }
+
+  // The bag's tab and Home stay put at the left, the storage tabs scroll behind them, and an arrow at each end shows
+  // while there are more tabs than fit. The arrows sit in the bar itself, so they stick to its ends as it scrolls.
+  function keepTabScroll(doc, tabs) {
+    var first = tabs.querySelector(gameTabSelector());
+
+    if (!first) return;
+    if (!home.arrows) home.arrows = makeArrows(doc, tabs);
+
+    var gap = parseFloat(doc.defaultView.getComputedStyle(tabs).columnGap) || 0;
+
+    setClass(tabs, 'slmh-scroll', true);
+    setClass(first, 'slmh-pin', true);
+    setClass(home.tab, 'slmh-pin', true);
+    setStyle(first, 'left', '0px');
+    setStyle(home.tab, 'left', first.offsetWidth + gap + 'px');
+    setStyle(home.arrows.back, 'left', first.offsetWidth + home.tab.offsetWidth + 2 * gap + 'px');
+
+    if (home.tab.nextElementSibling !== home.arrows.back) tabs.insertBefore(home.arrows.back, home.tab.nextElementSibling);
+    if (tabs.lastElementChild !== home.arrows.on) tabs.appendChild(home.arrows.on);
+
+    showArrows(tabs);
+  }
+
+  function makeArrows(doc, tabs) {
+    var back = make(doc, 'div', 'slmh-arrow', '<');
+    var on = make(doc, 'div', 'slmh-arrow r', '>');
+
+    tipFor(back, say('tabsBackTip'));
+    tipFor(on, say('tabsOnTip'));
+    back.addEventListener('click', function () { tabs.scrollLeft -= TAB_SCROLL_STEP; });
+    on.addEventListener('click', function () { tabs.scrollLeft += TAB_SCROLL_STEP; });
+    if (tabs.slmhScrolls) return { back: back, on: on };
+
+    // The bar outlives its arrows when Home is taken off and put back, so it is hooked only once.
+    tabs.slmhScrolls = true;
+    tabs.addEventListener('scroll', function () { if (home.arrows) showArrows(tabs); });
+    tabs.addEventListener('wheel', function (e) {
+      if (!home.arrows || tabs.scrollWidth <= tabs.clientWidth + 1) return;
+
+      e.preventDefault();
+      tabs.scrollLeft += e.deltaY || e.deltaX;
+    }, { passive: false });
+
+    return { back: back, on: on };
+  }
+
+  function showArrows(tabs) {
+    var isOverflowing = tabs.scrollWidth > tabs.clientWidth + 1;
+    var end = tabs.scrollWidth - tabs.clientWidth - 1;
+
+    setClass(home.arrows.back, 'on', isOverflowing);
+    setClass(home.arrows.on, 'on', isOverflowing);
+    setClass(home.arrows.back, 'off', tabs.scrollLeft <= 0);
+    setClass(home.arrows.on, 'off', tabs.scrollLeft >= end);
+  }
+
+  // Only a real change is written: the tab bar's observer sees every write and would run again for nothing.
+  function setClass(node, className, isOn) {
+    if (node.classList.contains(className) !== isOn) node.classList.toggle(className, isOn);
+  }
+
+  function setStyle(node, name, value) {
+    if (node.style[name] !== value) node.style[name] = value;
   }
 
   // A and D switch the game's tab with no click, and the game then marks the new tab active. A game tab marked active
@@ -2364,7 +2469,16 @@
   function isSwitchedByKey() {
     var now = gameTabIndex('active');
 
-    return home.isShown && now >= 0 && now !== home.underTab;
+    if (!home.isShown || now < 0 || now === home.underTab) return false;
+
+    // A Home click switched it to put an item in: the list stays, over the new tab.
+    if (Date.now() < home.switchingUntil) {
+      home.underTab = now;
+
+      return false;
+    }
+
+    return true;
   }
 
   // The tab the list was opened over is not the game's chosen one any more, so it does not get its mark back.
@@ -2445,12 +2559,19 @@
     askStationSoon();
   }
 
-  // The trade page keeps its drag in Vue setup state; the mounted app is reached through its container.
+  // The trade page keeps its drag in Vue setup state.
   function tradeDrag() {
+    var setup = vueSetup();
+
+    return setup ? setup.dragState : null;
+  }
+
+  // The Vue pages keep their state in the mounted app's setup state, reached through its container.
+  function vueSetup() {
     var app = home.doc && home.doc.querySelector('#app');
     var instance = app && app._vnode && app._vnode.component;
 
-    return instance && instance.setupState ? instance.setupState.dragState : null;
+    return instance && instance.setupState ? instance.setupState : null;
   }
 
   function isOverHomePane(e) {
@@ -2505,6 +2626,7 @@
     if (home.observer) home.observer.disconnect();
     if (home.tab && home.tab.parentNode) home.tab.parentNode.removeChild(home.tab);
     if (home.back && home.back.parentNode) home.back.parentNode.removeChild(home.back);
+    if (home.arrows) removeArrows();
 
     if (home.panel) {
       home.panel.classList.remove('slmh-host', 'slmh-on', 'slmh-forced');
@@ -2517,8 +2639,23 @@
     home.observer = null;
     home.tab = null;
     home.back = null;
+    home.arrows = null;
     home.panel = null;
     home.tabsEl = null;
+  }
+
+  function removeArrows() {
+    [home.arrows.back, home.arrows.on].forEach(function (arrow) {
+      if (arrow.parentNode) arrow.parentNode.removeChild(arrow);
+    });
+
+    if (!home.tabsEl) return;
+
+    home.tabsEl.classList.remove('slmh-scroll');
+    Array.prototype.forEach.call(home.tabsEl.querySelectorAll('.slmh-pin'), function (tab) {
+      tab.classList.remove('slmh-pin');
+      tab.style.left = '';
+    });
   }
 
   function showHome() {
@@ -2561,7 +2698,7 @@
     var tabs = home.tabsEl;
     var style = home.doc.defaultView.getComputedStyle(home.panel);
     var place = {
-      top: tabs.offsetTop + tabs.offsetHeight + PANE_TAB_GAP + 'px',
+      top: offsetTopIn(tabs, home.panel) + tabs.offsetHeight + PANE_TAB_GAP + 'px',
       left: style.paddingLeft,
       right: style.paddingRight,
       bottom: style.paddingBottom
@@ -2570,6 +2707,15 @@
     Object.keys(place).forEach(function (side) {
       if (root.style[side] !== place[side]) root.style[side] = place[side];
     });
+  }
+
+  // How far below the panel's top a node sits; the basket screen's tab bar sits inside a positioned header.
+  function offsetTopIn(node, panel) {
+    var top = 0;
+
+    for (var at = node; at && at !== panel; at = at.offsetParent) top += at.offsetTop;
+
+    return top;
   }
 
   // ---- The inventory's window ----
@@ -2841,9 +2987,16 @@
     row.appendChild(make(doc, 'span', 'n', item.name));
     row.appendChild(make(doc, 'span', 'x', TIMES + item.count));
 
-    if (home.station.kind !== 'inventory') row.appendChild(make(doc, 'span', 'slmh-tag ' + (item.ok ? 'st' : 'bag'), say(item.ok ? 'tagUse' : 'tagBag')));
+    if (home.station.kind !== 'inventory') row.appendChild(rowTag(doc, item));
 
     return row;
+  }
+
+  // What a click does with the row: into the station, or into the bag. At the basket a row she wants says so.
+  function rowTag(doc, item) {
+    if (item.ok && item.wish) return make(doc, 'span', 'slmh-tag st wish', say('tagWish'));
+
+    return make(doc, 'span', 'slmh-tag ' + (item.ok ? 'st' : 'bag'), say(item.ok ? 'tagUse' : 'tagBag'));
   }
 
   function onHomeClick(e) {
@@ -2954,6 +3107,8 @@
       var index = cartTabs().map(function (t) { return String(t.ownerId); }).indexOf(ownerId);
 
       if (index >= 0) core.UnitySendEvent('TAB_SWITCH', { tab: index });
+    } else if (model === 'atab') {
+      switchBagSideTab(core, tabOwners().indexOf(ownerId));
     } else if (model === 'tooltable') {
       var cabinet = toolTableTabs().map(function (t) { return String(t.ownerId); }).indexOf(ownerId);
       var switchLeftTab = pageGlobal(home.frame.contentWindow, 'switchLeftTab');
@@ -2966,9 +3121,19 @@
     }
   }
 
+  // The page's own tab click, so Vue marks the tab at once; the event alone if the page cannot be reached.
+  function switchBagSideTab(core, index) {
+    var setup = vueSetup();
+
+    if (index < 0) return;
+    if (setup && typeof setup.onSwitchATab === 'function') setup.onSwitchATab(index);
+    else core.UnitySendEvent('SWITCH_A_TAB', { tab: index });
+  }
+
   function putInStation(ownerId, itemId) {
     var startedAt = Date.now();
 
+    home.switchingUntil = startedAt + TAB_WAIT_MS;
     switchTab(ownerId);
 
     (function clickWhenShown() {
@@ -2995,8 +3160,10 @@
       }
     }
 
-    // The drone trade gives an item with a right click on the bag; the other stations take it as the page's own click.
+    // The drone trade gives an item with a right click on the bag, and the basket takes one with the bag screen's quick
+    // transfer from the bag side; the other stations take it as the page's own click.
     if (home.station.model === 'trade') core.UnitySendEvent('CLICK_ITEM', { itemKey: String(itemId), fromGrid: 'bag', rightClick: true });
+    else if (home.station.model === 'atab') core.UnitySendEvent('QUICK_TRANSFER_ITEM', { itemId: Number(itemId) });
     else core.UnitySendEvent('ITEM_CLICK', { itemId: Number(itemId), rightClick: !!home.station.quick });
 
     askStationSoon();
@@ -3026,9 +3193,18 @@
     if (home.station.model === 'trade') return tab && tab.getAttribute('data-owner');
     if (home.station.model === 'cart') return win.State && win.State.cartOwnerId != null ? String(win.State.cartOwnerId) : null;
     if (home.station.model === 'tooltable') return toolTableOwner(pageGlobal(win, 'activeLeftTab'));
+    if (home.station.model === 'atab') return bagSideOwner();
     if (win.State && win.State.bagOwnerId != null) return String(win.State.bagOwnerId);
 
     return tab && tab._ownerId != null ? String(tab._ownerId) : null;
+  }
+
+  // The bag side's owner once the game has sent its items, so a put waits for the switched tab to load.
+  function bagSideOwner() {
+    var setup = vueSetup();
+    var owner = setup && setup.bagA ? setup.bagA.ownerId : null;
+
+    return owner ? String(owner) : null;
   }
 
   function toolTableOwner(leftTab) {
@@ -3045,6 +3221,8 @@
     if (home.station.model === 'trade') {
       return Array.prototype.map.call(win.document.querySelectorAll('.bag-tab[data-owner]'), function (t) { return t.getAttribute('data-owner'); });
     }
+
+    if (home.station.model === 'atab') return (home.data && home.data.tabs) || [];
 
     if (home.station.model === 'tooltable') {
       return toolTableTabs().filter(function (t) { return !t.isRack; }).map(function (t) { return String(t.ownerId); });

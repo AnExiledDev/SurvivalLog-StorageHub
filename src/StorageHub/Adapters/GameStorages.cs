@@ -340,21 +340,47 @@ internal sealed class GameStorages
         return NonEmpty(item?.WebIcon) ?? NonEmpty(item?.Icon);
     }
 
-    /// <summary>Every piece of home furniture with a bag that counts as the player's storage; read only, so a hook may call it.</summary>
+    /// <summary>
+    /// Every piece of home furniture with a bag that counts as the player's storage; read only, so a hook may call it.
+    /// The neighbor's basket is left out: what sits in it is staged for her or is her gift.
+    /// </summary>
     public static List<Furniture> HomeFurnitures(AgentManager agents)
     {
         var found = agents.GetFurnituresWithBag(agents.GetHomeMapId(), true, true);
         var homes = new List<Furniture>();
+        var basketId = BasketConfigId();
 
         for (var i = 0; found != null && i < found.Count; i++)
         {
             var furniture = found[i];
 
-            if (furniture != null && !ItemManager.IsExcludedFromCostPool(furniture.InstanceId)) homes.Add(furniture);
+            if (furniture != null && !ItemManager.IsExcludedFromCostPool(furniture.InstanceId) && !IsBasket(furniture, basketId)) homes.Add(furniture);
         }
 
         return homes;
     }
+
+    /// <summary>The neighbor's basket at home, if this character has one and it is built.</summary>
+    public static Furniture? HomeBasket(AgentManager agents)
+    {
+        var basketId = BasketConfigId();
+
+        if (basketId <= 0) return null;
+
+        var found = agents.GetFurnituresWithBag(agents.GetHomeMapId(), true, true);
+
+        for (var i = 0; found != null && i < found.Count; i++)
+        {
+            if (IsBasket(found[i], basketId)) return found[i];
+        }
+
+        return null;
+    }
+
+    /// <summary>The basket's furniture id for this character: the girl's or the boy's, 0 when there is no neighbor.</summary>
+    public static int BasketConfigId() => NeighborRules.GetBasketFurnitureId();
+
+    public static bool IsBasket(Furniture? furniture, int basketId) => basketId > 0 && furniture != null && furniture.AgentConfigId == basketId;
 
     /// <summary>
     /// Whether a station takes each stack from the last Read, by the game's own checks on the item the UI cache holds.
@@ -369,6 +395,60 @@ internal sealed class GameStorages
         if (kind == StationKind.Inventory || state == null || cache == null || config == null) return _ => false;
 
         return stack => cache.TryGetValue(stack.OwnerId, out var held) && held != null && held.TryGetValue(stack.ItemId, out var item) && item != null && StationRules.Takes(kind, item, state, config);
+    }
+
+    /// <summary>
+    /// The open basket screen's storage tabs, in the game's order, and what she wishes for, read off the screen's own
+    /// state. No tabs and no wish when the bag screen is not open on the basket.
+    /// </summary>
+    public (List<long> Tabs, BasketWish Wish) ReadBasketScreen()
+    {
+        var tabs = new List<long>();
+        var screen = BackpackScreen();
+
+        if (screen == null || !IsBasketScreen(screen)) return (tabs, BasketWish.None);
+
+        for (var i = 0; screen.ATabOwnerIds != null && i < screen.ATabOwnerIds.Count; i++) tabs.Add(screen.ATabOwnerIds[i]);
+
+        return (tabs, WishOf(screen.NeighborWishSnap));
+    }
+
+    /// <summary>Whether she wishes for an item, by the item's category in the game's item table.</summary>
+    public static Func<int, bool> IsWished(BasketWish wish)
+    {
+        var config = GameSingleton.Existing<ConfigManager>();
+
+        return configId => config?.Get_Config_Item(configId) is { } row && wish.Wants(row.Category);
+    }
+
+    /// <summary>The bag screen's state while it shows.</summary>
+    public static State_Web_BackpackUI? BackpackScreen()
+    {
+        var ui = GameSingleton.Existing<ReduxUISystem>();
+        var screen = Il2CppType.Of<WebUI_BackpackUI>();
+
+        if (ui == null || !ui.IsUIActive(screen)) return null;
+
+        return ui.GetStateByUI(screen)?.TryCast<State_Web_BackpackUI>();
+    }
+
+    /// <summary>The bag screen with the neighbor's basket on its right side.</summary>
+    public static bool IsBasketScreen(State_Web_BackpackUI screen)
+    {
+        var agents = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager;
+
+        return screen.IsDualBag && agents != null && IsBasket(agents.GetAgent(screen.OwnerId_B)?.TryCast<Furniture>(), BasketConfigId());
+    }
+
+    private static BasketWish WishOf(NeighborWishSnapshot? snap)
+    {
+        if (snap == null) return BasketWish.None;
+
+        var categories = new List<int>();
+
+        for (var i = 0; snap.wishCats != null && i < snap.wishCats.Count; i++) categories.Add(snap.wishCats[i]);
+
+        return new BasketWish(snap.active, snap.wishPending, snap.basketAway, snap.dying, categories, snap.crisisActive ? snap.crisisCat : null);
     }
 
     /// <summary>Whether the bag screen shows; the game skips its bag request while it does.</summary>
@@ -404,6 +484,8 @@ internal sealed class GameStorages
 
             yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), isRack, isRack && IsRobotPutOff(homes[i]));
         }
+
+        if (HomeBasket(agents) is { } basket) yield return new Storage(basket.InstanceId, FurnitureName(config, basket), StorageKind.Basket);
     }
 
     /// <summary>The rack's own switch that stops robots putting items in, failing soft to "on" so the rack stays a target.</summary>

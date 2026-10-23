@@ -8,6 +8,9 @@ public enum StorageKind
     Bag,
     Furniture,
     Drawer,
+
+    /// <summary>The neighbor's basket: listed so the player sees what is staged there, but never a put-away target or a fill source.</summary>
+    Basket,
 }
 
 /// <summary>

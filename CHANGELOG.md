@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0
+
+- The neighbor's basket screen gets a "Home" tab right after "Character Inventory", and a bag tab for every home storage holding something the basket accepts. Clicking an item in the Home list puts it in the basket. What she asks for today is marked "Wanted" and listed first.
+- When there are more tabs than fit, the bag tab and Home stay put and the rest scroll, with arrows at each end. The mouse wheel scrolls them too.
+- What is in the basket shows in the panel under its own storage, but nothing is ever put away into the basket or taken back out of it by "Fill bag from storage".
+- Fixed: at a station, a Home click that had to switch the storage tab first closed the Home list. It now stays open.
+- Made for Survival Log 1.1.19131.
+
 ## 0.11.2
 
 - Fixed: pressing A or D while a station's Home tab was showing switched the inventory hidden under it, and the Home list stayed. Now the Home list closes and the inventory you switched to shows.

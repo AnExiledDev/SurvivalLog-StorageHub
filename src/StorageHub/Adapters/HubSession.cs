@@ -591,7 +591,16 @@ internal sealed class HubSession
         {
             if (!RefreshInventory(out _)) return;
 
-            _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath));
+            if (kind == StationKind.Basket)
+            {
+                var (tabs, wish) = _game.ReadBasketScreen();
+
+                _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish), tabs));
+            }
+            else
+            {
+                _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath));
+            }
         }
         finally
         {

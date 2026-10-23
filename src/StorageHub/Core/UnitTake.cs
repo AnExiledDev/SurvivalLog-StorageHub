@@ -127,12 +127,15 @@ public static class UnitTake
         return moved;
     }
 
-    /// <summary>A fill never empties a drone, whose bag can hold goods it is about to trade away.</summary>
+    /// <summary>
+    /// A fill never empties a drone, whose bag can hold goods it is about to trade away, or the neighbor's basket, whose
+    /// items are staged for her or are her gifts.
+    /// </summary>
     private static IEnumerable<ItemStack> FillSources(Inventory inventory, int configId)
     {
-        var drones = inventory.Storages.Where(storage => storage.Bay == DroneBay.Drone).Select(storage => storage.OwnerId).ToHashSet();
+        var kept = inventory.Storages.Where(storage => storage.Bay == DroneBay.Drone || storage.Kind == StorageKind.Basket).Select(storage => storage.OwnerId).ToHashSet();
 
-        return inventory.Stacks.Where(stack => stack.ConfigId == configId && !drones.Contains(stack.OwnerId));
+        return inventory.Stacks.Where(stack => stack.ConfigId == configId && !kept.Contains(stack.OwnerId));
     }
 
     /// <summary>Stacks in a home storage: not the bag, and not the floor, which is not a storage.</summary>

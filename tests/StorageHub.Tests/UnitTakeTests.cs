@@ -139,6 +139,16 @@ public class UnitTakeTests
     }
 
     [Fact]
+    public void Filling_never_takes_back_what_is_staged_in_the_neighbors_basket()
+    {
+        var basket = new Storage(800, "Basket", StorageKind.Basket);
+        var home = Home(Stack(1, Rope, 10, basket)) with { Storages = new[] { Bag, Fridge, Box, basket } };
+
+        Assert.Empty(UnitTake.Fill(home, Keep((Rope, 3))));
+        Assert.Equal(new[] { Rope }, UnitTake.NoneStored(home, Keep((Rope, 3))));
+    }
+
+    [Fact]
     public void Short_items_no_storage_holds_are_named_as_none_stored()
     {
         var home = Home(Stack(1, Apple, 1, Bag), Stack(2, Rope, 4, Box), Stack(3, RedBerry, 2, Floor));

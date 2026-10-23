@@ -76,6 +76,46 @@ public class StationViewTests
     }
 
     [Fact]
+    public void The_neighbors_basket_is_not_listed_beside_a_station_since_nothing_is_taken_back_out_of_it()
+    {
+        var basket = new Storage(800, "Basket", StorageKind.Basket);
+        var home = new Inventory(new[] { Bag, Fridge, basket }, new[] { Stack(1, Apple, 1, basket) }, new Dictionary<int, string>());
+
+        using var view = Parse(home, _ => true);
+
+        Assert.Equal(new[] { "200" }, view.RootElement.GetProperty("storages").EnumerateArray().Select(storage => storage.GetProperty("id").GetString()));
+    }
+
+    [Fact]
+    public void At_the_basket_the_rows_she_wants_are_marked_and_come_before_the_rest()
+    {
+        var home = Home(Stack(1, Apple, 1, Box), Stack(2, Rope, 1, Box), Stack(3, RedBerry, 1, Box));
+
+        using var view = JsonDocument.Parse(StationView.Build(home, StationKind.Basket, _ => true, _ => null, configId => configId == Rope));
+        var rows = Storage(view, Box);
+
+        Assert.Equal(new[] { "Rope", "Red Apple", "Red Berry" }, rows.Select(row => row.GetProperty("name").GetString()));
+        Assert.True(rows[0].GetProperty("wish").GetBoolean());
+        Assert.False(rows[1].TryGetProperty("wish", out _));
+    }
+
+    [Fact]
+    public void The_basket_view_names_the_storage_behind_each_tab_in_order()
+    {
+        using var view = JsonDocument.Parse(StationView.Build(Home(), StationKind.Basket, _ => true, _ => null, null, new long[] { 100, 300, 200 }));
+
+        Assert.Equal(new[] { "100", "300", "200" }, view.RootElement.GetProperty("tabs").EnumerateArray().Select(tab => tab.GetString()));
+    }
+
+    [Fact]
+    public void A_station_without_storage_tabs_sends_no_tab_list()
+    {
+        using var view = Parse(Home(), _ => true);
+
+        Assert.False(view.RootElement.TryGetProperty("tabs", out _));
+    }
+
+    [Fact]
     public void Every_station_the_view_names_is_one_the_page_can_ask_for_by_that_name()
     {
         foreach (var kind in Enum.GetValues<StationKind>()) Assert.Equal(kind, StationView.Parse(StationView.KindName(kind)));

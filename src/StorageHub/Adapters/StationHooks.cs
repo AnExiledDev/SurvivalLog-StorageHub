@@ -53,6 +53,7 @@ internal static class StationHooks
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCompressorBagList", nameof(BeforeCompressor), null, "the ration press");
         Patch(harmony, typeof(ItemManager), nameof(ItemManager.CollectTradeContainers), null, nameof(AfterTradeContainers), "the drone trade");
         Patch(harmony, typeof(Ac_Item_GetHandMadeBagList), nameof(Ac_Item_GetHandMadeBagList.SendAction), nameof(BeforeWorkbench), null, "the workbench");
+        Patch(harmony, typeof(Reducer_Web_BackpackUI), "BuildATabs", null, nameof(AfterBagTabs), "the neighbor's basket");
     }
 
     private static void Patch(Harmony harmony, Type type, string method, string? prefix, string? postfix, string station)
@@ -167,6 +168,30 @@ internal static class StationHooks
 
         __result = containers;
     }
+
+    /// <summary>
+    /// The basket screen shows the bag beside the basket, and the bag side's tabs (Reducer_Web_BackpackUI.BuildATabs,
+    /// RVA 0x2A20F00, which the screen calls only when it opens) are the game's own, as at a car's door boxes. Each home
+    /// storage holding something the basket takes becomes one more tab there, so drag and drop and the switch keys work
+    /// as on the bag; the tab names are then built again from the longer list.
+    /// </summary>
+    private static void AfterBagTabs(State_Web_BackpackUI state, State_Data_Item itemState) =>
+        Guard(() =>
+        {
+            if (state?.ATabOwnerIds == null || itemState == null || !GameStorages.IsBasketScreen(state)) return;
+
+            var shown = new HashSet<long> { state.OwnerId_B };
+
+            for (var i = 0; i < state.ATabOwnerIds.Count; i++) shown.Add(state.ATabOwnerIds[i]);
+
+            var storages = StoragesToAdd(StationKind.Basket, itemState, shown);
+
+            if (storages.Count == 0) return;
+
+            foreach (var storage in storages) state.ATabOwnerIds.Add(storage.OwnerId);
+
+            state.ATabsJson.Value = Reducer_Web_BackpackUI.BuildATabsJson(state, itemState);
+        });
 
     /// <summary>The game's fridge list with a tab added for each other home storage the station has a use for.</summary>
     private static Il2CppFridges? WithFridgeTabs(Il2CppFridges? fridges, StationKind kind, State_Data_Item state, long ownerId, long targetId)

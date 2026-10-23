@@ -173,7 +173,7 @@ internal static class StationHooks
     /// The basket screen shows the bag beside the basket, and the bag side's tabs are the game's own, as at a car's door
     /// boxes. Each home storage holding something she wishes for becomes one more tab there, so drag and drop and the
     /// switch keys work as on the bag. Her wish reaches the screen after it opens (Reducer_Web_BackpackUI.
-    /// RA_NeighborWishSync, RVA 0x2A28780; the tabs are built before it, in RA_OpenUI), so the tabs are added then. A
+    /// RA_NeighborWishSync, RVA 0x2A67860; the tabs are built before it, in RA_OpenUI), so the tabs are added then. A
     /// later wish only appends, never takes a tab away, so the tab the player is on never moves. The game names every
     /// tab it does not know "Backpack", so each storage tab is given the name the Home list shows.
     /// </summary>

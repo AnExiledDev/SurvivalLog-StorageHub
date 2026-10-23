@@ -66,15 +66,16 @@ public static class UnitTake
 
     /// <summary>
     /// Runs the steps. moveOne returns the units the game moved: 0 when it refused, 1 for a single unit, or more when
-    /// it could not split the stack and moved the rest of it, which ends that step.
+    /// it could not split the stack and moved the rest of it, which ends that step. The unit that moves keeps the stack's
+    /// id, so rest finds what stayed behind (null when it cannot), and the next unit comes off that.
     /// </summary>
-    public static IReadOnlyDictionary<int, int> Run(IEnumerable<UnitStep> steps, Func<ItemStack, long, bool> moveWhole, Func<ItemStack, long, int> moveOne)
+    public static IReadOnlyDictionary<int, int> Run(IEnumerable<UnitStep> steps, Func<ItemStack, long, bool> moveWhole, Func<ItemStack, long, int> moveOne, Func<ItemStack, ItemStack?> rest)
     {
         var taken = new Dictionary<int, int>();
 
         foreach (var step in steps)
         {
-            var moved = step.IsWhole ? (moveWhole(step.Stack, step.Target) ? step.Stack.Count : 0) : MoveUnits(step, moveOne);
+            var moved = step.IsWhole ? (moveWhole(step.Stack, step.Target) ? step.Stack.Count : 0) : MoveUnits(step, moveOne, rest);
 
             if (moved > 0) taken[step.Stack.ConfigId] = (taken.TryGetValue(step.Stack.ConfigId, out var sum) ? sum : 0) + moved;
         }
@@ -100,20 +101,27 @@ public static class UnitTake
         return Texts.Sentences(isChinese, took, Texts.NoneStored.Say(isChinese, Texts.List(isChinese, missing, 5)));
     }
 
-    private static int MoveUnits(UnitStep step, Func<ItemStack, long, int> moveOne)
+    private static int MoveUnits(UnitStep step, Func<ItemStack, long, int> moveOne, Func<ItemStack, ItemStack?> rest)
     {
         var moved = 0;
+        var from = step.Stack;
 
         while (moved < step.Units)
         {
-            var units = moveOne(step.Stack, step.Target);
+            var units = moveOne(from, step.Target);
 
             if (units <= 0) break;
 
             // The game moved what was left of the stack in one go, so the step is over and all of it came.
-            if (units > 1) return step.Stack.Count;
+            if (units > 1) return moved + units;
 
             moved += units;
+
+            if (moved >= step.Units) break;
+
+            if (rest(from) is not { } next) break;
+
+            from = next;
         }
 
         return moved;

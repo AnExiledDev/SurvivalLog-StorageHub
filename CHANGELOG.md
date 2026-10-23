@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1
+
+- Fixed the game freezing when taking more than one item from a stack with "Take 5" or "Fill bag from storage".
+- Made for Survival Log 1.1.19131.
+
 ## 0.11.0
 
 - A chest button at the top of the HUD's tool column opens and closes the panel, with the panel key in its tooltip.

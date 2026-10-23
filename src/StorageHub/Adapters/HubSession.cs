@@ -461,7 +461,7 @@ internal sealed class HubSession
             foreach (var step in steps) _log($"  plan {step.Units} of {Describe(step.Stack)} -> bag");
         }
 
-        return UnitTake.Run(steps, MoveAndLog, MoveUnitAndLog);
+        return UnitTake.Run(steps, MoveAndLog, MoveUnitAndLog, RestOf);
     }
 
     /// <summary>One unit off a stack, or the whole stack's count when the game could only move all of it.</summary>
@@ -480,6 +480,16 @@ internal sealed class HubSession
 
                 return 0;
         }
+    }
+
+    /// <summary>What stayed in the storage after one unit of the stack left: same item, one fewer, under a new id.</summary>
+    private ItemStack? RestOf(ItemStack moved)
+    {
+        var rest = _game.ReadOwner(moved.OwnerId).FirstOrDefault(stack => stack.ConfigId == moved.ConfigId && stack.Count == moved.Count - 1 && stack.ItemId != moved.ItemId);
+
+        if (rest == null) _log($"  the rest of {Describe(moved)} could not be found, so the take stops there");
+
+        return rest;
     }
 
     private string PutOne(int configId, long ownerId, long targetOwnerId)

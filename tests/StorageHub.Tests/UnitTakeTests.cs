@@ -8,6 +8,9 @@ public class UnitTakeTests
 {
     private static readonly Storage DroneBag = new(600, "Drone", StorageKind.Furniture, DroneBay.Drone);
 
+    /// <summary>What the game leaves behind after one unit leaves: the rest of the stack, under a new id.</summary>
+    private static ItemStack? Rest(ItemStack stack) => stack.Count > 1 ? stack with { ItemId = stack.ItemId + 100, Count = stack.Count - 1 } : null;
+
     private static KeepList Keep(params (int ConfigId, int Amount)[] entries) =>
         entries.Aggregate(KeepList.Empty, (list, entry) => list.With(entry.ConfigId, entry.Amount));
 
@@ -50,10 +53,36 @@ public class UnitTakeTests
         var stack = Stack(1, Rope, 9, Box);
         var calls = 0;
 
-        var taken = UnitTake.Run(new[] { new UnitStep(stack, 4, Bag.OwnerId) }, (_, _) => throw new InvalidOperationException("must not move whole"), (_, _) => { calls++; return 1; });
+        var taken = UnitTake.Run(new[] { new UnitStep(stack, 4, Bag.OwnerId) }, (_, _) => throw new InvalidOperationException("must not move whole"), (_, _) => { calls++; return 1; }, Rest);
 
         Assert.Equal(4, calls);
         Assert.Equal(4, taken[Rope]);
+    }
+
+    [Fact]
+    public void Each_unit_comes_off_the_rest_of_the_stack_not_the_unit_that_already_left()
+    {
+        // The unit that moves keeps the stack's id and the rest gets a new one, so asking for the old id again moved
+        // the unit already in the bag, from a storage it was no longer in, and the game froze.
+        var stack = Stack(1, Rope, 9, Box);
+        var asked = new List<long>();
+
+        var taken = UnitTake.Run(new[] { new UnitStep(stack, 3, Bag.OwnerId) }, (_, _) => false, (from, _) => { asked.Add(from.ItemId); return 1; }, Rest);
+
+        Assert.Equal(new long[] { 1, 101, 201 }, asked);
+        Assert.Equal(3, taken[Rope]);
+    }
+
+    [Fact]
+    public void A_step_stops_when_the_rest_of_the_stack_cannot_be_found()
+    {
+        var stack = Stack(1, Rope, 9, Box);
+        var calls = 0;
+
+        var taken = UnitTake.Run(new[] { new UnitStep(stack, 4, Bag.OwnerId) }, (_, _) => false, (_, _) => { calls++; return 1; }, _ => null);
+
+        Assert.Equal(1, calls);
+        Assert.Equal(1, taken[Rope]);
     }
 
     [Fact]
@@ -62,7 +91,7 @@ public class UnitTakeTests
         var stack = Stack(1, Rope, 9, Box);
         var calls = 0;
 
-        var taken = UnitTake.Run(new[] { new UnitStep(stack, 4, Bag.OwnerId) }, (_, _) => false, (_, _) => { calls++; return calls == 1 ? 1 : 8; });
+        var taken = UnitTake.Run(new[] { new UnitStep(stack, 4, Bag.OwnerId) }, (_, _) => false, (_, _) => { calls++; return calls == 1 ? 1 : 8; }, Rest);
 
         Assert.Equal(2, calls);
         Assert.Equal(9, taken[Rope]);
@@ -74,7 +103,7 @@ public class UnitTakeTests
         var stack = Stack(1, Rope, 9, Box);
         var calls = 0;
 
-        var taken = UnitTake.Run(new[] { new UnitStep(stack, 5, Bag.OwnerId) }, (_, _) => false, (_, _) => ++calls <= 2 ? 1 : 0);
+        var taken = UnitTake.Run(new[] { new UnitStep(stack, 5, Bag.OwnerId) }, (_, _) => false, (_, _) => ++calls <= 2 ? 1 : 0, Rest);
 
         Assert.Equal(2, taken[Rope]);
     }

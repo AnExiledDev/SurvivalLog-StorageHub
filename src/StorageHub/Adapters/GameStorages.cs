@@ -213,6 +213,9 @@ internal sealed class GameStorages
 
         if (split.HasValue) return split.Value ? UnitMove.One : UnitMove.Refused;
 
+        // Stacking passes on a stack that is no longer where it was read; moving it from there would hang the game.
+        if (!ReadOwner(stack.OwnerId).Any(held => held.ItemId == stack.ItemId)) return UnitMove.Refused;
+
         return Move(stack, targetOwnerId) ? UnitMove.WholeStack : UnitMove.Refused;
     }
 

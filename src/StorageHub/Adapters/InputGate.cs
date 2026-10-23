@@ -10,12 +10,14 @@ namespace StorageHub.Adapters;
 /// While the panel is open: stops the game's hotkeys, so typing "e" in the search box does not also open a menu, and
 /// sends every click to the web UI. The game only passes a click to the web UI where one of its own pages reported a
 /// button, which the panel is not. While the inventory's Mods menu is open it stops the hotkeys too, so the Esc that
-/// closes the menu does not also close the inventory. Static because a Harmony patch has nowhere else to look.
+/// closes the menu does not also close the inventory. While one of its text fields has focus (the Home tab's search
+/// included) it stops the hotkeys as well, so A and D typed there do not switch the game's inventory tabs. Static because a Harmony patch has nowhere else to look.
 /// </summary>
 internal static class InputGate
 {
     private static bool _isPanelOpen;
     private static bool _isMenuOpen;
+    private static bool _isTyping;
     private static int _blockedThroughFrame = -1;
     private static bool _hasRoutedAClick;
     private static Action<string> _log = _ => { };
@@ -33,6 +35,17 @@ internal static class InputGate
     public static void PanelClosed()
     {
         _isPanelOpen = false;
+        _blockedThroughFrame = Time.frameCount + 1;
+    }
+
+    public static void TypingStarted() => _isTyping = true;
+
+    /// <summary>Like <see cref="PanelClosed"/>, for the Esc or Enter that left the field; a field that was not focused changes nothing.</summary>
+    public static void TypingEnded()
+    {
+        if (!_isTyping) return;
+
+        _isTyping = false;
         _blockedThroughFrame = Time.frameCount + 1;
     }
 
@@ -65,7 +78,7 @@ internal static class InputGate
         }
     }
 
-    private static bool SkipWhileBlocked() => !(_isPanelOpen || _isMenuOpen || Time.frameCount <= _blockedThroughFrame);
+    private static bool SkipWhileBlocked() => !(_isPanelOpen || _isMenuOpen || _isTyping || Time.frameCount <= _blockedThroughFrame);
 
     private static void RouteClicksToPanel(ref bool __result)
     {

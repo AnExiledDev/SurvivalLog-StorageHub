@@ -5,7 +5,7 @@ namespace StorageHub.Adapters;
 
 /// <summary>
 /// Sends the keyboard to the web UI while one of the panel's text fields has focus, the way the game's own crafting
-/// search does, and gives it back as it was found.
+/// search does, and gives it back as it was found. The game's hotkeys are held off for as long as the field has it.
 /// </summary>
 internal sealed class WebKeyboard
 {
@@ -16,6 +16,8 @@ internal sealed class WebKeyboard
 
     public void Claim()
     {
+        InputGate.TypingStarted();
+
         var layer = GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer();
 
         if (layer == null) return;
@@ -26,6 +28,8 @@ internal sealed class WebKeyboard
 
     public void Release()
     {
+        InputGate.TypingEnded();
+
         if (_wasEnabled is not { } wasEnabled) return;
 
         _wasEnabled = null;

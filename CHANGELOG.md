@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1
+
+- Fixed: typing A or D in a search box, the Home tab's included, also switched the game's inventory tabs. The game's keys now wait while you type.
+- Made for Survival Log 1.1.19131.
+
 ## 0.10.0
 
 - A new look for the panel. "Items", "Rotting soon" and "Keep in bag" are tabs along the top, each with a count.

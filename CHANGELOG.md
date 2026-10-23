@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.2
+
+- Fixed: pressing A or D while a station's Home tab was showing switched the inventory hidden under it, and the Home list stayed. Now the Home list closes and the inventory you switched to shows.
+- Made for Survival Log 1.1.19131.
+
 ## 0.11.1
 
 - Fixed the game freezing when taking more than one item from a stack with "Take 5" or "Fill bag from storage".

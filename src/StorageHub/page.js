@@ -2104,7 +2104,7 @@
   ].join('');
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
-  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, isMenuOpen: false, reopen: null };
+  var home = { data: null, isOff: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -2354,8 +2354,35 @@
     if (hasGameTab && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (!hasGameTab) showBackTab(doc, pinned);
     if (pinned.lastElementChild !== home.tab) pinned.appendChild(home.tab);
+    if (isSwitchedByKey()) leaveForSwitchedTab();
 
     markActiveTab();
+  }
+
+  // A and D switch the game's tab with no click, and the game then marks the new tab active. A game tab marked active
+  // while the list shows, other than the one the list was opened over, is that switch.
+  function isSwitchedByKey() {
+    var now = gameTabIndex('active');
+
+    return home.isShown && now >= 0 && now !== home.underTab;
+  }
+
+  // The tab the list was opened over is not the game's chosen one any more, so it does not get its mark back.
+  function leaveForSwitchedTab() {
+    Array.prototype.forEach.call(home.panel.querySelectorAll(gameTabSelector()), function (tab) {
+      tab.classList.remove('slmh-was');
+    });
+    hideHome();
+  }
+
+  function gameTabIndex(className) {
+    var tabs = home.panel.querySelectorAll(gameTabSelector());
+
+    for (var i = 0; i < tabs.length; i++) {
+      if (tabs[i].classList.contains(className)) return i;
+    }
+
+    return -1;
   }
 
   function dropHomeTab() {
@@ -2501,6 +2528,7 @@
     mountPane();
     placePane();
     markActiveTab();
+    home.underTab = gameTabIndex('slmh-was');
     askStation();
   }
 

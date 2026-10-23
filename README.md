@@ -12,7 +12,7 @@ Survival Log makes you open storage after storage to find something, and again t
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
 - **Home storage list**: a searchable list of everything in your home storages. At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade, workbench and the neighbor's basket it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. At the shredder, the workbench and the drone trade a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. At the basket a click puts the item in the basket, and what the neighbor asks for today is marked "Wanted" and listed first. In the window, "Open" shows a storage beside your bag. Pointing at an item in the list shows its item tooltip with Info Pack 0.8.4 or later installed (optional), or a short one with its count and storage without it.
-- **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade, workbench and the neighbor's basket get a bag tab for every home storage holding something they can use, next to the game's own storage tabs. At the basket, when the tabs do not fit, the bag tab and Home stay put and the rest scroll with arrows or the mouse wheel.
+- **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade, workbench and the neighbor's basket get a bag tab for every home storage holding something they can use, next to the game's own storage tabs. At the basket the tabs are only for storages holding something the neighbor asks for today, each named after its storage, and when they do not fit, the bag tab and Home stay put and the rest scroll with arrows or the mouse wheel.
 - **Scrolling mouse slots**: the rat cage's mouse slots scroll past three rows, instead of the whole screen shrinking to fit a big cage.
 - **Drone deliveries**: when a drone comes home, what it brought is put away into the storages tagged for it.
 - **Tidy storages**: opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
@@ -155,7 +155,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - When the hub is full, the game leaves the cargo in the drone. Anything the game moves out of the drone later is not put away.
 - The keep list is one list for all saves.
 - The neighbor's basket shows in the panel so you can see what is staged in it, but it is never a place to put things away, and "Fill bag from storage" never takes from it.
-- The basket screen's storage tabs are set when it opens. A storage that only gets usable items while the screen is open gets its tab the next time you open it. With no storage holding anything the basket accepts, there is no tab bar, so no Home tab either.
+- The basket screen's storage tabs are added a moment after it opens, once the game has told the screen what she asks for. A storage that only gets a wanted item while the screen is open gets its tab the next time you open it. While she asks for nothing (no rescue under way, her wish not shown yet, or the basket away) or no storage holds what she asks for, there is no tab bar, so no Home tab either.
 
 ## Requirements
 
@@ -187,7 +187,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.13.0 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.13.1 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

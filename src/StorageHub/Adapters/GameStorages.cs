@@ -440,7 +440,7 @@ internal sealed class GameStorages
         return screen.IsDualBag && agents != null && IsBasket(agents.GetAgent(screen.OwnerId_B)?.TryCast<Furniture>(), BasketConfigId());
     }
 
-    private static BasketWish WishOf(NeighborWishSnapshot? snap)
+    public static BasketWish WishOf(NeighborWishSnapshot? snap)
     {
         if (snap == null) return BasketWish.None;
 
@@ -469,6 +469,18 @@ internal sealed class GameStorages
         Ac_Item_GetBagList.SendAction(player.InstanceId, ownerId, false);
 
         return true;
+    }
+
+    /// <summary>Each home storage's name as the Home list shows it, numbered where names repeat.</summary>
+    public static Dictionary<long, string> HomeStorageNames(AgentManager agents, ConfigManager config)
+    {
+        var homes = HomeFurnitures(agents);
+        var names = StorageNames.Distinct(homes.Select(furniture => FurnitureName(config, furniture)).ToList());
+        var byId = new Dictionary<long, string>();
+
+        for (var i = 0; i < homes.Count; i++) byId[homes[i].InstanceId] = names[i];
+
+        return byId;
     }
 
     private IEnumerable<Storage> HomeStorages(AgentManager agents, ConfigManager config)

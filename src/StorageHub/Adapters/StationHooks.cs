@@ -53,7 +53,7 @@ internal static class StationHooks
         Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCompressorBagList", nameof(BeforeCompressor), null, "the ration press");
         Patch(harmony, typeof(ItemManager), nameof(ItemManager.CollectTradeContainers), null, nameof(AfterTradeContainers), "the drone trade");
         Patch(harmony, typeof(Ac_Item_GetHandMadeBagList), nameof(Ac_Item_GetHandMadeBagList.SendAction), nameof(BeforeWorkbench), null, "the workbench");
-        Patch(harmony, typeof(Reducer_Web_BackpackUI), "BuildATabs", null, nameof(AfterBagTabs), "the neighbor's basket");
+        Patch(harmony, typeof(Reducer_Web_BackpackUI), "RA_NeighborWishSync", null, nameof(AfterBasketWish), "the neighbor's basket");
     }
 
     private static void Patch(Harmony harmony, Type type, string method, string? prefix, string? postfix, string station)
@@ -170,28 +170,53 @@ internal static class StationHooks
     }
 
     /// <summary>
-    /// The basket screen shows the bag beside the basket, and the bag side's tabs (Reducer_Web_BackpackUI.BuildATabs,
-    /// RVA 0x2A20F00, which the screen calls only when it opens) are the game's own, as at a car's door boxes. Each home
-    /// storage holding something the basket takes becomes one more tab there, so drag and drop and the switch keys work
-    /// as on the bag; the tab names are then built again from the longer list.
+    /// The basket screen shows the bag beside the basket, and the bag side's tabs are the game's own, as at a car's door
+    /// boxes. Each home storage holding something she wishes for becomes one more tab there, so drag and drop and the
+    /// switch keys work as on the bag. Her wish reaches the screen after it opens (Reducer_Web_BackpackUI.
+    /// RA_NeighborWishSync, RVA 0x2A28780; the tabs are built before it, in RA_OpenUI), so the tabs are added then. A
+    /// later wish only appends, never takes a tab away, so the tab the player is on never moves. The game names every
+    /// tab it does not know "Backpack", so each storage tab is given the name the Home list shows.
     /// </summary>
-    private static void AfterBagTabs(State_Web_BackpackUI state, State_Data_Item itemState) =>
+    private static void AfterBasketWish(State_Web_BackpackUI state) =>
         Guard(() =>
         {
-            if (state?.ATabOwnerIds == null || itemState == null || !GameStorages.IsBasketScreen(state)) return;
+            if (state?.ATabOwnerIds == null || state.ATabsJson == null || !GameStorages.IsBasketScreen(state)) return;
 
+            var itemState = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+            var isWished = GameStorages.IsWished(GameStorages.WishOf(state.NeighborWishSnap));
             var shown = new HashSet<long> { state.OwnerId_B };
+
+            if (itemState == null) return;
 
             for (var i = 0; i < state.ATabOwnerIds.Count; i++) shown.Add(state.ATabOwnerIds[i]);
 
-            var storages = StoragesToAdd(StationKind.Basket, itemState, shown);
+            var storages = StoragesToAdd(StationKind.Basket, itemState, shown, item => isWished(item.ItemConfigId));
 
             if (storages.Count == 0) return;
 
             foreach (var storage in storages) state.ATabOwnerIds.Add(storage.OwnerId);
 
-            state.ATabsJson.Value = Reducer_Web_BackpackUI.BuildATabsJson(state, itemState);
+            state.ATabsJson.Value = BagTabNames.Rename(Reducer_Web_BackpackUI.BuildATabsJson(state, itemState), StorageTabNames(state));
         });
+
+    /// <summary>Each tab showing a home storage, by its place in the tab list, with the name the Home list gives it.</summary>
+    private static Dictionary<int, string> StorageTabNames(State_Web_BackpackUI state)
+    {
+        var byIndex = new Dictionary<int, string>();
+        var agents = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager;
+        var config = GameSingleton.Existing<ConfigManager>();
+
+        if (agents == null || config == null) return byIndex;
+
+        var names = GameStorages.HomeStorageNames(agents, config);
+
+        for (var i = 0; i < state.ATabOwnerIds.Count; i++)
+        {
+            if (names.TryGetValue(state.ATabOwnerIds[i], out var name)) byIndex[i] = name;
+        }
+
+        return byIndex;
+    }
 
     /// <summary>The game's fridge list with a tab added for each other home storage the station has a use for.</summary>
     private static Il2CppFridges? WithFridgeTabs(Il2CppFridges? fridges, StationKind kind, State_Data_Item state, long ownerId, long targetId)
@@ -244,8 +269,11 @@ internal static class StationHooks
 
     private readonly record struct HomeStorage(long OwnerId, int ConfigId);
 
-    /// <summary>Every home storage not already shown that holds something the station takes, in the game's own order.</summary>
-    private static List<HomeStorage> StoragesToAdd(StationKind kind, State_Data_Item state, HashSet<long> shown)
+    /// <summary>
+    /// Every home storage not already shown that holds something the station takes (and, given isWanted, that also
+    /// passes it), in the game's own order.
+    /// </summary>
+    private static List<HomeStorage> StoragesToAdd(StationKind kind, State_Data_Item state, HashSet<long> shown, Func<Data_Item, bool>? isWanted = null)
     {
         var storages = new List<HomeStorage>();
         var cache = state?.OwnerCache;
@@ -259,7 +287,7 @@ internal static class StationHooks
             // A drone's bag holds goods it is about to trade away.
             if (shown.Contains(furniture.InstanceId) || StrangerTradeActiveManager.TripOf(furniture) != null) continue;
 
-            if (!HoldsUsable(cache, furniture.InstanceId, kind, state, config)) continue;
+            if (!HoldsUsable(cache, furniture.InstanceId, kind, state, config, isWanted)) continue;
 
             storages.Add(new HomeStorage(furniture.InstanceId, furniture.AgentConfigId));
             shown.Add(furniture.InstanceId);
@@ -268,14 +296,14 @@ internal static class StationHooks
         return storages;
     }
 
-    private static bool HoldsUsable(Il2CppSystem.Collections.Generic.Dictionary<long, Il2CppSystem.Collections.Generic.Dictionary<long, Data_Item>> cache, long ownerId, StationKind kind, State_Data_Item state, ConfigManager config)
+    private static bool HoldsUsable(Il2CppSystem.Collections.Generic.Dictionary<long, Il2CppSystem.Collections.Generic.Dictionary<long, Data_Item>> cache, long ownerId, StationKind kind, State_Data_Item state, ConfigManager config, Func<Data_Item, bool>? isWanted)
     {
         if (!cache.TryGetValue(ownerId, out var held) || held == null) return false;
 
         foreach (var item in held.Values)
         {
             // The cache keeps stale entries whose OwnerId points elsewhere; they are not in this storage.
-            if (item != null && item.OwnerId == ownerId && item.ItemCount > 0 && StationRules.Takes(kind, item, state, config)) return true;
+            if (item != null && item.OwnerId == ownerId && item.ItemCount > 0 && StationRules.Takes(kind, item, state, config) && (isWanted == null || isWanted(item))) return true;
         }
 
         return false;

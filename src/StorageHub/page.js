@@ -2046,6 +2046,16 @@
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
   var TAB_SCROLL_STEP = 160;
+  // The bag panel at the basket is sized by its widest child, so a long row of storage tabs widened it past the screen
+  // and pushed the grid to the middle of it. The header gets no say in the width, the same way the game keeps a long
+  // tag name from widening a panel, and the tabs scroll inside it. Added as soon as the screen is found, so it holds
+  // even before the plugin answers.
+  var TAB_CAP_CSS = [
+    '.bag-slot.is-anchored .header{width:0;min-width:100%;box-sizing:border-box}',
+    '.bag-slot.is-anchored .bag-tabs{min-width:0;overflow-x:auto;scrollbar-width:none}',
+    '.bag-slot.is-anchored .bag-tabs::-webkit-scrollbar{display:none}',
+    '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:1 0 auto;white-space:nowrap}'
+  ].join('');
   var STATION_ASK_MS = 3000;
   var STATION_AFTER_CLICK_MS = [400, 1200];
   var TAB_WAIT_MS = 2000;
@@ -2174,6 +2184,7 @@
       home.askedAt = 0;
     }
 
+    if (home.station.scrollTabs) addStyle(home.doc, 'slmh-tabcap', TAB_CAP_CSS);
     if (isInventory()) keepPop();
     else keepHomeTab();
 
@@ -2263,11 +2274,15 @@
   }
 
   function addHomeStyle(doc) {
-    if (doc.getElementById('slmh-style')) return;
+    addStyle(doc, 'slmh-style', HOME_CSS);
+  }
+
+  function addStyle(doc, id, css) {
+    if (doc.getElementById(id)) return;
 
     var style = make(doc, 'style');
-    style.id = 'slmh-style';
-    style.textContent = HOME_CSS;
+    style.id = id;
+    style.textContent = css;
     doc.head.appendChild(style);
   }
 
@@ -2406,6 +2421,8 @@
 
     if (!first) return;
     if (!home.arrows) home.arrows = makeArrows(doc, tabs);
+
+    addHomeStyle(doc);
 
     var gap = parseFloat(doc.defaultView.getComputedStyle(tabs).columnGap) || 0;
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1
+
+- Fixed: at the neighbor's basket, a long row of storage tabs widened the bag panel past the left edge of the screen and left a wide gap between the bag and the basket. The tab row now stays as wide as the bag panel and scrolls.
+- At the basket, storage tabs are only added for storages holding something she asks for today, and each tab shows its storage's name instead of "Backpack".
+- Made for Survival Log 1.1.19131.
+
 ## 0.13.0
 
 - The neighbor's basket can be put away into your storages by tag, the same way as your bag. The button for it is Neighbor Basket's "Put away" on the basket screen (Neighbor Basket 0.2.0 or newer, optional). What no storage wants stays in the basket.

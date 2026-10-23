@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1
+
+- Fixed: the Storage Hub window (F4) did not open. This broke in 0.13.1.
+- Made for Survival Log 1.1.19611.
+
 ## 0.14.0
 
 - At home, opening any storage, the neighbor's basket or the trunk puts every home storage in a row of tabs above your bag, with Home after the bag's tab, the way the crafting bench and other stations show them. Clicking an item in Home puts it in the storage that is open.

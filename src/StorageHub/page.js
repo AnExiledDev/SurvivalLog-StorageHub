@@ -753,7 +753,7 @@
   function build() {
     if (ui && document.body.contains(ui.root)) return;
 
-    addStyle();
+    addPanelStyle();
 
     var root = el('div');
     root.id = 'sh-root';
@@ -874,7 +874,7 @@
   }
 
   // The style outlives a lost panel root, so a rebuild must not stack another copy of it.
-  function addStyle() {
+  function addPanelStyle() {
     if (document.getElementById('sh-style')) return;
 
     var style = el('style');

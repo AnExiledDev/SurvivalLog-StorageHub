@@ -191,6 +191,17 @@ public class TextsTests
         Assert.All(scopes, scope => Assert.Contains(scope, keys));
     }
 
+    [Fact]
+    public void The_page_script_declares_each_outer_function_once()
+    {
+        // Two declarations of one name in the same scope: the later one silently wins, and every call to the
+        // earlier one breaks. The panel's addStyle() was shadowed this way and the panel never drew.
+        var names = Regex.Matches(PageScript(), @"^  function (\w+)\(", RegexOptions.Multiline).Select(match => match.Groups[1].Value).ToList();
+
+        Assert.NotEmpty(names);
+        Assert.Empty(names.GroupBy(name => name).Where(group => group.Count() > 1).Select(group => group.Key));
+    }
+
     private static string PageScript()
     {
         using var stream = typeof(TextsTests).Assembly.GetManifestResourceStream("StorageHub.page.js") ?? throw new InvalidOperationException("page.js is not embedded in the test assembly");

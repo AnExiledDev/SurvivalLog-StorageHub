@@ -159,7 +159,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 
 ## Requirements
 
-- Survival Log 1.1.19131. Built for this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.19611. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Stacking](https://www.nexusmods.com/survivallog/mods/74). With it, the panel can take part of a stack and "Fill bag from storage" takes just the amount short.
 - Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or newer, for its item tooltips in the panel.

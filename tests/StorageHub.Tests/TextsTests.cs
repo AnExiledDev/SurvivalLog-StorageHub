@@ -114,6 +114,21 @@ public class TextsTests
     }
 
     [Fact]
+    public void The_page_groups_food_by_the_hours_left_so_spoiled_food_sorts_apart_from_food_with_minutes_left()
+    {
+        var rot = new[]
+        {
+            new RotRow(Apple, "Red Apple", 1, Fridge.OwnerId, "Fridge", -1),
+            new RotRow(Apple, "Red Apple", 1, Fridge.OwnerId, "Fridge", 0),
+            new RotRow(Apple, "Red Apple", 1, Fridge.OwnerId, "Fridge", 30),
+        };
+
+        using var view = JsonDocument.Parse(HubView.Build(Home(), _ => null, rot: rot));
+
+        Assert.Equal(new[] { -1, 0, 30 }, view.RootElement.GetProperty("rot").EnumerateArray().Select(row => row.GetProperty("hours").GetInt32()));
+    }
+
+    [Fact]
     public void The_page_asks_only_for_labels_the_plugin_sends()
     {
         var keys = Texts.Page.Select(word => word.Key).ToHashSet();

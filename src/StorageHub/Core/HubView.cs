@@ -94,7 +94,7 @@ public static class HubView
     private static string Icon(string? icon) => icon is null ? "null" : Str(icon);
 
     private static string RotJson(RotRow row, string? icon) =>
-        $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"count\":{row.Count.ToString(CultureInfo.InvariantCulture)},\"at\":{Id(row.OwnerId)},\"where\":{Str(row.Where)},\"left\":{Str(row.Label)},\"urgent\":{(row.IsUrgent ? "true" : "false")}}}";
+        $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"count\":{row.Count.ToString(CultureInfo.InvariantCulture)},\"at\":{Id(row.OwnerId)},\"where\":{Str(row.Where)},\"left\":{Str(row.Label)},\"urgent\":{(row.IsUrgent ? "true" : "false")},\"hours\":{Num(row.HoursLeft)}}}";
 
     private static string Id(long ownerId) => Str(ownerId.ToString(CultureInfo.InvariantCulture));
 

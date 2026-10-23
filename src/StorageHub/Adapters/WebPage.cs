@@ -58,7 +58,7 @@ internal sealed class WebPage
     public void Station(string stationJson) => Call($"station({stationJson})");
 
     /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
-    public void Status(string text) => Call($"status({HubView.Str(text)})");
+    public void Status(string text) => Call($"status({HubView.Str(text)},{HubView.Str(StatusTone.Of(text))})");
 
     /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made,
     /// and the home storage window opened from it.</summary>

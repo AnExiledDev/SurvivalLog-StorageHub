@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0
+
+- A new look for the panel. "Items", "Rotting soon" and "Keep in bag" are tabs along the top, each with a count.
+- Item rows show where the item sits under its name, your bag first. An "All places" drop-down beside the search box shows only the items in one storage.
+- The item's detail says how many places hold it, and has a Keep button.
+- The Keep button on item rows is a bell that shows when you point at the row, and stays lit with the amount once the item is kept.
+- "Rotting soon" is split into Spoiled, Under a day, This week and Later.
+- Keep list rows have a bar that fills as your bag gets to the amount to keep.
+- "Put bag away" is the big button at the bottom right, with "Put floor away" beside it.
+- The status line is green when everything moved, amber when something was left behind and red when something failed.
+- The Home tab at stations and the Home storage window have the same new look. The "usable" and "Everything" switch shows how many items each side holds.
+- With Info Pack 0.8.4 or later, pointing at an item in the Home tab or the Home storage window shows its item tooltip.
+- Made for Survival Log 1.1.19131.
+
 ## 0.9.5
 
 - After a game update, a hook that can no longer be placed is logged as an error, so the Mod Manager can mark the mod as maybe needing an update.

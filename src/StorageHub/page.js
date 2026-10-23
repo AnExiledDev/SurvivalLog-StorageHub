@@ -384,7 +384,7 @@
   var MAX_KEEP_RESULTS = 60;
 
   // view is 'items', 'rot' (Rotting soon) or 'keep' (Keep in bag).
-  var state = { data: { storages: [], items: [], rot: [], keep: { on: true, rows: [] } }, query: '', selected: null, isOpen: false, view: 'items', catalog: [], isCatalogAsked: false };
+  var state = { data: { storages: [], items: [], rot: [], keep: { on: true, rows: [] } }, query: '', selected: null, place: null, isPlaceOpen: false, isOpen: false, view: 'items', catalog: [], isCatalogAsked: false };
   // Amounts the player has changed and the game has not yet answered, by item id: { amount, timer, isSent }.
   var pendingKeep = {};
   var ui = null;
@@ -417,7 +417,7 @@
     keepOnTip: 'On the keep list: open it to change the amount',
     keepAddTip: 'Add to the keep list: putting the bag away leaves this many in your bag',
     keepOff: 'The keep list is turned off in the config (Keep, Enabled), so putting the bag away moves everything.',
-    keepEmpty: 'Nothing on the keep list yet. Find an item on the right, or press Keep on an item in the main list.',
+    keepEmpty: 'Nothing on the keep list yet. Find an item on the right, or press the bell on an item in the Items list.',
     keepRemoveTip: 'Take off the keep list',
     heldNone: '{0} in your bag, none kept',
     held: '{0} in your bag',
@@ -437,9 +437,21 @@
     addKeep: '+ Keep',
     addKeepTip: 'Add to the keep list, keeping {0}',
     nothingSpoils: 'Nothing here spoils.',
-    floorOnlyTip: 'Only on the floor: "Put floor items away by tag" picks it up',
+    floorOnlyTip: 'Only on the floor: "Put floor away" picks it up',
     pickItem: 'Pick an item on the left.',
-    total: '{0} in total',
+    itemsView: 'Items',
+    goBag: 'Put bag away',
+    goFloor: 'Put floor away',
+    allPlaces: 'All places',
+    placeTip: 'Show only the items in one place',
+    totalPlaces: '{0} in total, in {1} places',
+    totalPlace: '{0} in total, in one place',
+    keepingBag: 'keeping {0} in your bag',
+    whereIs: 'Where it is',
+    rotSpoiled: 'Spoiled',
+    rotDay: 'Under a day',
+    rotWeek: 'This week',
+    rotLater: 'Later',
     takeAll: 'Take all into bag',
     putAwayTag: 'Put away by tag',
     putAway: 'Put away',
@@ -471,7 +483,7 @@
     homeItems: '{0} items',
     tagUse: 'Use',
     tagBag: 'To bag',
-    hintStation: 'Click: usable items go into the station, anything else into your bag.',
+    hintStation: 'Use goes into the station. To bag goes into your bag.',
     hintInv: 'Click an item to take it into your bag, or Open a storage beside your bag.',
     homeNoMatch: 'Nothing in your storages matches that search.',
     homeNone: 'No storage holds anything for this station.',
@@ -529,68 +541,158 @@
     return node;
   }
 
+  function actButton(className, text, action) {
+    var node = el('button', className, text);
+    node.setAttribute('data-act', action);
+
+    return node;
+  }
+  var BELL_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6v4l-2 3v1h16v-1l-2-3V8a6 6 0 0 0-6-6zm-2 16a2 2 0 0 0 4 0z"/></svg>';
+  var LOOK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a89a82" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
+  var TONE_ICON = {
+    ok: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>',
+    warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 21h20zm-1 6h2v6h-2zm0 8h2v2h-2z"/></svg>',
+    bad: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 21h20zm-1 6h2v6h-2zm0 8h2v2h-2z"/></svg>'
+  };
+  var DOT = ' \u00b7 ';
+  var DAY_HOURS = 24;
+  var WEEK_HOURS = 168;
+
   var CSS = [
-    '#sh-root{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.4);font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:#eee;user-select:none}',
+    '#sh-root{--accent:#FFC83A;--glow:rgba(255,200,58,.35);--text:#f0e8d8;--text2:#cbbfa8;--text3:#a89a82;--text4:#7a6e5a;--line:rgba(220,188,120,.2);--soft:rgba(220,188,120,.11);--card:rgba(70,58,44,.55);--ok:#8cc56a;--warn:#e9b955;--no:#e0876a}',
+    '#sh-root{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;background:rgba(10,6,2,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--text);user-select:none}',
     '#sh-root *{box-sizing:border-box}',
-    '.sh-plate{width:min(1180px,92vw);height:min(800px,86vh);display:flex;flex-direction:column;gap:12px;padding:18px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(30,30,33,.92),rgba(18,18,20,.94));box-shadow:0 10px 40px rgba(0,0,0,.6)}',
-    '.sh-head{display:flex;align-items:baseline;gap:14px}',
-    '.sh-title{font-size:18px;font-weight:600;letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.6)}',
-    '.sh-sub{font-size:13px;color:rgba(238,238,238,.6);flex:1}',
-    '.sh-btn.sh-x{width:30px;height:30px;padding:0;font-size:18px;line-height:28px}',
-    '.sh-bar{display:flex;gap:10px}',
-    '.sh-search{flex:1;height:36px;padding:0 12px;font:inherit;font-size:14px;color:#eee;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:8px;outline:none;user-select:text}',
-    '.sh-search:focus{border-color:rgba(255,193,7,.75)}',
-    '.sh-body{flex:1;display:flex;gap:12px;min-height:0}',
-    '.sh-list,.sh-detail{background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:8px;min-height:0}',
-    '.sh-list{width:46%;overflow-y:auto;padding:6px}',
-    '.sh-detail{flex:1;display:flex;flex-direction:column;padding:14px;gap:12px}',
-    '.sh-row{display:flex;align-items:center;gap:10px;padding:4px 8px;border-radius:7px;border:1px solid transparent;cursor:pointer}',
-    '.sh-row:hover{background:rgba(255,255,255,.06)}',
-    '.sh-row.sh-active{background:rgba(255,193,7,.24);border-color:rgba(255,193,7,.75)}',
-    '.sh-row.sh-still{cursor:default}',
-    '.sh-row.sh-still:hover{background:none}',
-    '.sh-name{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.sh-count{font-size:14px;font-weight:600;color:#EBA308}',
-    '.sh-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden;color:rgba(238,238,238,.7);font-weight:600}',
-    '.sh-icon img{width:100%;height:100%;object-fit:contain}',
-    '.sh-i38{width:38px;height:38px;font-size:16px}',
-    '.sh-i64{width:64px;height:64px;font-size:26px}',
-    '.sh-dhead{display:flex;align-items:center;gap:14px}',
-    '.sh-dname{font-size:18px;font-weight:600;letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.6)}',
-    '.sh-dtotal{font-size:14px;color:#EBA308;margin-top:4px}',
-    '.sh-actions{display:flex;gap:10px}',
-    '.sh-locs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px}',
-    '.sh-loc{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.04)}',
-    '.sh-badge{font-size:11px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.1);color:rgba(238,238,238,.8)}',
-    '.sh-badge-bag{background:rgba(255,193,7,.24);color:#EBA308}',
-    '.sh-where{flex:none;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.sh-left{flex:none;min-width:58px;text-align:right;font-size:13px;color:rgba(238,238,238,.8)}',
-    '.sh-left-urgent{color:#e0614f;font-weight:600}',
-    '.sh-empty{padding:20px;color:rgba(238,238,238,.55);font-size:14px;text-align:center}',
-    '.sh-btn{font:inherit;font-size:13px;color:#dde2f0;padding:7px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(58,58,60,.9),rgba(38,38,40,.92));cursor:pointer;white-space:nowrap}',
-    '.sh-btn:hover{background:linear-gradient(180deg,rgba(72,66,48,.92),rgba(50,46,32,.95));border-color:rgba(255,193,7,.75)}',
-    '.sh-btn.sh-on{background:rgba(255,193,7,.24);border-color:rgba(255,193,7,.75);color:#EBA308}',
-    '.sh-btn,.sh-row{transition:background-color .12s,border-color .12s,color .12s,opacity .12s}',
-    '.sh-btn.sh-mini{font-size:12px;padding:3px 9px;opacity:.7}',
-    '.sh-row:hover .sh-btn.sh-mini,.sh-btn.sh-mini.sh-on{opacity:1}',
-    '.sh-row.sh-keep{cursor:default;padding:5px 8px}',
-    '.sh-kname{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
-    '.sh-held{font-size:12px;color:rgba(238,238,238,.6)}',
-    '.sh-held-short{color:#e0614f}',
-    '.sh-keep-zero .sh-name{color:rgba(238,238,238,.55)}',
-    '.sh-step{flex:none;display:flex;align-items:center;border:1px solid rgba(255,255,255,.14);border-radius:7px;overflow:hidden;background:rgba(10,10,12,.72)}',
-    '.sh-step .sh-btn{width:30px;padding:6px 0;border:none;border-radius:0;text-align:center;font-size:15px;line-height:18px}',
-    '.sh-amount{width:58px;height:30px;padding:0 4px;text-align:center;font:inherit;font-size:14px;font-weight:600;color:#EBA308;background:transparent;border:none;border-left:1px solid rgba(255,255,255,.14);border-right:1px solid rgba(255,255,255,.14);outline:none;user-select:text}',
-    '.sh-amount:focus{background:rgba(255,193,7,.14)}',
+    '.sh-plate{position:relative;width:min(1180px,92vw);height:min(800px,86vh);display:flex;flex-direction:column;padding:20px 22px 16px;border-radius:4px;border:1px solid rgba(220,188,120,.28);background:radial-gradient(ellipse at 15% 0%,rgba(150,100,40,.28),transparent 55%),linear-gradient(180deg,#3a3129 0%,#2b241d 55%,#241e18 100%);box-shadow:0 30px 90px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,230,180,.08)}',
+    '.sh-plate::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,var(--accent) 50%,transparent 90%);opacity:.6}',
+    '.sh-head{display:flex;align-items:center;gap:14px;flex:none}',
+    '.sh-title{display:flex;align-items:center;font-size:22px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:#fff}',
+    '.sh-title::before{content:"";width:4px;height:20px;margin-right:12px;background:var(--accent);box-shadow:0 0 10px var(--glow)}',
+    '.sh-sub{flex:1;min-width:0;font-size:13px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-x{width:30px;height:30px;padding:0;border-radius:4px;border:1px solid var(--line);background:none;color:var(--text3);font:inherit;font-size:18px;line-height:28px;cursor:pointer}',
+    '.sh-x:hover{color:var(--accent);border-color:var(--accent)}',
+    '.sh-tabs{display:flex;gap:8px;margin-top:14px;padding-bottom:12px;border-bottom:1px solid var(--soft);flex:none}',
+    '.sh-tab{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:4px;border:1px solid var(--line);background:rgba(255,240,210,.04);color:var(--text2);font:inherit;font-size:14px;cursor:pointer}',
+    '.sh-tab:hover{border-color:rgba(255,200,58,.6);color:#fff}',
+    '.sh-tab.sh-on{color:var(--accent);background:rgba(255,200,58,.13);border-color:var(--accent);box-shadow:0 0 12px rgba(255,200,58,.16)}',
+    '.sh-n{min-width:18px;padding:0 5px;border-radius:8px;text-align:center;font-size:11px;background:rgba(255,240,210,.1);color:var(--text2)}',
+    '.sh-tab.sh-on .sh-n{background:var(--accent);color:#2a1f10;font-weight:700}',
+    '.sh-tab .sh-n.sh-bad{background:var(--no);color:#2a1208;font-weight:700}',
+    '.sh-body{flex:1;min-height:0;display:flex;gap:14px;margin-top:14px}',
+    '.sh-col{display:flex;flex-direction:column;min-height:0;padding:14px 16px;border-radius:6px;background:rgba(30,24,18,.45);border:1px solid var(--soft)}',
+    '.sh-left{width:48%;flex:none}',
+    '.sh-right{flex:1;min-width:0}',
+    '.sh-detail{flex:1;min-height:0;display:flex;flex-direction:column}',
+    '.sh-tools{display:flex;gap:8px;flex:none}',
+    '.sh-slot{display:flex;flex:none}','.sh-slot:empty{display:none}','.sh-slot .sh-tools{flex:1;min-width:0}',
+    '.sh-find{flex:1;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:rgba(20,14,8,.5)}',
+    '.sh-find:focus-within{border-color:rgba(255,200,58,.7)}',
+    '.sh-search{flex:1;min-width:0;height:100%;padding:0;font:inherit;font-size:14px;color:var(--text);background:none;border:none;outline:none;user-select:text}',
+    '.sh-search::placeholder{color:var(--text4)}',
+    '.sh-sel{position:relative;flex:none;max-width:42%;height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:rgba(20,14,8,.5);color:var(--text2);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}',
+    '.sh-sel:hover,.sh-sel.sh-on{border-color:rgba(255,200,58,.6)}',
+    '.sh-sel span{overflow:hidden;text-overflow:ellipsis}',
+    '.sh-menu{position:absolute;right:0;top:40px;z-index:3;min-width:200px;max-height:360px;overflow-y:auto;padding:4px;border-radius:4px;border:1px solid var(--line);background:#2b241d;box-shadow:0 10px 30px rgba(0,0,0,.6);text-align:left}',
+    '.sh-menu div{padding:6px 10px;border-radius:3px;color:var(--text2);overflow:hidden;text-overflow:ellipsis}',
+    '.sh-menu div:hover{background:rgba(255,200,58,.1);color:#fff}',
+    '.sh-menu div.sh-on{color:var(--accent)}',
+    '.sh-list{flex:1;min-height:0;overflow-y:auto;margin-top:10px;padding-right:6px;display:flex;flex-direction:column;gap:5px}',
+    '.sh-list>*{flex:none}',
+    '.sh-list::-webkit-scrollbar{width:5px}',
+    '.sh-list::-webkit-scrollbar-thumb{background:rgba(255,200,58,.3);border-radius:3px}',
+    '.sh-row{display:flex;align-items:center;gap:12px;padding:6px 10px;border-radius:4px;background:var(--card);border:1px solid var(--soft);cursor:pointer}',
+    '.sh-row:hover{background:rgba(84,70,52,.7);border-color:rgba(255,200,58,.35)}',
+    '.sh-row.sh-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(255,200,58,.25)}',
+    '.sh-row.sh-still{cursor:default;opacity:.75}',
+    '.sh-row.sh-still:hover{background:var(--card);border-color:var(--soft)}',
+    '.sh-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:4px;background:rgba(10,8,6,.55);border:1px solid rgba(0,0,0,.5);overflow:hidden;color:var(--text3);font-weight:600}',
+    '.sh-icon img{width:86%;height:86%;object-fit:contain}',
+    '.sh-i32{width:32px;height:32px;font-size:14px}',
+    '.sh-i42{width:42px;height:42px;font-size:17px}',
+    '.sh-i72{width:72px;height:72px;font-size:28px}',
+    '.sh-main{flex:1;min-width:0}',
+    '.sh-name{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-where{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-where b{color:var(--text2);font-weight:600}',
+    '.sh-where .sh-bagat,.sh-where .sh-bagat b{color:var(--accent)}',
+    '.sh-count{min-width:40px;text-align:right;font-size:16px;font-weight:700;color:var(--accent)}',
+    '.sh-bell{position:relative;flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0;border-radius:4px;border:1px solid var(--line);background:none;color:var(--text4);font:inherit;cursor:pointer;opacity:0}',
+    '.sh-row:hover .sh-bell,.sh-bell.sh-on,.sh-bell.sh-wide{opacity:1}',
+    '.sh-bell:hover{border-color:rgba(255,200,58,.6);color:var(--text2)}',
+    '.sh-bell.sh-on{color:var(--accent);border-color:rgba(255,200,58,.5)}',
+    '.sh-bell em{position:absolute;top:-7px;right:-7px;padding:0 4px;border-radius:3px;font-style:normal;font-size:10px;font-weight:700;background:var(--accent);color:#2a1f10}',
+    '.sh-bell.sh-wide{width:auto;height:32px;margin-left:auto;padding:0 12px;font-size:13px;color:var(--text2)}',
+    '.sh-bell.sh-wide.sh-on{color:var(--accent)}',
+    '.sh-dhead{display:flex;align-items:center;gap:16px;flex:none}',
+    '.sh-dname{font-size:20px;font-weight:700;color:#fff}',
+    '.sh-dsub{margin-top:3px;font-size:13px;color:var(--text3)}',
+    '.sh-actions{display:flex;align-items:center;gap:8px;margin-top:14px;flex:none}',
+    '.sh-h2{display:flex;align-items:center;gap:8px;margin:18px 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);flex:none}',
+    '.sh-h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}',
+    '.sh-slot+.sh-h2{margin-top:14px}',
+    '.sh-locs{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding-right:6px}',
+    '.sh-locs>*{flex:none}',
+    '.sh-locs::-webkit-scrollbar{width:5px}',
+    '.sh-locs::-webkit-scrollbar-thumb{background:rgba(255,200,58,.3);border-radius:3px}',
+    '.sh-loc{display:grid;grid-template-columns:70px minmax(0,1fr) 50px 100px;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;background:var(--card);border:1px solid var(--soft)}',
+    '.sh-kind{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3)}',
+    '.sh-loc.sh-bag{border-color:rgba(255,200,58,.35);background:rgba(255,200,58,.07)}',
+    '.sh-loc.sh-bag .sh-kind{color:var(--accent)}',
+    '.sh-loc.sh-drawer .sh-kind{color:#c9a77a}',
+    '.sh-loc .sh-lname{font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-loc .sh-lcount{text-align:right;font-weight:700;color:var(--text)}',
+    '.sh-loc .sh-add{width:100%}',
+    '.sh-add{height:30px;padding:0 14px;border-radius:4px;border:1px solid rgba(255,200,58,.6);background:rgba(255,200,58,.12);color:var(--accent);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}',
+    '.sh-add:hover{background:rgba(255,200,58,.22)}',
+    '.sh-add.sh-sm{height:26px;padding:0 10px;font-size:12px}',
+    '.sh-btn{height:34px;padding:0 14px;border-radius:4px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(92,78,60,.9),rgba(66,55,42,.92));color:var(--text);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}',
+    '.sh-btn.sh-sm{height:30px}',
+    '.sh-btn:hover{border-color:var(--accent)}',
+    '.sh-go{height:46px;padding:0 26px;border-radius:4px;border:1px solid #ffd36a;background:linear-gradient(180deg,#ffd25a,#e8a91c);color:#2a1f10;font:inherit;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;box-shadow:0 0 16px rgba(255,200,58,.25);cursor:pointer;white-space:nowrap}',
+    '.sh-go:hover{background:linear-gradient(180deg,#ffdc78,#f0b42c)}',
+    '.sh-tab,.sh-row,.sh-btn,.sh-add,.sh-bell,.sh-sel{transition:background-color .12s,border-color .12s,color .12s,opacity .12s}',
+    '.sh-foot{display:flex;align-items:center;gap:10px;margin-top:14px;flex:none}',
+    '.sh-status{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text3)}',
+    '.sh-status svg{flex:none}',
+    '.sh-status span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-status.sh-ok{color:var(--ok)}',
+    '.sh-status.sh-warn{color:var(--warn)}',
+    '.sh-status.sh-bad{color:var(--no)}',
+    '.sh-keys{margin-right:6px;font-size:12px;color:var(--text4);white-space:nowrap}',
+    '.sh-empty{margin:auto;padding:20px;text-align:center;font-size:13px;color:var(--text3)}',
+    '.sh-hint{flex:none;font-size:13px;color:var(--text3)}',
+    '.sh-g{display:flex;align-items:center;gap:8px;padding:8px 2px 2px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2)}',
+    '.sh-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}',
+    '.sh-g .sh-gc{order:2;font-weight:400;letter-spacing:0;color:var(--text4)}',
+    '.sh-g:first-child{padding-top:0}',
+    '.sh-ttl{flex:none;min-width:72px;padding:3px 8px;border-radius:3px;text-align:center;font-size:12px;font-weight:700;color:var(--text2);background:rgba(255,240,210,.07)}',
+    '.sh-ttl.sh-warn{color:var(--warn);background:rgba(233,185,85,.12)}',
+    '.sh-ttl.sh-bad{color:#2a1208;background:var(--no)}',
+    '.sh-row.sh-keep{cursor:default;padding:7px 10px}',
+    '.sh-row.sh-keep:hover{background:var(--card);border-color:var(--soft)}',
+    '.sh-keep-zero .sh-name{color:var(--text3)}',
+    '.sh-held{font-size:12px;color:var(--text3)}',
+    '.sh-held-short{color:var(--warn)}',
+    '.sh-meter{height:4px;margin-top:5px;border-radius:2px;background:rgba(255,240,210,.08);overflow:hidden}',
+    '.sh-meter i{display:block;height:100%;background:var(--ok)}',
+    '.sh-meter i.sh-low{background:var(--warn)}',
+    '.sh-step{flex:none;display:flex;align-items:center;height:30px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:rgba(20,14,8,.5)}',
+    '.sh-step .sh-stepb{width:28px;height:100%;padding:0;border:none;background:rgba(255,240,210,.06);color:var(--text2);font:inherit;font-size:15px;cursor:pointer}',
+    '.sh-step .sh-stepb:hover{color:var(--accent);background:rgba(255,200,58,.12)}',
+    '.sh-amount{width:52px;height:100%;padding:0 4px;text-align:center;font:inherit;font-size:14px;font-weight:700;color:var(--accent);background:transparent;border:none;outline:none;user-select:text}',
+    '.sh-amount:focus{background:rgba(255,200,58,.14)}',
     '.sh-amount::-webkit-outer-spin-button,.sh-amount::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}',
-    '.sh-btn.sh-del{flex:none;width:28px;height:28px;padding:0;font-size:16px;line-height:26px;text-align:center}',
-    '.sh-btn.sh-del:hover{border-color:#e0614f;color:#e0614f;background:rgba(224,97,79,.14)}',
-    '.sh-banner{margin:2px 2px 8px;padding:8px 10px;border-radius:7px;border:1px solid rgba(224,97,79,.6);background:rgba(224,97,79,.12);font-size:13px;color:#f0b5ab}',
-    '.sh-hint{font-size:13px;color:rgba(238,238,238,.6)}',
-    '.sh-pick:hover{background:rgba(255,255,255,.08)}',
-    '.sh-foot{display:flex;font-size:13px;color:rgba(238,238,238,.7)}',
-    '.sh-status{flex:1}',
-    '#sh-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;padding:10px 18px;border-radius:8px;border:1px solid rgba(255,193,7,.75);background:linear-gradient(180deg,rgba(30,30,33,.94),rgba(18,18,20,.96));color:#eee;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
+    '.sh-del{flex:none;width:26px;height:26px;padding:0;border:none;border-radius:4px;background:none;color:var(--text4);font:inherit;font-size:16px;cursor:pointer}',
+    '.sh-del:hover{color:var(--no);background:rgba(224,135,106,.12)}',
+    '.sh-banner{flex:none;padding:8px 10px;border-radius:4px;border:1px solid rgba(224,135,106,.6);background:rgba(224,135,106,.12);font-size:13px;color:#f0c0ab}',
+    '.sh-pick{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:4px;border:1px solid transparent}',
+    '.sh-pick:hover{background:rgba(255,240,210,.05);border-color:var(--soft)}',
+    '.sh-pick .sh-pname{flex:1;min-width:0;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sh-chip{flex:none;padding:1px 7px;border-radius:3px;font-size:11px;color:var(--text3);background:rgba(255,240,210,.07)}',
+    '.sh-chip.sh-on{color:var(--accent);background:rgba(255,200,58,.12)}',
+    '#sh-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;padding:10px 18px;border-radius:4px;border:1px solid rgba(220,188,120,.28);background:linear-gradient(180deg,#3a3129,#241e18);color:#f0e8d8;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}',
+    '#sh-toast.sh-ok{color:#8cc56a}',
+    '#sh-toast.sh-warn{color:#e9b955}',
+    '#sh-toast.sh-bad{color:#e0876a}'
   ].join('\n');
 
   function build() {
@@ -605,35 +707,60 @@
     var sub = el('div', 'sh-sub');
     head.appendChild(el('div', 'sh-title', 'Storage Hub'));
     head.appendChild(sub);
-    head.appendChild(button(TIMES, 'close', 'sh-x'));
+    var x = el('button', 'sh-x', TIMES);
+    x.setAttribute('data-act', 'close');
+    head.appendChild(x);
 
-    var bar = el('div', 'sh-bar');
+    var tabs = el('div', 'sh-tabs');
+    var tabNodes = {};
+    ['items', 'rot', 'keep'].forEach(function (view) {
+      var tab = withArgs(el('button', 'sh-tab'), view);
+      tab.setAttribute('data-act', 'view');
+      tab.appendChild(el('span'));
+      tab.appendChild(el('span', 'sh-n'));
+      tabs.appendChild(tab);
+      tabNodes[view] = tab;
+    });
+
+    // The search and the place filter sit above the list, or above the add list on the right in the keep view.
+    var tools = el('div', 'sh-tools');
+    var find = el('div', 'sh-find');
+    find.innerHTML = LOOK_ICON;
     var search = el('input', 'sh-search');
     search.type = 'text';
-    var rotButton = button('', 'rotView');
-    var keepButton = button('', 'keepView');
-    var bagButton = button('', 'putAwayBag');
-    var floorButton = button('', 'putAwayFloor');
-    bar.appendChild(search);
-    bar.appendChild(rotButton);
-    bar.appendChild(keepButton);
-    bar.appendChild(bagButton);
-    bar.appendChild(floorButton);
+    find.appendChild(search);
+    var place = el('div', 'sh-sel');
+    tools.appendChild(find);
+    tools.appendChild(place);
 
     var body = el('div', 'sh-body');
+    var left = el('div', 'sh-col sh-left');
+    var leftTools = el('div', 'sh-slot');
     var list = el('div', 'sh-list');
+    var right = el('div', 'sh-col sh-right');
+    var rightTools = el('div', 'sh-slot');
     var detail = el('div', 'sh-detail');
-    body.appendChild(list);
-    body.appendChild(detail);
+    leftTools.appendChild(tools);
+    left.appendChild(leftTools);
+    left.appendChild(list);
+    right.appendChild(rightTools);
+    right.appendChild(detail);
+    body.appendChild(left);
+    body.appendChild(right);
 
     var foot = el('div', 'sh-foot');
     var status = el('div', 'sh-status');
-    var closeKeys = el('div');
+    var closeKeys = el('span', 'sh-keys');
+    var floorButton = button('', 'putAwayFloor');
+    var bagButton = el('button', 'sh-go');
+    bagButton.setAttribute('data-act', 'putAwayBag');
     foot.appendChild(status);
     foot.appendChild(closeKeys);
+    foot.appendChild(floorButton);
+    foot.appendChild(bagButton);
 
     plate.appendChild(head);
-    plate.appendChild(bar);
+    plate.appendChild(tabs);
     plate.appendChild(body);
     plate.appendChild(foot);
     root.appendChild(plate);
@@ -671,7 +798,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sub: sub, search: search, rotButton: rotButton, keepButton: keepButton, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, sub: sub, tabs: tabNodes, tools: tools, leftTools: leftTools, rightTools: rightTools, search: search, place: place, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
   }
 
   // The click comes straight after mouseup, so the held redraw runs once it is through.
@@ -702,6 +829,13 @@
 
   function onClick(e) {
     var target = e.target.closest('[data-act],[data-item]');
+    var act = target ? target.getAttribute('data-act') : null;
+
+    // Any click outside the place menu closes it.
+    if (state.isPlaceOpen && act !== 'placeMenu' && act !== 'placePick') {
+      state.isPlaceOpen = false;
+      renderPlace();
+    }
 
     if (!target) return;
 
@@ -716,12 +850,28 @@
       return;
     }
 
-    var act = target.getAttribute('data-act');
     var args = target.getAttribute('data-args');
 
     // Switching lists is the page's own business; the game is only asked for the item catalog the keep view searches.
-    if (act === 'rotView' || act === 'keepView') {
-      showView(act === 'rotView' ? 'rot' : 'keep');
+    if (act === 'view') {
+      showView(args);
+
+      return;
+    }
+
+    if (act === 'placeMenu') {
+      state.isPlaceOpen = !state.isPlaceOpen;
+      renderPlace();
+
+      return;
+    }
+
+    if (act === 'placePick') {
+      state.place = args || null;
+      state.isPlaceOpen = false;
+      ui.list.scrollTop = 0;
+      renderPlace();
+      renderList();
 
       return;
     }
@@ -741,9 +891,9 @@
     sendAction(args ? act + '|' + args : act);
   }
 
-  // A view's button opens it, and pressed again goes back to the item list.
   function showView(view) {
-    state.view = state.view === view ? 'items' : view;
+    state.view = view;
+    state.isPlaceOpen = false;
     ui.list.scrollTop = 0;
 
     if (state.view === 'keep') askForCatalog();
@@ -887,8 +1037,11 @@
 
   function visibleItems() {
     var words = searchWords();
+    var place = state.place;
 
-    return state.data.items.filter(function (item) { return matches(item, words); });
+    return state.data.items.filter(function (item) {
+      return matches(item, words) && (place == null || item.at.some(function (at) { return String(at[0]) === place; }));
+    });
   }
 
   function visibleRot() {
@@ -940,17 +1093,66 @@
       rot: say('subRot', homes),
       keep: say('subKeep')
     };
+    var rot = state.data.rot || [];
     ui.sub.textContent = subtitles[state.view];
     ui.search.placeholder = say(state.view === 'keep' ? 'searchKeep' : 'search');
-    ui.rotButton.textContent = say('rotView');
-    ui.rotButton.title = say('rotTip');
-    ui.rotButton.className = 'sh-btn' + (state.view === 'rot' ? ' sh-on' : '');
-    ui.keepButton.textContent = say('keepView');
-    ui.keepButton.title = say('keepTip');
-    ui.keepButton.className = 'sh-btn' + (state.view === 'keep' ? ' sh-on' : '');
-    ui.bagButton.textContent = say('putAwayBag');
-    ui.floorButton.textContent = say('putAwayFloor');
+    renderTab('items', say('itemsView'), '', state.data.items.length, false);
+    renderTab('rot', say('rotView'), say('rotTip'), rot.length, rot.some(function (row) { return row.urgent; }));
+    renderTab('keep', say('keepView'), say('keepTip'), keepRows().length, false);
+    ui.bagButton.textContent = say('goBag');
+    ui.bagButton.title = say('putAwayBag');
+    ui.floorButton.textContent = say('goFloor');
+    ui.floorButton.title = say('putAwayFloor');
     ui.closeKeys.textContent = say('closeKeys', window.__storagehubToggleKey || 'F8');
+
+    // The keep view searches every item for the add list on the right, so the search box moves over there.
+    var slot = state.view === 'keep' ? ui.rightTools : ui.leftTools;
+
+    if (ui.tools.parentNode !== slot) slot.appendChild(ui.tools);
+
+    renderPlace();
+  }
+
+  function renderTab(view, label, tip, count, isUrgent) {
+    var tab = ui.tabs[view];
+    tab.className = 'sh-tab' + (state.view === view ? ' sh-on' : '');
+    tab.title = tip;
+    tab.firstChild.textContent = label;
+    tab.lastChild.textContent = String(count);
+    tab.lastChild.className = 'sh-n' + (isUrgent ? ' sh-bad' : '');
+  }
+
+  // A drop-down of the places that hold anything, drawn by the page so it matches the panel; the items view only.
+  function renderPlace() {
+    var place = ui.place;
+    var places = state.data.storages;
+
+    // A storage that went away since it was picked shows everything again.
+    if (state.place != null && !places.some(function (s) { return s.id === state.place; })) state.place = null;
+
+    place.style.display = state.view === 'items' ? '' : 'none';
+    place.className = 'sh-sel' + (state.isPlaceOpen ? ' sh-on' : '');
+    place.setAttribute('data-act', 'placeMenu');
+    place.title = say('placeTip');
+    place.textContent = '';
+    place.appendChild(el('span', '', state.place == null ? say('allPlaces') : storageOf(state.place).name));
+    place.appendChild(el('span', '', '\u25be'));
+
+    if (!state.isPlaceOpen) return;
+
+    var menu = el('div', 'sh-menu');
+    menu.appendChild(placeChoice('', say('allPlaces'), state.place == null));
+
+    places.forEach(function (s) { menu.appendChild(placeChoice(String(s.id), s.name, String(s.id) === state.place)); });
+
+    place.appendChild(menu);
+  }
+
+  function placeChoice(id, name, isOn) {
+    var choice = withArgs(el('div', isOn ? 'sh-on' : '', name), id);
+    choice.setAttribute('data-act', 'placePick');
+
+    return choice;
   }
 
   function renderList() {
@@ -971,7 +1173,7 @@
     ui.list.textContent = '';
 
     if (items.length === 0) {
-      ui.list.appendChild(el('div', 'sh-empty', say(state.query ? 'noMatch' : 'noItems')));
+      ui.list.appendChild(el('div', 'sh-empty', say(state.query || state.place != null ? 'noMatch' : 'noItems')));
 
       return;
     }
@@ -980,11 +1182,14 @@
 
     items.forEach(function (item) {
       var row = el('div', 'sh-row' + (String(item.id) === state.selected ? ' sh-active' : ''));
+      var main = el('div', 'sh-main');
+      main.appendChild(el('div', 'sh-name', item.name));
+      main.appendChild(whereLine(item));
       row.setAttribute('data-item', String(item.id));
-      row.appendChild(icon(item, 'sh-i38'));
-      row.appendChild(el('div', 'sh-name', item.name));
+      row.appendChild(icon(item, 'sh-i42'));
+      row.appendChild(main);
       row.appendChild(quickKeepButton(item.id));
-      row.appendChild(el('div', 'sh-count', TIMES + item.total));
+      row.appendChild(el('div', 'sh-count', String(item.total)));
       fragment.appendChild(row);
     });
 
@@ -992,10 +1197,41 @@
     ui.list.scrollTop = scroll;
   }
 
+  // The bag first, then the places holding the most.
+  function placesOf(item) {
+    return item.at.slice().sort(function (a, b) {
+      var bagFirst = (storageOf(b[0]).kind === 'bag') - (storageOf(a[0]).kind === 'bag');
+
+      return bagFirst || b[1] - a[1];
+    });
+  }
+
+  // "Bag 4, Fridge 12, Wooden Box 3" with a middle dot between places
+  function whereLine(item) {
+    var line = el('div', 'sh-where');
+
+    placesOf(item).forEach(function (at, index) {
+      var storage = storageOf(at[0]);
+      var part = el('span', storage.kind === 'bag' ? 'sh-bagat' : '', storage.name + ' ');
+      part.appendChild(el('b', '', String(at[1])));
+
+      if (index > 0) line.appendChild(document.createTextNode(DOT));
+
+      line.appendChild(part);
+    });
+
+    return line;
+  }
+
+  // The bell on a list row: shows once the row is hovered, and stays lit with the amount once the item is kept.
   function quickKeepButton(id) {
     var isOnList = isKept(id);
-    var node = withArgs(button(isOnList ? say('keepN', keptAmount(id)) : say('keep'), 'quickKeep', 'sh-mini' + (isOnList ? ' sh-on' : '')), id);
+    var node = withArgs(el('button', 'sh-bell' + (isOnList ? ' sh-on' : '')), id);
+    node.setAttribute('data-act', 'quickKeep');
+    node.innerHTML = BELL_ICON;
     node.title = say(isOnList ? 'keepOnTip' : 'keepAddTip');
+
+    if (isOnList) node.appendChild(el('em', '', String(keptAmount(id))));
 
     return node;
   }
@@ -1028,14 +1264,16 @@
   function keepRowNode(kept) {
     var amount = keptAmount(kept.id);
     var row = el('div', 'sh-row sh-keep' + (amount === 0 ? ' sh-keep-zero' : ''));
-    var names = el('div', 'sh-kname');
-    names.appendChild(el('div', 'sh-name', kept.name));
-    names.appendChild(heldNode(kept.held, amount));
-    row.appendChild(icon(kept, 'sh-i38'));
-    row.appendChild(names);
+    var main = el('div', 'sh-main');
+    main.appendChild(el('div', 'sh-name', kept.name));
+    main.appendChild(heldNode(kept.held, amount));
+    main.appendChild(meterNode(kept.held, amount));
+    row.appendChild(icon(kept, 'sh-i42'));
+    row.appendChild(main);
     row.appendChild(stepperNode(kept.id, amount));
 
-    var remove = withArgs(button(TIMES, 'keepRemove', 'sh-del'), kept.id);
+    var remove = withArgs(el('button', 'sh-del', TIMES), kept.id);
+    remove.setAttribute('data-act', 'keepRemove');
     remove.title = say('keepRemoveTip');
     row.appendChild(remove);
 
@@ -1050,10 +1288,22 @@
     return el('div', 'sh-held' + (isShort ? ' sh-held-short' : ''), isShort ? say('heldShort', held, amount - held) : say('held', held));
   }
 
+  // How much of the amount to keep the bag holds now: full and green when it has enough, amber while short.
+  function meterNode(held, amount) {
+    var meter = el('div', 'sh-meter');
+    var fill = el('i', held < amount ? 'sh-low' : '');
+    fill.style.width = (amount === 0 ? 0 : Math.min(100, Math.round(held / amount * 100))) + '%';
+    meter.appendChild(fill);
+
+    return meter;
+  }
+
   function stepperNode(id, amount) {
     var step = el('div', 'sh-step');
-    var less = withArgs(button(MINUS, 'keepStep'), id + '|-1');
-    var more = withArgs(button('+', 'keepStep'), id + '|1');
+    var less = withArgs(el('button', 'sh-stepb', MINUS), id + '|-1');
+    var more = withArgs(el('button', 'sh-stepb', '+'), id + '|1');
+    less.setAttribute('data-act', 'keepStep');
+    more.setAttribute('data-act', 'keepStep');
     less.title = say('keepLess');
     more.title = say('keepMore');
     step.appendChild(less);
@@ -1108,7 +1358,6 @@
 
     return !!active && active.className === 'sh-amount' && ui.list.contains(active);
   }
-
   // The right side of the keep view: the search box finds any item in the game; with no search, what the bag holds.
   function renderKeepAdd() {
     var scrollBox = ui.detail.querySelector('.sh-locs');
@@ -1117,11 +1366,8 @@
     var source = words.length > 0 && state.catalog.length > 0 ? state.catalog : state.data.items;
     var found = source.filter(function (item) { return words.length > 0 ? matches(item, words) : bagCount(item.id) > 0; });
     ui.detail.textContent = '';
-
-    var head = el('div');
-    head.appendChild(el('div', 'sh-dname', say('keepAddTitle')));
-    head.appendChild(el('div', 'sh-hint', keepAddHint(words.length > 0)));
-    ui.detail.appendChild(head);
+    ui.detail.appendChild(el('div', 'sh-h2', say('keepAddTitle')));
+    ui.detail.appendChild(el('div', 'sh-hint', keepAddHint(words.length > 0)));
 
     if (found.length === 0) {
       ui.detail.appendChild(el('div', 'sh-empty', say(words.length > 0 ? 'noName' : 'bagEmpty')));
@@ -1130,6 +1376,7 @@
     }
 
     var picks = el('div', 'sh-locs');
+    picks.style.marginTop = '10px';
 
     found.slice(0, MAX_KEEP_RESULTS).forEach(function (item) { picks.appendChild(keepPickNode(item)); });
 
@@ -1146,17 +1393,18 @@
   }
 
   function keepPickNode(item) {
-    var pick = el('div', 'sh-loc sh-pick');
+    var pick = el('div', 'sh-pick');
     var held = bagCount(item.id);
-    pick.appendChild(icon(item, 'sh-i38'));
-    pick.appendChild(el('div', 'sh-name', item.name));
+    pick.appendChild(icon(item, 'sh-i32'));
+    pick.appendChild(el('div', 'sh-pname', item.name));
 
-    if (held > 0) pick.appendChild(el('span', 'sh-badge sh-badge-bag', say('inBag', held)));
+    if (held > 0) pick.appendChild(el('span', 'sh-chip', say('inBag', held)));
 
     if (isKept(item.id)) {
-      pick.appendChild(el('span', 'sh-badge', say('keeping', keptAmount(item.id))));
+      pick.appendChild(el('span', 'sh-chip sh-on', say('keeping', keptAmount(item.id))));
     } else {
-      var add = withArgs(button(say('addKeep'), 'keepAdd'), item.id);
+      var add = withArgs(el('button', 'sh-add sh-sm', say('addKeep')), item.id);
+      add.setAttribute('data-act', 'keepAdd');
       add.title = say('addKeepTip', suggestedKeep(item.id));
       pick.appendChild(add);
     }
@@ -1164,8 +1412,9 @@
     return pick;
   }
 
-  // One row per kind, place and hour left; clicking one shows that item's detail beside the list, as in the item list.
-  // A kind that lies only on the floor has no detail (the item list holds bags and storages only), so its rows do not click.
+  // Food grouped by how long it has left, soonest first; clicking a row shows that item's detail beside the list, as in
+  // the item list. A kind that lies only on the floor has no detail (the item list holds bags and storages only), so
+  // its rows do not click.
   function renderRot() {
     var scroll = ui.list.scrollTop;
     var rows = visibleRot();
@@ -1178,25 +1427,58 @@
     }
 
     var fragment = document.createDocumentFragment();
+    var groups = [];
 
     rows.forEach(function (rot) {
-      var hasDetail = findItem(rot.id) != null;
-      var isSelected = hasDetail && String(rot.id) === state.selected;
-      var row = el('div', 'sh-row' + (hasDetail ? '' : ' sh-still') + (isSelected ? ' sh-active' : ''));
+      var name = rotGroup(rot.hours);
+      var group = groups.length > 0 ? groups[groups.length - 1] : null;
 
-      if (hasDetail) row.setAttribute('data-item', String(rot.id));
-      else row.title = say('floorOnlyTip');
+      if (!group || group.name !== name) {
+        group = { name: name, rows: [] };
+        groups.push(group);
+      }
 
-      row.appendChild(icon(rot, 'sh-i38'));
-      row.appendChild(el('div', 'sh-name', rot.name));
-      row.appendChild(el('span', 'sh-badge sh-where', rot.where));
-      row.appendChild(el('div', 'sh-count', TIMES + rot.count));
-      row.appendChild(el('div', 'sh-left' + (rot.urgent ? ' sh-left-urgent' : ''), rot.left));
-      fragment.appendChild(row);
+      group.rows.push(rot);
+    });
+
+    groups.forEach(function (group) {
+      var head = el('div', 'sh-g', group.name);
+      head.appendChild(el('span', 'sh-gc', String(group.rows.length)));
+      fragment.appendChild(head);
+
+      group.rows.forEach(function (rot) { fragment.appendChild(rotRowNode(rot)); });
     });
 
     ui.list.appendChild(fragment);
     ui.list.scrollTop = scroll;
+  }
+
+  function rotGroup(hours) {
+    if (hours < 0) return say('rotSpoiled');
+    if (hours < DAY_HOURS) return say('rotDay');
+    if (hours < WEEK_HOURS) return say('rotWeek');
+
+    return say('rotLater');
+  }
+
+  function rotRowNode(rot) {
+    var hasDetail = findItem(rot.id) != null;
+    var isSelected = hasDetail && String(rot.id) === state.selected;
+    var row = el('div', 'sh-row' + (hasDetail ? '' : ' sh-still') + (isSelected ? ' sh-active' : ''));
+    var main = el('div', 'sh-main');
+    var tone = rot.hours < 1 ? ' sh-bad' : rot.hours < DAY_HOURS ? ' sh-warn' : '';
+
+    if (hasDetail) row.setAttribute('data-item', String(rot.id));
+    else row.title = say('floorOnlyTip');
+
+    main.appendChild(el('div', 'sh-name', rot.name));
+    main.appendChild(el('div', 'sh-where', rot.where));
+    row.appendChild(icon(rot, 'sh-i42'));
+    row.appendChild(main);
+    row.appendChild(el('div', 'sh-count', String(rot.count)));
+    row.appendChild(el('div', 'sh-ttl' + tone, rot.left));
+
+    return row;
   }
 
   function renderDetail() {
@@ -1217,11 +1499,14 @@
       return;
     }
 
+    var places = placesOf(item);
+    var kept = keptAmount(item.id);
+    var line = places.length === 1 ? say('totalPlace', item.total) : say('totalPlaces', item.total, places.length);
     var head = el('div', 'sh-dhead');
-    var titles = el('div');
+    var titles = el('div', 'sh-main');
     titles.appendChild(el('div', 'sh-dname', item.name));
-    titles.appendChild(el('div', 'sh-dtotal', say('total', item.total)));
-    head.appendChild(icon(item, 'sh-i64'));
+    titles.appendChild(el('div', 'sh-dsub', kept > 0 ? line + DOT + say('keepingBag', kept) : line));
+    head.appendChild(icon(item, 'sh-i72'));
     head.appendChild(titles);
     ui.detail.appendChild(head);
 
@@ -1229,26 +1514,40 @@
     var hasElsewhere = item.at.some(function (at) { return storageOf(at[0]).kind !== 'bag'; });
     var actions = el('div', 'sh-actions');
 
-    if (hasElsewhere) actions.appendChild(withArgs(button(say('takeAll'), 'takeAll'), item.id));
-    if (hasBag) actions.appendChild(withArgs(button(say('putAwayTag'), 'putAway'), item.id));
+    if (hasElsewhere) actions.appendChild(withArgs(actButton('sh-add', say('takeAll'), 'takeAll'), item.id));
+    if (hasBag) actions.appendChild(withArgs(button(say('putAwayTag'), 'putAway', 'sh-sm'), item.id));
 
+    actions.appendChild(keepWideButton(item.id));
     ui.detail.appendChild(actions);
+    ui.detail.appendChild(el('div', 'sh-h2', say('whereIs')));
 
     var locs = el('div', 'sh-locs');
 
-    item.at.forEach(function (at) {
+    places.forEach(function (at) {
       var storage = storageOf(at[0]);
       var isBag = storage.kind === 'bag';
-      var loc = el('div', 'sh-loc');
-      loc.appendChild(el('span', 'sh-badge' + (isBag ? ' sh-badge-bag' : ''), KIND_WORD[storage.kind] ? say(KIND_WORD[storage.kind]) : storage.kind));
-      loc.appendChild(el('div', 'sh-name', storage.name));
-      loc.appendChild(el('div', 'sh-count', TIMES + at[1]));
-      loc.appendChild(isBag ? withArgs(button(say('putAway'), 'putAway'), item.id) : withArgs(button(say('take'), 'take'), item.id + '|' + storage.id));
+      var loc = el('div', 'sh-loc' + (isBag ? ' sh-bag' : storage.kind === 'drawer' ? ' sh-drawer' : ''));
+      loc.appendChild(el('div', 'sh-kind', KIND_WORD[storage.kind] ? say(KIND_WORD[storage.kind]) : storage.kind));
+      loc.appendChild(el('div', 'sh-lname', storage.name));
+      loc.appendChild(el('div', 'sh-lcount', String(at[1])));
+      loc.appendChild(isBag ? withArgs(actButton('sh-add sh-sm', say('putAway'), 'putAway'), item.id) : withArgs(actButton('sh-add sh-sm', say('take'), 'take'), item.id + '|' + storage.id));
       locs.appendChild(loc);
     });
 
     ui.detail.appendChild(locs);
     locs.scrollTop = scroll;
+  }
+
+  // The bell with words, beside the detail's moves: adds the item to the keep list, or opens the list once it is on it.
+  function keepWideButton(id) {
+    var isOnList = isKept(id);
+    var node = withArgs(el('button', 'sh-bell sh-wide' + (isOnList ? ' sh-on' : '')), id);
+    node.setAttribute('data-act', 'quickKeep');
+    node.innerHTML = BELL_ICON;
+    node.appendChild(el('span', '', isOnList ? say('keepN', keptAmount(id)) : say('keep')));
+    node.title = say(isOnList ? 'keepOnTip' : 'keepAddTip');
+
+    return node;
   }
 
   function withArgs(node, args) {
@@ -1319,13 +1618,17 @@
     active.blur();
   }
 
-  function status(text) {
+  // tone is "ok", "warn", "bad" or "", worked out by the plugin from what happened.
+  function status(text, tone) {
     build();
     clearBusy();
     settleSentKeeps();
+    var toneClass = TONE_ICON[tone] ? ' sh-' + tone : '';
 
     if (state.isOpen) {
-      ui.status.textContent = text;
+      ui.status.className = 'sh-status' + toneClass;
+      ui.status.innerHTML = text && TONE_ICON[tone] ? TONE_ICON[tone] : '';
+      ui.status.appendChild(el('span', '', text));
 
       return;
     }
@@ -1337,6 +1640,7 @@
       return;
     }
 
+    ui.toast.className = toneClass.trim();
     ui.toast.textContent = text;
     ui.toast.style.display = 'block';
     clearTimeout(toastTimer);
@@ -1473,41 +1777,52 @@
     // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
     '.slmh-forced .bag-tabs{display:flex!important}',
     '.slmh-forced #bagPanelTitle{display:none!important}',
-    '.slmh-pane{position:absolute;z-index:5;display:flex;flex-direction:column;min-height:0}',
-    '.slmh-pop{position:fixed;z-index:50;box-sizing:border-box;display:flex;flex-direction:column;padding:14px 16px 12px;border-radius:14px;background:linear-gradient(168deg,rgba(34,34,36,.96),rgba(20,20,22,.98));border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-pane{position:absolute;z-index:5;display:flex;flex-direction:column;min-height:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-pop{position:fixed;z-index:50;box-sizing:border-box;display:flex;flex-direction:column;padding:14px 16px 12px;border-radius:4px;background:radial-gradient(ellipse at 15% 0%,rgba(150,100,40,.28),transparent 55%),linear-gradient(180deg,#3a3129 0%,#2b241d 55%,#241e18 100%);border:1px solid rgba(220,188,120,.28);box-shadow:0 12px 40px rgba(0,0,0,.6);font-family:"Microsoft YaHei","PingFang SC",sans-serif}',
+    '.slmh-pop::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,#FFC83A 50%,transparent 90%);opacity:.6}',
     '.slmh-head{display:flex;align-items:center;margin-bottom:10px}',
-    '.slmh-title{font-size:17px;font-weight:700;color:#ffe6a8;letter-spacing:.5px}',
-    '.slmh-sub{margin-left:8px;font-size:12px;color:#999}',
-    '.slmh-x{margin-left:auto;width:26px;height:26px;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(20,15,12,.55);color:#c0c0c0;font-size:16px;line-height:1;cursor:pointer;font-family:inherit}',
-    '.slmh-x:hover{border-color:rgba(251,176,52,.6);color:#fbb034}',
+    '.slmh-title{display:flex;align-items:center;font-size:15px;font-weight:700;color:#fff;letter-spacing:3px;text-transform:uppercase}',
+    '.slmh-title::before{content:"";width:3px;height:15px;margin-right:9px;background:#FFC83A;box-shadow:0 0 8px rgba(255,200,58,.35)}',
+    '.slmh-sub{margin-left:10px;font-size:12px;color:#a89a82}',
+    '.slmh-x{margin-left:auto;width:26px;height:26px;padding:0;border-radius:4px;border:1px solid rgba(220,188,120,.2);background:none;color:#a89a82;font-size:16px;line-height:1;cursor:pointer;font-family:inherit}',
+    '.slmh-x:hover{border-color:#FFC83A;color:#FFC83A}',
     '.slmh-search{position:relative}',
-    '.slmh-search input{width:100%;box-sizing:border-box;padding:7px 10px 7px 30px;background:rgba(20,15,12,.85);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fcfcfc;font-size:13px;outline:none;font-family:inherit}',
-    '.slmh-search input:focus{border-color:rgba(251,176,52,.7)}',
+    '.slmh-search input{width:100%;box-sizing:border-box;height:32px;padding:0 10px 0 30px;background:rgba(20,14,8,.6);border:1px solid rgba(220,188,120,.2);border-radius:4px;color:#f0e8d8;font-size:13px;outline:none;font-family:inherit}',
+    '.slmh-search input::placeholder{color:#7a6e5a}',
+    '.slmh-search input:focus{border-color:rgba(255,200,58,.7)}',
     '.slmh-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.6}',
-    '.slmh-scope{display:flex;gap:4px;margin-top:8px}',
-    '.slmh-scope button{flex:1;padding:5px 8px;font-size:12.5px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(20,15,12,.55);color:#c0c0c0;cursor:pointer;font-family:inherit}',
-    '.slmh-scope button.on{border-color:rgba(251,176,52,.7);color:#fbb034;background:linear-gradient(180deg,rgba(90,70,30,.55),rgba(60,45,20,.6))}',
+    '.slmh-scope{display:flex;margin-top:8px;border:1px solid rgba(220,188,120,.2);border-radius:4px;overflow:hidden;background:rgba(20,14,8,.5)}',
+    '.slmh-scope button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 8px;font-size:12.5px;border:none;background:none;color:#cbbfa8;cursor:pointer;font-family:inherit}',
+    '.slmh-scope button+button{border-left:1px solid rgba(220,188,120,.2)}',
+    '.slmh-scope button:hover{color:#fff}',
+    '.slmh-scope button.on{color:#FFC83A;background:rgba(255,200,58,.13)}',
+    '.slmh-scope b{min-width:16px;padding:0 5px;border-radius:7px;font-size:11px;font-weight:700;background:rgba(255,240,210,.1);color:#cbbfa8}',
+    '.slmh-scope button.on b{background:#FFC83A;color:#2a1f10}',
     '.slmh-list{flex:1;min-height:0;overflow-y:auto;margin-top:8px;padding-right:4px}',
-    '.slmh-list::-webkit-scrollbar{width:6px}',
-    '.slmh-list::-webkit-scrollbar-thumb{background:rgba(251,176,52,.35);border-radius:3px}',
-    '.slmh-store{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:5px;background:rgba(20,15,12,.6);border:1px solid rgba(255,255,255,.12);border-radius:6px;cursor:pointer;font-size:13px;color:#fcfcfc;user-select:none}',
-    '.slmh-store:hover{border-color:rgba(251,176,52,.45)}',
-    '.slmh-store.on{border-color:rgba(251,176,52,.75)}',
-    '.slmh-car{width:10px;font-size:9px;color:#fbb034}',
-    '.slmh-store .cnt{margin-left:auto;color:#c0c0c0;font-size:12px}',
-    '.slmh-open{padding:2px 9px;font-size:12px;border-radius:5px;border:1px solid rgba(251,176,52,.55);background:linear-gradient(180deg,rgba(90,70,30,.85),rgba(60,45,20,.9));color:#ffd77a;cursor:pointer;font-family:inherit}',
-    '.slmh-open.on{background:rgba(251,176,52,.85);color:#2a1d08}',
-    '.slmh-row{display:flex;align-items:center;gap:8px;padding:3px 6px 3px 16px;cursor:pointer;border-radius:5px;font-size:12.5px;color:#e8e8e8}',
-    '.slmh-row:hover{background:rgba(251,176,52,.14)}',
-    '.slmh-ic{width:32px;height:32px;flex:none;background:linear-gradient(135deg,rgba(70,60,55,.95),rgba(45,38,34,.95));border:1px solid rgba(255,255,255,.14);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#c0c0c0;font-size:13px}',
+    '.slmh-list::-webkit-scrollbar{width:5px}',
+    '.slmh-list::-webkit-scrollbar-thumb{background:rgba(255,200,58,.3);border-radius:3px}',
+    '.slmh-store{display:flex;align-items:center;gap:7px;padding:9px 2px 4px;cursor:pointer;font-size:11.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#cbbfa8;user-select:none;border-bottom:1px solid rgba(220,188,120,.11)}',
+    '.slmh-list>div:first-child>.slmh-store{padding-top:2px}',
+    '.slmh-store:hover{color:#fff}',
+    '.slmh-store.on{color:#FFC83A}',
+    '.slmh-car{width:9px;font-size:8px;color:#FFC83A}',
+    '.slmh-store .cnt{font-weight:400;letter-spacing:0;text-transform:none;color:#7a6e5a}',
+    '.slmh-open{margin-left:auto;padding:1px 9px;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;border-radius:3px;border:1px solid rgba(255,200,58,.55);background:rgba(255,200,58,.1);color:#FFC83A;cursor:pointer;font-family:inherit}',
+    '.slmh-open:hover{background:rgba(255,200,58,.22)}',
+    '.slmh-open.on{background:#FFC83A;color:#2a1f10}',
+    '.slmh-row{display:flex;align-items:center;gap:9px;margin-top:4px;padding:3px 8px 3px 4px;cursor:pointer;border-radius:4px;background:rgba(70,58,44,.55);border:1px solid rgba(220,188,120,.11);font-size:12.5px;color:#f0e8d8}',
+    '.slmh-row:hover{background:rgba(84,70,52,.7);border-color:rgba(255,200,58,.35)}',
+    '.slmh-ic{width:32px;height:32px;flex:none;background:rgba(10,8,6,.55);border:1px solid rgba(0,0,0,.5);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#a89a82;font-size:13px}',
     '.slmh-ic img{max-width:28px;max-height:28px}',
-    '.slmh-row .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.slmh-row .x{color:#c0c0c0;font-size:12px;flex:none}',
-    '.slmh-tag{margin-left:auto;flex:none;font-size:11px;padding:1px 6px;border-radius:4px}',
-    '.slmh-tag.st{color:#9fe6a8;background:rgba(60,110,60,.35)}',
-    '.slmh-tag.bag{color:#c0c0c0;background:rgba(255,255,255,.07)}',
-    '.slmh-empty{padding:16px 6px;color:#c0c0c0;font-size:12.5px;text-align:center}',
-    '.slmh-hint{margin-top:8px;font-size:12px;color:#c0c0c0}'
+    '.slmh-row .n{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.slmh-row .x{color:#FFC83A;font-weight:700;font-size:12px;flex:none}',
+    '.slmh-tag{margin-left:auto;flex:none;display:flex;align-items:center;gap:5px;font-size:11px;color:#a89a82}',
+    '.slmh-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:#7a6e5a}',
+    '.slmh-tag.st{color:#8cc56a}',
+    '.slmh-tag.st::before{background:#8cc56a;box-shadow:0 0 6px rgba(140,197,106,.6)}',
+    '.slmh-empty{padding:16px 6px;color:#a89a82;font-size:12.5px;text-align:center}',
+    '.slmh-hint{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:#a89a82}',
+    '.slmh-hint::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:#FFC83A;opacity:.7}'
   ].join('');
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
@@ -1683,8 +1998,12 @@
     list.addEventListener('click', onHomeClick);
   }
 
+  // One half of the two-part switch: the words, then how many rows that half shows.
   function scopeButton(doc, text, isAll) {
-    var node = make(doc, 'button', isAll === home.isAllScope ? 'on' : '', text);
+    var node = make(doc, 'button', isAll === home.isAllScope ? 'on' : '');
+
+    node.appendChild(make(doc, 'span', '', text));
+    node.appendChild(make(doc, 'b'));
 
     node.addEventListener('click', function () {
       home.isAllScope = isAll;
@@ -2085,7 +2404,11 @@
     var shown = home.data ? homeStorages() : [];
 
     ui.sub.textContent = home.data ? say('homeSub', home.data.storages.length) : '';
-    Array.prototype.forEach.call(ui.scope.children, function (node, index) { node.className = (index === 1) === home.isAllScope ? 'on' : ''; });
+    var counts = home.data ? scopeCounts() : [0, 0];
+    Array.prototype.forEach.call(ui.scope.children, function (node, index) {
+      node.className = (index === 1) === home.isAllScope ? 'on' : '';
+      node.lastChild.textContent = String(counts[index]);
+    });
     ui.list.innerHTML = '';
 
     if (!shown.length) ui.list.appendChild(make(doc, 'div', 'slmh-empty', homeEmptyLine()));
@@ -2102,22 +2425,46 @@
     return say('homeEmpty');
   }
 
+  // How many rows the search leaves usable here, and in all.
+  function scopeCounts() {
+    var query = homeQuery();
+    var counts = [0, 0];
+
+    home.data.storages.forEach(function (storage) {
+      storage.items.forEach(function (item) {
+        if (!matchesHome(item, query)) return;
+
+        counts[1]++;
+
+        if (item.ok) counts[0]++;
+      });
+    });
+
+    return counts;
+  }
+
+  function homeQuery() {
+    return home.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  }
+
+  function matchesHome(item, query) {
+    var name = String(item.name).toLowerCase();
+
+    return query.every(function (word) { return name.indexOf(word) >= 0; });
+  }
+
   function isUsableScope() {
     return home.station.kind !== 'inventory' && !home.isAllScope;
   }
 
   // Each storage with the rows the scope and the search leave; one with none left is not shown.
   function homeStorages() {
-    var query = home.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var query = homeQuery();
     var isUsableOnly = isUsableScope();
     var tabs = home.station.kind === 'inventory' ? [] : tabOwners();
 
     return home.data.storages.map(function (storage) {
-      var rows = storage.items.filter(function (item) {
-        var name = String(item.name).toLowerCase();
-
-        return (!isUsableOnly || item.ok) && query.every(function (word) { return name.indexOf(word) >= 0; });
-      });
+      var rows = storage.items.filter(function (item) { return (!isUsableOnly || item.ok) && matchesHome(item, query); });
 
       return { storage: storage, rows: rows, hasTab: tabs.indexOf(storage.id) >= 0 };
     }).filter(function (entry) {
@@ -2168,6 +2515,8 @@
 
     row.setAttribute('data-storage', storageId);
     row.setAttribute('data-item', item.item);
+    // Info Pack shows its item tooltip over anything carrying the item's config id.
+    row.setAttribute('data-slip-item', item.cfg);
 
     if (item.icon) {
       var img = make(doc, 'img');

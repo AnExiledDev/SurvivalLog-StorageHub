@@ -7,11 +7,11 @@ Survival Log makes you open storage after storage to find something, and again t
 ## Features
 
 - **The panel**: `F8` opens a list of every kind of item in your bag, your storages at home and the workbench drawer, with icons, totals and a search box. Pick an item to see where it sits and how many are in each place, and take it or put it away from there.
-- **Put away by tag**: "Put whole bag away by tag" sends everything in your bag to the storages whose tags want it. "Put floor items away by tag" does the same for what is lying on the floor at home, and puts anything no storage takes into your bag.
+- **Put away by tag**: "Put bag away" sends everything in your bag to the storages whose tags want it. "Put floor away" does the same for what is lying on the floor at home, and puts anything no storage takes into your bag.
 - **Mods menu**: both put-away actions are also in the Mods menu on the game's inventory screen, so you don't need the panel for them.
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
-- **Home storage list**: a searchable list of everything in your home storages. At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. At the shredder, the workbench and the drone trade a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. In the window, "Open" shows a storage beside your bag.
+- **Home storage list**: a searchable list of everything in your home storages. At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. At the shredder, the workbench and the drone trade a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. In the window, "Open" shows a storage beside your bag. With Info Pack 0.8.4 or later installed (optional), pointing at an item in the list shows its item tooltip.
 - **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench get a bag tab for every home storage holding something they can use, next to the game's own storage tabs.
 - **Scrolling mouse slots**: the rat cage's mouse slots scroll past three rows, instead of the whole screen shrinking to fit a big cage.
 - **Drone deliveries**: when a drone comes home, what it brought is put away into the storages tagged for it.
@@ -28,12 +28,14 @@ Storage Hub keeps nothing of its own in your save and does not edit game files. 
 
 `F8` opens and closes it (the key can be changed in the settings). `Esc` and the `x` in the top-right corner close it too. While the panel is open, the game's hotkeys are paused, so typing in the search box does not also open a game menu.
 
-- The search box filters the list by name. With several words, an item has to match all of them.
-- Click an item on the left to see it on the right: its total, then one row per place that holds it (Bag, Storage or Drawer) with how many are there.
+- Three tabs along the top switch between "Items", "Rotting soon" and "Keep in bag". Each shows how many rows it holds; the "Rotting soon" count turns red when something has spoiled or has under an hour left.
+- The search box filters the list by name. With several words, an item has to match all of them. The "All places" drop-down beside it shows only the items in one storage, or in your bag.
+- Each item row shows its icon, name and total, and under the name where it sits, your bag first (for example "Bag 4", then "Fridge 12").
+- Click an item on the left to see it on the right: its total and how many places hold it, then one row per place (Bag, Storage or Drawer) with how many are there.
 - "Take" on a storage's row moves that storage's stacks of the item into your bag. "Take all into bag" takes it from every place that holds it.
 - "Put away" on the Bag row, or "Put away by tag" at the top, puts your bag's stacks of that one item away.
-- "Put whole bag away by tag" and "Put floor items away by tag" sit next to the search box.
-- The result shows on the status line at the bottom, for example `Moved 4 stacks.` or `Moved 3 stacks. 1 had nowhere to go: Rope.` When the panel is closed, results show as a short message near the bottom of the screen instead.
+- "Put bag away" (the big button at the bottom right) and "Put floor away" beside it put away your whole bag, or everything on the floor at home.
+- The result shows on the status line at the bottom, for example `Moved 4 stacks.` or `Moved 3 stacks. 1 had nowhere to go: Rope.` It is green when everything moved, amber when something was left behind and red when something failed. When the panel is closed, results show as a short message near the bottom of the screen instead.
 - Storages with the same name are numbered, like `Wooden Box` and `Wooden Box 2`, so you can tell them apart.
 - The list refreshes every second while the panel is open.
 
@@ -41,9 +43,9 @@ Before a save is loaded, the panel opens empty and says `Not available right now
 
 ### Rotting soon
 
-The "Rotting soon" button next to the search box switches the list to food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). Spoiled food and food with under an hour left are shown in red. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the game's own figure, the one its inventory tooltip shows.
+The "Rotting soon" tab lists food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). The list is split into Spoiled, Under a day, This week and Later. Spoiled food and food with under an hour left are shown in red, and food with under a day left in amber. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the game's own figure, the one its inventory tooltip shows.
 
-The search box filters this list too, and clicking a row shows that item on the right. Food that is only on the floor has no detail to show, so its rows don't click. Press "Rotting soon" again to go back to the full item list.
+The search box filters this list too, and clicking a row shows that item on the right. Food that is only on the floor has no detail to show, so its rows don't click. The "Items" tab goes back to the full item list.
 
 ### Mods menu
 
@@ -69,12 +71,12 @@ Floor pickup uses the same order, then falls back to your bag. Items the game's 
 
 The keep list names items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest. That covers "Put whole bag away by tag", "Put away by tag" and "Put away" on one item in the panel, and "Put away by tag" in the Mods menu. Floor pickup and drone deliveries ignore the list.
 
-- "Keep in bag" (next to "Rotting soon") opens the list on the left. Each row shows the item's icon and name, how many to keep, and how many your bag holds now. When your bag holds fewer than that, the count turns red and says how many you are short.
+- The "Keep in bag" tab opens the list on the left. Each row shows the item's icon and name, how many to keep, how many your bag holds now, and a bar that fills as your bag gets to that amount. When your bag holds fewer than that, the bar and the count turn amber and say how many you are short.
 - Use `-` and `+` to change the amount, or type a number and press Enter. `Esc` while typing puts the old number back and closes the panel. Amounts go from 0 to 9999.
 - An amount of 0 keeps the item on the list but keeps none of it, so you can turn one item off without losing its place.
 - The `x` at the end of a row takes the item off the list.
 - The right side adds items. With the search box empty it shows what is in your bag; type a name to search every item in the game (while that list is still loading, it searches the items you own). "+ Keep" adds the item, keeping as many as your bag holds now, or 1 if it holds none.
-- On the main item list, each row has a "Keep" button that adds the item the same way. Once the item is on the list, the button shows the amount (for example "Keep 5"), and pressing it opens the list.
+- On the "Items" list, each row has a bell that shows when you point at the row and adds the item the same way. Once the item is on the list, the bell stays lit with the amount on it, and pressing it opens the list. The item's detail on the right has the same button, with words ("Keep" or "Keep 5").
 - Changes are saved a moment after you stop clicking, and the status line confirms them, for example `Keeping 5 Red Apple in your bag.`
 - After a put-away, the status line says what stayed, for example `Moved 4 stacks. Kept in your bag: 6 Red Apple.`
 
@@ -176,7 +178,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.9.5 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.10.0 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

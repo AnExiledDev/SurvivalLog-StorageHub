@@ -66,6 +66,8 @@ If a storage is full, the next one in line gets a turn. A whole stack moves at o
 
 No put-away ever fills a drone, since a drone's bag can hold goods it is about to trade away, and nothing is ever put into the workbench drawer. A drone hub takes put-aways like any other storage.
 
+With [Neighbor Basket](https://github.com/AnExiledDev/SurvivalLog-NeighborBasket) 0.2.0 or newer installed (optional), its "Put away" button on the basket screen sends what the neighbor's basket holds, such as her gifts back, to your storages in the same order. What no storage wants stays in the basket.
+
 Floor pickup uses the same order, then falls back to your bag. Items the game's own drone collects after a wave are left for the drone.
 
 ## Keep in bag
@@ -185,7 +187,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.12.0 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.13.0 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

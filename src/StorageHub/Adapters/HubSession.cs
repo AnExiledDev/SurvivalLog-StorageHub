@@ -389,7 +389,24 @@ internal sealed class HubSession
         ShowFreshPanelStatus(notReady);
     }
 
-    private void Act(string name, Func<string> action)
+    /// <summary>
+    /// Puts the basket's contents away, for Neighbor Basket's button through <see cref="BasketApi"/>. Main thread only.
+    /// Returns the result line, which also shows on this mod's status line.
+    /// </summary>
+    public string PutAwayBasketNow() => Act("put away basket", PutAwayBasket);
+
+    private string PutAwayBasket()
+    {
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
+
+        if (StoragePlan.PutAwayBasket(_inventory, LoggedFacts) is not { } steps) return Texts.NoBasket.Pick(IsChinese);
+
+        if (steps.Count == 0) return Texts.BasketEmpty.Pick(IsChinese);
+
+        return Execute(steps, MoveAndLog);
+    }
+
+    private string Act(string name, Func<string> action)
     {
         _log(name);
         string status;
@@ -412,6 +429,8 @@ internal sealed class HubSession
         _page.Status(_status.Result(status));
 
         if (_isOpen) PushView();
+
+        return status;
     }
 
     /// <summary>The inventory is read again first: the bag button works with the panel shut, when nothing here is fresh.</summary>

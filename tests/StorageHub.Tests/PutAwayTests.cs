@@ -294,4 +294,31 @@ public class PutAwayTests
 
         Assert.Empty(StoragePlan.Take(noBag, noBag.Stacks));
     }
+
+    private static readonly Storage Basket = new(800, "Basket", StorageKind.Basket);
+
+    [Fact]
+    public void The_basket_put_away_sends_only_what_the_basket_holds_to_the_storages_tagged_for_it()
+    {
+        var gift = Stack(1, RedBerry, 3, Basket);
+        var home = Home(gift, Stack(2, Rope, 2, Bag)) with { Storages = new[] { Bag, Fridge, Box, Drawer, Basket } };
+        var tags = Tags((stack, storage) => storage == Fridge && stack.ConfigId == RedBerry ? new PutRank(Level: 3, Specificity: 5) : null);
+
+        var step = Assert.Single(StoragePlan.PutAwayBasket(home, tags)!);
+
+        Assert.Equal(gift, step.Stack);
+        Assert.Equal(Fridge.OwnerId, step.Targets[0]);
+        Assert.DoesNotContain(Basket.OwnerId, step.Targets);
+        Assert.DoesNotContain(Bag.OwnerId, step.Targets);
+    }
+
+    [Fact]
+    public void With_the_basket_away_there_is_nothing_to_plan_and_an_empty_basket_plans_no_moves()
+    {
+        Assert.Null(StoragePlan.PutAwayBasket(Home(Stack(2, Rope, 2, Bag)), Tags((_, _) => null)));
+
+        var emptyBasket = Home() with { Storages = new[] { Bag, Fridge, Basket } };
+
+        Assert.Empty(StoragePlan.PutAwayBasket(emptyBasket, Tags((_, _) => null))!);
+    }
 }

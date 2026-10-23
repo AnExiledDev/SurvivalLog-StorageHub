@@ -23,6 +23,17 @@ public static class StoragePlan
     }
 
     /// <summary>
+    /// What the neighbour's basket holds goes where PutAway would send it, the same as the bag's put-away. Null when
+    /// the basket is not at home; what no storage wants stays in the basket.
+    /// </summary>
+    public static IReadOnlyList<MoveStep>? PutAwayBasket(Inventory inventory, PutFacts facts)
+    {
+        if (inventory.Storages.FirstOrDefault(storage => storage.Kind == StorageKind.Basket) is not { } basket) return null;
+
+        return PutAway(inventory, inventory.Stacks.Where(stack => stack.OwnerId == basket.OwnerId), facts);
+    }
+
+    /// <summary>
     /// Floor items go where PutAway would send them, and failing every storage, into the bag, so nothing has to be
     /// left lying around just because no storage is tagged for it.
     /// </summary>

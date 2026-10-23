@@ -37,6 +37,8 @@ public static class Texts
     public static readonly Phrase Keeping = new("Keeping {0} {1} in your bag.", "背包里会留 {0} 个{1}。");
     public static readonly Phrase NothingOnFloor = new("Nothing on the floor at home.", "家里地面上没有物品。");
     public static readonly Phrase NothingToMove = new("Nothing to move.", "没有需要移动的物品。");
+    public static readonly Phrase NoBasket = new("The basket is not at home.", "篮子不在家。");
+    public static readonly Phrase BasketEmpty = new("The basket is empty.", "篮子是空的。");
     public static readonly Counted Moved = new(new("Moved 1 stack.", "移动了 1 堆。"), new("Moved {0} stacks.", "移动了 {0} 堆。"));
     public static readonly Phrase Nowhere = new("{0} had nowhere to go: {1}.", "{0} 堆无处可放：{1}。");
     public static readonly Phrase Took = new("Took {0} into your bag.", "已收进背包：{0}。");
@@ -222,7 +224,7 @@ public static class Texts
         var all = new List<Phrase>
         {
             Failed, KeepNotRead, KeepNotSaved, NothingPutAway, NotAvailable, NoItemData, NoWorld, NoBag, OffKeepList, KeepingNone,
-            Keeping, NothingOnFloor, NothingToMove, Moved.One, Moved.Many, Nowhere, KeptInBag, ListMore, Units, UnitsTo, UnitsIn,
+            Keeping, NothingOnFloor, NothingToMove, NoBasket, BasketEmpty, Moved.One, Moved.Many, Nowhere, KeptInBag, ListMore, Units, UnitsTo, UnitsIn,
             DeliveryNothing, DeliveryNoTaker, DeliveryMoved, DeliveryUnread, StayedIn, Stayed,
             Floor, Bag, WorkbenchDrawer, DroneHub, Drone, UnnamedItem, UnnamedStorage,
             Spoiled, UnderAnHour, HoursLeft, DaysLeft,

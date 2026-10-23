@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0
+
+- The neighbor's basket can be put away into your storages by tag, the same way as your bag. The button for it is Neighbor Basket's "Put away" on the basket screen (Neighbor Basket 0.2.0 or newer, optional). What no storage wants stays in the basket.
+- Made for Survival Log 1.1.19131.
+
 ## 0.12.0
 
 - The neighbor's basket screen gets a "Home" tab right after "Character Inventory", and a bag tab for every home storage holding something the basket accepts. Clicking an item in the Home list puts it in the basket. What she asks for today is marked "Wanted" and listed first.

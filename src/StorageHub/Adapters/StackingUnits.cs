@@ -18,6 +18,9 @@ internal static class StackingUnits
 {
     private static readonly Lazy<Func<long, long, long, bool?>?> Mover = new(Find);
 
+    /// <summary>Whether part of a stack can be moved at all; without Stacking only whole stacks move.</summary>
+    public static bool IsAvailable => Mover.Value != null;
+
     public static bool? MoveOne(long itemId, long fromOwnerId, long toOwnerId) => Mover.Value?.Invoke(itemId, fromOwnerId, toOwnerId);
 
     private static Func<long, long, long, bool?>? Find()

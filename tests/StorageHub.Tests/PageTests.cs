@@ -52,6 +52,38 @@ public class PageCommandTests
         Assert.Equal(new PageCommand.Close(), PageCommand.Parse("slmod|storagehub|close"));
         Assert.Equal(new PageCommand.Ready(), PageCommand.Parse("slmod|storagehub|ready"));
         Assert.Equal(new PageCommand.NoScript(), PageCommand.Parse("slmod|storagehub|noscript"));
+        Assert.Equal(new PageCommand.Toggle(), PageCommand.Parse("slmod|storagehub|toggle"));
+        Assert.Equal(new PageCommand.KeepFill(), PageCommand.Parse("slmod|storagehub|keepFill"));
+    }
+
+    [Fact]
+    public void Take_some_names_the_item_the_storage_and_how_many_and_refuses_zero()
+    {
+        Assert.Equal(new PageCommand.TakeSome(Apple, Fridge.OwnerId, 7), PageCommand.Parse("slmod|storagehub|takeSome|1|200|7"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|takeSome|1|200|0"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|takeSome|1|200"));
+        Assert.IsType<PageCommand.Unknown>(PageCommand.Parse("slmod|storagehub|takeSome|1|200|-2"));
+    }
+
+    [Fact]
+    public void The_view_says_whether_part_of_a_stack_can_be_taken()
+    {
+        using var on = JsonDocument.Parse(HubView.Build(Home(), _ => null));
+        using var off = JsonDocument.Parse(HubView.Build(Home(), _ => null, canSplit: false));
+
+        Assert.True(on.RootElement.GetProperty("canSplit").GetBoolean());
+        Assert.False(off.RootElement.GetProperty("canSplit").GetBoolean());
+    }
+
+    [Fact]
+    public void Drone_bags_are_marked_so_the_page_does_not_count_them_as_storage_to_fill_from()
+    {
+        var drone = new Storage(600, "Drone", StorageKind.Furniture, DroneBay.Drone);
+        using var view = JsonDocument.Parse(HubView.Build(Home() with { Storages = new[] { Bag, Box, drone } }, _ => null));
+        var storages = view.RootElement.GetProperty("storages").EnumerateArray().ToList();
+
+        Assert.True(storages.Single(storage => storage.GetProperty("id").GetString() == "600").GetProperty("drone").GetBoolean());
+        Assert.False(storages.Single(storage => storage.GetProperty("name").GetString() == Box.Name).TryGetProperty("drone", out _));
     }
 
     [Fact]

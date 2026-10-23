@@ -17,5 +17,5 @@ public static class CommandBatch
     }
 
     private static bool IsMove(PageCommand command) =>
-        command is PageCommand.Take or PageCommand.TakeAll or PageCommand.PutAway or PageCommand.PutAwayBag or PageCommand.PutAwayFloor;
+        command is PageCommand.Take or PageCommand.TakeAll or PageCommand.PutAway or PageCommand.PutAwayBag or PageCommand.PutAwayFloor or PageCommand.KeepFill;
 }

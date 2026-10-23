@@ -23,19 +23,19 @@ public static class HubView
 
     /// <summary>
     /// The view; rot is the "Rotting soon" list, soonest first, and keep is the keep list. Each is sent empty when not
-    /// given, the keep list as turned on.
+    /// given, the keep list as turned on. canSplit says whether part of a stack can be taken (Stacking is installed).
     /// </summary>
-    public static string Build(Inventory inventory, Func<int, string?> iconOf, IReadOnlyList<RotRow>? rot = null, KeepView? keep = null)
+    public static string Build(Inventory inventory, Func<int, string?> iconOf, IReadOnlyList<RotRow>? rot = null, KeepView? keep = null, bool canSplit = true)
     {
         var json = new StringBuilder(4096);
-        var storages = inventory.Storages.Select(storage => $"{{\"id\":{Id(storage.OwnerId)},\"name\":{Str(storage.Name)},\"kind\":{Str(KindName(storage.Kind))}}}");
+        var storages = inventory.Storages.Select(storage => $"{{\"id\":{Id(storage.OwnerId)},\"name\":{Str(storage.Name)},\"kind\":{Str(KindName(storage.Kind))}{(storage.Bay == DroneBay.Drone ? ",\"drone\":true" : "")}}}");
         var items = ItemSearch.Find(inventory, "").Select(row => ItemJson(row, iconOf(row.ConfigId)));
         var rotting = (rot ?? Array.Empty<RotRow>()).Select(row => RotJson(row, iconOf(row.ConfigId)));
         var keeping = keep ?? new KeepView(true, Array.Empty<KeepRow>());
         var kept = keeping.Rows.Select(row => KeepJson(row, iconOf(row.ConfigId)));
 
         json.Append("{\"storages\":[").AppendJoin(',', storages).Append("],\"items\":[").AppendJoin(',', items).Append("],\"rot\":[").AppendJoin(',', rotting)
-            .Append("],\"keep\":{\"on\":").Append(keeping.IsOn ? "true" : "false").Append(",\"rows\":[").AppendJoin(',', kept).Append("]}}");
+            .Append("],\"keep\":{\"on\":").Append(keeping.IsOn ? "true" : "false").Append(",\"rows\":[").AppendJoin(',', kept).Append("]},\"canSplit\":").Append(canSplit ? "true" : "false").Append('}');
 
         return json.ToString();
     }

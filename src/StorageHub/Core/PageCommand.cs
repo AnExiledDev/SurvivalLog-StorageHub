@@ -21,6 +21,15 @@ public abstract record PageCommand
     /// <summary>Move one unit of an item from one storage into the bag.</summary>
     public sealed record TakeOne(int ConfigId, long OwnerId) : PageCommand;
 
+    /// <summary>Move this many units of an item from one storage into the bag, splitting the last stack when Stacking can.</summary>
+    public sealed record TakeSome(int ConfigId, long OwnerId, int Count) : PageCommand;
+
+    /// <summary>Bring the bag up to its keep list from the home storages.</summary>
+    public sealed record KeepFill : PageCommand;
+
+    /// <summary>The HUD button: open the panel, or close it.</summary>
+    public sealed record Toggle : PageCommand;
+
     /// <summary>Move one unit of an item from one storage straight into a station's own container, such as the shredder's hopper.</summary>
     public sealed record PutOne(int ConfigId, long OwnerId, long TargetOwnerId) : PageCommand;
 
@@ -80,6 +89,9 @@ public abstract record PageCommand
         {
             ("take", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new Take(configId, ownerId),
             ("takeOne", 3) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) => new TakeOne(configId, ownerId),
+            ("takeSome", 4) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) && TryInt(parts[3], out var count) && count > 0 => new TakeSome(configId, ownerId, count),
+            ("keepFill", 1) => new KeepFill(),
+            ("toggle", 1) => new Toggle(),
             ("putOne", 4) when TryInt(parts[1], out var configId) && TryLong(parts[2], out var ownerId) && TryLong(parts[3], out var targetId) => new PutOne(configId, ownerId, targetId),
             ("takeAll", 2) when TryInt(parts[1], out var configId) => new TakeAll(configId),
             ("putAway", 2) when TryInt(parts[1], out var configId) => new PutAway(configId),

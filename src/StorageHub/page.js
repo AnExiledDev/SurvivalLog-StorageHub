@@ -373,6 +373,17 @@
   // ===== END slmod-menu v1 =====
 
   var PREFIX = 'slmod|storagehub|';
+  var HUD_CLASS = 'sh-hud-btn';
+  // Storage Hub's place in the HUD's tool column when Exiled's Toolkit lays it out in columns of four.
+  var DOCK_ORDER = '60';
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  // A chest with its lid and clasp, on the 24-unit grid the game's HUD icons use.
+  var CHEST_PATH = 'M4 4h16a1 1 0 0 1 1 1v4H3V5a1 1 0 0 1 1-1zm-1 7h7v2h4v-2h7v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z';
+  var TIP_ID = 'sh-tip';
+  var TIP_DELAY_MS = 300;
+  // Styled inline, so the tip looks the same in any page it is drawn in, the Home tab's station pages included.
+  var TIP_STYLE = 'position:fixed;z-index:2147483600;display:none;max-width:320px;padding:8px 12px;border-radius:4px;border:1px solid rgba(255,200,58,.45);background:linear-gradient(180deg,#3a3129,#241e18);box-shadow:0 8px 24px rgba(0,0,0,.6);font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:13px;line-height:1.45;color:#f0e8d8;white-space:pre-line;text-align:left;pointer-events:none';
+  var TIP_TITLE_STYLE = 'display:block;margin-bottom:2px;font-size:14px;font-weight:700;color:#FFC83A';
   var KIND_WORD = { bag: 'kindBag', storage: 'kindStorage', drawer: 'kindDrawer' };
   var BUSY_TIMEOUT_MS = 5000;
 
@@ -395,6 +406,10 @@
   // asked for in between wait for the mouse to come up.
   var isPointerDown = false;
   var isRedrawHeld = false;
+  // The take slider's last amount per item and storage ("item|storage"), so a refresh does not reset it.
+  var takeAmounts = {};
+  // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
+  var hud = { isLive: false, key: '' };
 
   // The panel's words, used until the plugin sends them in the game's language (window.__storagehubWords) before each call.
   var ENGLISH = {
@@ -488,7 +503,33 @@
     homeNoMatch: 'Nothing in your storages matches that search.',
     homeNone: 'No storage holds anything for this station.',
     homeEmpty: 'Your home storages are empty.',
-    homeLoading: 'Reading your storages...'
+    homeLoading: 'Reading your storages...',
+    hudTip: 'Search every storage at home, take items out, and keep what you need in your bag',
+    itemsTip: 'Everything in your bag and your home storages',
+    closeTip: 'Close the panel',
+    takeAllTip: 'Take every one from every storage into your bag',
+    putAwayTagTip: 'Put the ones in your bag into the storages whose tags want them',
+    takeN: 'Take {0}',
+    takeSomeTip: 'Take {0} from {1} into your bag',
+    takeHere: 'Take all',
+    takeHereTip: 'Take every one from {0} into your bag',
+    amountTip: 'Drag to pick how many to take',
+    noSplit: 'Taking part of a stack needs the Stacking mod, so each place is taken whole.',
+    fill: 'Fill bag from storage',
+    fillTip: 'Take what your bag is short of from your home storages (never from a drone)',
+    fillShort: '{0} short, {1} can be pulled from storage',
+    fillDone: 'Your bag holds everything on the list.',
+    stored: '{0} in storage',
+    storedTip: 'How many your home storages hold, which Fill can take',
+    storedNone: 'None in storage',
+    storedNoneTip: 'No home storage holds any, so Fill cannot bring it',
+    homeOpenTip: 'Show this storage beside your bag',
+    homeTabTip: 'Show the tab of this storage',
+    homeCloseTip: 'Close this storage again',
+    homeShutTip: 'Close the home storage list',
+    scopeUsableTip: 'Show only what this station can use',
+    scopeAllTip: 'Show everything in your storages',
+    homeItemTip: '{0} in {1}'
   };
 
   function words() {
@@ -633,7 +674,7 @@
     '.sh-locs>*{flex:none}',
     '.sh-locs::-webkit-scrollbar{width:5px}',
     '.sh-locs::-webkit-scrollbar-thumb{background:rgba(255,200,58,.3);border-radius:3px}',
-    '.sh-loc{display:grid;grid-template-columns:70px minmax(0,1fr) 50px 100px;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;background:var(--card);border:1px solid var(--soft)}',
+    '.sh-loc{display:grid;grid-template-columns:70px minmax(0,1fr) 50px 110px;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;background:var(--card);border:1px solid var(--soft)}',
     '.sh-kind{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3)}',
     '.sh-loc.sh-bag{border-color:rgba(255,200,58,.35);background:rgba(255,200,58,.07)}',
     '.sh-loc.sh-bag .sh-kind{color:var(--accent)}',
@@ -641,6 +682,12 @@
     '.sh-loc .sh-lname{font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.sh-loc .sh-lcount{text-align:right;font-weight:700;color:var(--text)}',
     '.sh-loc .sh-add{width:100%}',
+    '.sh-amt{grid-column:2/-1;display:grid;grid-template-columns:minmax(0,1fr) 110px;align-items:center;gap:10px}',
+    '.sh-range{width:100%;height:18px;margin:0;accent-color:#FFC83A;cursor:pointer}',
+    '.sh-fill{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:4px;border:1px solid rgba(255,200,58,.3);background:rgba(255,200,58,.06)}',
+    '.sh-fill .sh-hint{flex:1;min-width:0}',
+    '.sh-add.sh-dim{opacity:.5}',
+    '.sh-chip.sh-none{color:#2a1208;background:var(--no);font-weight:700}',
     '.sh-add{height:30px;padding:0 14px;border-radius:4px;border:1px solid rgba(255,200,58,.6);background:rgba(255,200,58,.12);color:var(--accent);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}',
     '.sh-add:hover{background:rgba(255,200,58,.22)}',
     '.sh-add.sh-sm{height:26px;padding:0 10px;font-size:12px}',
@@ -772,6 +819,7 @@
     document.body.appendChild(toast);
 
     root.addEventListener('click', onClick);
+    watchTips(document, root);
     // Clicks inside the plate must not reach the game pages underneath; the mask itself closes nothing on purpose.
     root.addEventListener('mousedown', function (e) {
       isPointerDown = true;
@@ -798,7 +846,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sub: sub, tabs: tabNodes, tools: tools, leftTools: leftTools, rightTools: rightTools, search: search, place: place, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, x: x, sub: sub, tabs: tabNodes, tools: tools, leftTools: leftTools, rightTools: rightTools, search: search, place: place, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
   }
 
   // The click comes straight after mouseup, so the held redraw runs once it is through.
@@ -888,6 +936,8 @@
       return;
     }
 
+    if (act === 'keepFill') flushPendingKeeps();
+
     sendAction(args ? act + '|' + args : act);
   }
 
@@ -953,6 +1003,15 @@
 
     pending.isSent = true;
     send('keepSet|' + id + '|' + pending.amount);
+  }
+
+  function flushPendingKeeps() {
+    Object.keys(pendingKeep).forEach(function (id) {
+      if (pendingKeep[id].isSent) return;
+
+      clearTimeout(pendingKeep[id].timer);
+      sendKeep(id);
+    });
   }
 
   function dropPendingKeep(id) {
@@ -1096,13 +1155,14 @@
     var rot = state.data.rot || [];
     ui.sub.textContent = subtitles[state.view];
     ui.search.placeholder = say(state.view === 'keep' ? 'searchKeep' : 'search');
-    renderTab('items', say('itemsView'), '', state.data.items.length, false);
+    renderTab('items', say('itemsView'), say('itemsTip'), state.data.items.length, false);
     renderTab('rot', say('rotView'), say('rotTip'), rot.length, rot.some(function (row) { return row.urgent; }));
     renderTab('keep', say('keepView'), say('keepTip'), keepRows().length, false);
     ui.bagButton.textContent = say('goBag');
-    ui.bagButton.title = say('putAwayBag');
+    tipFor(ui.bagButton, say('putAwayBag'));
     ui.floorButton.textContent = say('goFloor');
-    ui.floorButton.title = say('putAwayFloor');
+    tipFor(ui.floorButton, say('putAwayFloor'));
+    tipFor(ui.x, say('closeTip'));
     ui.closeKeys.textContent = say('closeKeys', window.__storagehubToggleKey || 'F8');
 
     // The keep view searches every item for the add list on the right, so the search box moves over there.
@@ -1116,7 +1176,7 @@
   function renderTab(view, label, tip, count, isUrgent) {
     var tab = ui.tabs[view];
     tab.className = 'sh-tab' + (state.view === view ? ' sh-on' : '');
-    tab.title = tip;
+    tipFor(tab, tip);
     tab.firstChild.textContent = label;
     tab.lastChild.textContent = String(count);
     tab.lastChild.className = 'sh-n' + (isUrgent ? ' sh-bad' : '');
@@ -1133,7 +1193,7 @@
     place.style.display = state.view === 'items' ? '' : 'none';
     place.className = 'sh-sel' + (state.isPlaceOpen ? ' sh-on' : '');
     place.setAttribute('data-act', 'placeMenu');
-    place.title = say('placeTip');
+    tipFor(place, say('placeTip'));
     place.textContent = '';
     place.appendChild(el('span', '', state.place == null ? say('allPlaces') : storageOf(state.place).name));
     place.appendChild(el('span', '', '\u25be'));
@@ -1186,8 +1246,8 @@
       main.appendChild(el('div', 'sh-name', item.name));
       main.appendChild(whereLine(item));
       row.setAttribute('data-item', String(item.id));
-      row.appendChild(icon(item, 'sh-i42'));
-      row.appendChild(main);
+      row.appendChild(itemTip(icon(item, 'sh-i42'), item.id, item.name, itemTipBody(item)));
+      row.appendChild(itemTip(main, item.id, item.name, itemTipBody(item)));
       row.appendChild(quickKeepButton(item.id));
       row.appendChild(el('div', 'sh-count', String(item.total)));
       fragment.appendChild(row);
@@ -1229,7 +1289,7 @@
     var node = withArgs(el('button', 'sh-bell' + (isOnList ? ' sh-on' : '')), id);
     node.setAttribute('data-act', 'quickKeep');
     node.innerHTML = BELL_ICON;
-    node.title = say(isOnList ? 'keepOnTip' : 'keepAddTip');
+    tipFor(node, say(isOnList ? 'keepOnTip' : 'keepAddTip'));
 
     if (isOnList) node.appendChild(el('em', '', String(keptAmount(id))));
 
@@ -1254,6 +1314,7 @@
     }
 
     var fragment = document.createDocumentFragment();
+    fragment.appendChild(fillBar());
 
     keepRows().forEach(function (kept) { fragment.appendChild(keepRowNode(kept)); });
 
@@ -1268,16 +1329,62 @@
     main.appendChild(el('div', 'sh-name', kept.name));
     main.appendChild(heldNode(kept.held, amount));
     main.appendChild(meterNode(kept.held, amount));
-    row.appendChild(icon(kept, 'sh-i42'));
-    row.appendChild(main);
+    row.appendChild(itemTip(icon(kept, 'sh-i42'), kept.id, kept.name, say('held', kept.held)));
+    row.appendChild(itemTip(main, kept.id, kept.name, say('held', kept.held)));
+
+    if (amount > 0) row.appendChild(storedChip(kept, amount));
+
     row.appendChild(stepperNode(kept.id, amount));
 
     var remove = withArgs(el('button', 'sh-del', TIMES), kept.id);
     remove.setAttribute('data-act', 'keepRemove');
-    remove.title = say('keepRemoveTip');
+    tipFor(remove, say('keepRemoveTip'));
     row.appendChild(remove);
 
     return row;
+  }
+
+  // How many the home storages hold for Fill to take, red when the bag is short and none are there to pull.
+  function storedChip(kept, amount) {
+    var count = storedCount(kept.id);
+
+    if (count > 0) return tipFor(el('span', 'sh-chip', say('stored', count)), say('storedTip'));
+
+    return tipFor(el('span', 'sh-chip' + (kept.held < amount ? ' sh-none' : ''), say('storedNone')), say('storedNoneTip'));
+  }
+
+  // Units in home storages, which is where Fill takes from: not the bag, and never a drone.
+  function storedCount(id) {
+    var item = findItem(id);
+
+    if (!item) return 0;
+
+    return item.at.reduce(function (sum, at) {
+      var storage = storageOf(at[0]);
+
+      return storage.kind === 'bag' || storage.drone ? sum : sum + at[1];
+    }, 0);
+  }
+
+  // The button that brings the bag up to the list, with how many items are short and how many storage can cover.
+  function fillBar() {
+    var short = 0;
+    var pullable = 0;
+
+    keepRows().forEach(function (kept) {
+      if (kept.held >= keptAmount(kept.id)) return;
+
+      short++;
+
+      if (storedCount(kept.id) > 0) pullable++;
+    });
+
+    var bar = el('div', 'sh-fill');
+    var go = tipFor(actButton('sh-add' + (pullable === 0 ? ' sh-dim' : ''), say('fill'), 'keepFill'), say('fillTip'));
+    bar.appendChild(el('div', 'sh-hint', short === 0 ? say('fillDone') : say('fillShort', short, pullable)));
+    bar.appendChild(go);
+
+    return bar;
   }
 
   function heldNode(held, amount) {
@@ -1304,8 +1411,8 @@
     var more = withArgs(el('button', 'sh-stepb', '+'), id + '|1');
     less.setAttribute('data-act', 'keepStep');
     more.setAttribute('data-act', 'keepStep');
-    less.title = say('keepLess');
-    more.title = say('keepMore');
+    tipFor(less, say('keepLess'));
+    tipFor(more, say('keepMore'));
     step.appendChild(less);
     step.appendChild(amountField(id, amount));
     step.appendChild(more);
@@ -1322,7 +1429,7 @@
     field.max = String(MAX_KEEP);
     field.value = String(amount);
     field.setAttribute('data-shown', String(amount));
-    field.title = say('keepAmountTip');
+    tipFor(field, say('keepAmountTip'));
     field.addEventListener('focus', function () {
       send('focus|1');
       field.select();
@@ -1395,8 +1502,8 @@
   function keepPickNode(item) {
     var pick = el('div', 'sh-pick');
     var held = bagCount(item.id);
-    pick.appendChild(icon(item, 'sh-i32'));
-    pick.appendChild(el('div', 'sh-pname', item.name));
+    pick.appendChild(itemTip(icon(item, 'sh-i32'), item.id, item.name, say('held', held)));
+    pick.appendChild(itemTip(el('div', 'sh-pname', item.name), item.id, item.name, say('held', held)));
 
     if (held > 0) pick.appendChild(el('span', 'sh-chip', say('inBag', held)));
 
@@ -1405,7 +1512,7 @@
     } else {
       var add = withArgs(el('button', 'sh-add sh-sm', say('addKeep')), item.id);
       add.setAttribute('data-act', 'keepAdd');
-      add.title = say('addKeepTip', suggestedKeep(item.id));
+      tipFor(add, say('addKeepTip', suggestedKeep(item.id)));
       pick.appendChild(add);
     }
 
@@ -1469,12 +1576,12 @@
     var tone = rot.hours < 1 ? ' sh-bad' : rot.hours < DAY_HOURS ? ' sh-warn' : '';
 
     if (hasDetail) row.setAttribute('data-item', String(rot.id));
-    else row.title = say('floorOnlyTip');
+    else tipFor(row, say('floorOnlyTip'));
 
     main.appendChild(el('div', 'sh-name', rot.name));
     main.appendChild(el('div', 'sh-where', rot.where));
-    row.appendChild(icon(rot, 'sh-i42'));
-    row.appendChild(main);
+    row.appendChild(itemTip(icon(rot, 'sh-i42'), rot.id, rot.name, rot.where + DOT + rot.left));
+    row.appendChild(itemTip(main, rot.id, rot.name, rot.where + DOT + rot.left));
     row.appendChild(el('div', 'sh-count', String(rot.count)));
     row.appendChild(el('div', 'sh-ttl' + tone, rot.left));
 
@@ -1506,7 +1613,7 @@
     var titles = el('div', 'sh-main');
     titles.appendChild(el('div', 'sh-dname', item.name));
     titles.appendChild(el('div', 'sh-dsub', kept > 0 ? line + DOT + say('keepingBag', kept) : line));
-    head.appendChild(icon(item, 'sh-i72'));
+    head.appendChild(itemTip(icon(item, 'sh-i72'), item.id, item.name, itemTipBody(item)));
     head.appendChild(titles);
     ui.detail.appendChild(head);
 
@@ -1514,12 +1621,14 @@
     var hasElsewhere = item.at.some(function (at) { return storageOf(at[0]).kind !== 'bag'; });
     var actions = el('div', 'sh-actions');
 
-    if (hasElsewhere) actions.appendChild(withArgs(actButton('sh-add', say('takeAll'), 'takeAll'), item.id));
-    if (hasBag) actions.appendChild(withArgs(button(say('putAwayTag'), 'putAway', 'sh-sm'), item.id));
+    if (hasElsewhere) actions.appendChild(tipFor(withArgs(actButton('sh-add', say('takeAll'), 'takeAll'), item.id), say('takeAllTip')));
+    if (hasBag) actions.appendChild(tipFor(withArgs(button(say('putAwayTag'), 'putAway', 'sh-sm'), item.id), say('putAwayTagTip')));
 
     actions.appendChild(keepWideButton(item.id));
     ui.detail.appendChild(actions);
     ui.detail.appendChild(el('div', 'sh-h2', say('whereIs')));
+
+    if (!canSplit() && places.some(function (at) { return storageOf(at[0]).kind !== 'bag' && at[1] > 1; })) ui.detail.appendChild(el('div', 'sh-hint', say('noSplit')));
 
     var locs = el('div', 'sh-locs');
 
@@ -1530,12 +1639,57 @@
       loc.appendChild(el('div', 'sh-kind', KIND_WORD[storage.kind] ? say(KIND_WORD[storage.kind]) : storage.kind));
       loc.appendChild(el('div', 'sh-lname', storage.name));
       loc.appendChild(el('div', 'sh-lcount', String(at[1])));
-      loc.appendChild(isBag ? withArgs(actButton('sh-add sh-sm', say('putAway'), 'putAway'), item.id) : withArgs(actButton('sh-add sh-sm', say('take'), 'take'), item.id + '|' + storage.id));
+      if (isBag) {
+        loc.appendChild(tipFor(withArgs(actButton('sh-add sh-sm', say('putAway'), 'putAway'), item.id), say('putAwayTagTip')));
+      } else {
+        var isPartial = canSplit() && at[1] > 1;
+        loc.appendChild(tipFor(withArgs(actButton('sh-add sh-sm', say(isPartial ? 'takeHere' : 'take'), 'take'), item.id + '|' + storage.id), say('takeHereTip', storage.name)));
+
+        if (isPartial) loc.appendChild(amountRow(item, storage, at[1]));
+      }
+
       locs.appendChild(loc);
     });
 
     ui.detail.appendChild(locs);
     locs.scrollTop = scroll;
+  }
+
+  // Without Stacking the game moves stacks whole, so part of one cannot be taken.
+  function canSplit() {
+    return state.data.canSplit !== false;
+  }
+
+  // A slider from 1 to what the place holds, and a button taking that many. Taking all of them is the plain take.
+  function amountRow(item, storage, count) {
+    var key = item.id + '|' + storage.id;
+    var amount = Math.max(1, Math.min(count, takeAmounts[key] || 1));
+    var row = el('div', 'sh-amt');
+    var range = el('input', 'sh-range');
+    var take = el('button', 'sh-add sh-sm');
+    range.type = 'range';
+    range.min = '1';
+    range.max = String(count);
+    range.step = '1';
+    range.value = String(amount);
+    tipFor(range, say('amountTip'));
+    takeSomeButton(take, item, storage, amount, count);
+    range.addEventListener('input', function () {
+      takeAmounts[key] = Number(range.value);
+      takeSomeButton(take, item, storage, Number(range.value), count);
+    });
+    row.appendChild(range);
+    row.appendChild(take);
+
+    return row;
+  }
+
+  function takeSomeButton(node, item, storage, amount, count) {
+    var isAll = amount >= count;
+    node.textContent = say('takeN', amount);
+    node.setAttribute('data-act', isAll ? 'take' : 'takeSome');
+    withArgs(node, item.id + '|' + storage.id + (isAll ? '' : '|' + amount));
+    tipFor(node, say('takeSomeTip', amount, storage.name));
   }
 
   // The bell with words, beside the detail's moves: adds the item to the keep list, or opens the list once it is on it.
@@ -1545,7 +1699,7 @@
     node.setAttribute('data-act', 'quickKeep');
     node.innerHTML = BELL_ICON;
     node.appendChild(el('span', '', isOnList ? say('keepN', keptAmount(id)) : say('keep')));
-    node.title = say(isOnList ? 'keepOnTip' : 'keepAddTip');
+    tipFor(node, say(isOnList ? 'keepOnTip' : 'keepAddTip'));
 
     return node;
   }
@@ -1554,6 +1708,129 @@
     node.setAttribute('data-args', String(args));
 
     return node;
+  }
+
+  // A button's hover tip, drawn by the page itself (see watchTips); an empty text takes it away.
+  function tipFor(node, text, title) {
+    if (text) node.setAttribute('data-tip', text);
+    else node.removeAttribute('data-tip');
+
+    if (title) node.setAttribute('data-tip-title', title);
+
+    return node;
+  }
+
+  // An item's hover tip. Info Pack shows its own over anything carrying the config id once it watches the page; the
+  // name and body here are the tip drawn when it does not.
+  function itemTip(node, configId, name, body) {
+    node.setAttribute('data-slip-item', String(configId));
+    node.setAttribute('data-item-name', name);
+    node.setAttribute('data-item-tip', body);
+
+    return node;
+  }
+
+  // "12 in total, in 2 places" and where they are, for an item's own tip.
+  function itemTipBody(item) {
+    var places = placesOf(item);
+    var line = places.length === 1 ? say('totalPlace', item.total) : say('totalPlaces', item.total, places.length);
+
+    return line + '\n' + places.map(function (at) { return storageOf(at[0]).name + ' ' + at[1]; }).join(DOT);
+  }
+
+  // One floating tip per page, shown a moment after the pointer rests on anything with a tip. The game's web view is
+  // not relied on for native title tips, so the page draws its own in the panel's look.
+  function watchTips(doc, area) {
+    if (area.__shTips) return;
+
+    var timer = 0;
+    var shown = null;
+    area.__shTips = true;
+    area.addEventListener('mouseover', function (e) {
+      var target = tipTarget(doc, e.target);
+
+      if (target === shown) return;
+
+      clearTimeout(timer);
+      hideTip(doc);
+      shown = target;
+
+      if (target) timer = setTimeout(function () { showTip(doc, target); }, TIP_DELAY_MS);
+    });
+    area.addEventListener('mouseleave', function () {
+      clearTimeout(timer);
+      shown = null;
+      hideTip(doc);
+    });
+    area.addEventListener('mousedown', function () {
+      clearTimeout(timer);
+      hideTip(doc);
+    }, true);
+  }
+
+  function tipTarget(doc, node) {
+    var target = node && node.closest ? node.closest('[data-tip],[data-item-tip]') : null;
+
+    if (!target || node.closest('.sh-menu')) return null;
+
+    // Info Pack draws the item tip in a page it watches, so this one stands back there.
+    if (!target.hasAttribute('data-tip') && isInfoPackWatching(doc)) return null;
+
+    return target;
+  }
+
+  function isInfoPackWatching(doc) {
+    var win = doc.defaultView;
+
+    return !!(win && win.__slipTagged);
+  }
+
+  function showTip(doc, target) {
+    if (!doc.body || !doc.body.contains(target)) return;
+
+    var tip = doc.getElementById(TIP_ID);
+    var isItem = !target.hasAttribute('data-tip');
+    var title = target.getAttribute(isItem ? 'data-item-name' : 'data-tip-title');
+
+    if (!tip) {
+      tip = doc.createElement('div');
+      tip.id = TIP_ID;
+      tip.style.cssText = TIP_STYLE;
+      doc.body.appendChild(tip);
+    }
+
+    tip.textContent = '';
+
+    if (title) {
+      var head = doc.createElement('b');
+      head.style.cssText = TIP_TITLE_STYLE;
+      head.textContent = title;
+      tip.appendChild(head);
+    }
+
+    tip.appendChild(doc.createTextNode(target.getAttribute(isItem ? 'data-item-tip' : 'data-tip') || ''));
+    tip.style.display = 'block';
+    placeTip(doc, tip, target.getBoundingClientRect());
+  }
+
+  // Below the target, or above it when there is no room below, and never off the side of the page.
+  function placeTip(doc, tip, rect) {
+    var win = doc.defaultView;
+    var width = tip.offsetWidth;
+    var height = tip.offsetHeight;
+    var left = Math.max(6, Math.min(rect.left + rect.width / 2 - width / 2, win.innerWidth - width - 6));
+    var top = rect.bottom + 8;
+
+    if (top + height > win.innerHeight - 6) top = Math.max(6, rect.top - height - 8);
+
+    tip.style.left = Math.round(left) + 'px';
+    tip.style.top = Math.round(top) + 'px';
+  }
+
+  function hideTip(doc) {
+    var tip = doc && doc.getElementById(TIP_ID);
+
+    if (tip) tip.style.display = 'none';
   }
 
   function render() {
@@ -1603,6 +1880,7 @@
     if (!ui) return;
 
     putBackTypedAmount();
+    hideTip(document);
     ui.root.style.display = 'none';
 
     if (document.activeElement === ui.search) ui.search.blur();
@@ -1986,8 +2264,8 @@
     box.appendChild(search);
 
     if (!isInventory()) {
-      scope.appendChild(scopeButton(doc, say(home.station.scope), false));
-      scope.appendChild(scopeButton(doc, say('scopeAll'), true));
+      scope.appendChild(tipFor(scopeButton(doc, say(home.station.scope), false), say('scopeUsableTip')));
+      scope.appendChild(tipFor(scopeButton(doc, say('scopeAll'), true), say('scopeAllTip')));
       box.appendChild(scope);
     }
 
@@ -1996,6 +2274,7 @@
     home.ui = { root: root, sub: sub, input: input, scope: scope, list: list, isTyping: false };
     watchHomeSearch(input);
     list.addEventListener('click', onHomeClick);
+    watchTips(doc, root);
   }
 
   // One half of the two-part switch: the words, then how many rows that half shows.
@@ -2344,6 +2623,7 @@
 
     removeHomeUi();
     shut.addEventListener('click', shutPop);
+    tipFor(shut, say('homeShutTip'));
     head.appendChild(make(doc, 'span', 'slmh-title', say('homeTitle')));
     head.appendChild(sub);
     head.appendChild(shut);
@@ -2505,6 +2785,7 @@
     var node = make(doc, 'button', 'slmh-open' + (isOpenHere ? ' on' : ''), say(isOpenHere ? 'homeClose' : 'homeOpen'));
 
     node.setAttribute('data-open', id);
+    tipFor(node, say(isOpenHere ? 'homeCloseTip' : isInventory() ? 'homeOpenTip' : 'homeTabTip'));
 
     return node;
   }
@@ -2517,6 +2798,8 @@
     row.setAttribute('data-item', item.item);
     // Info Pack shows its item tooltip over anything carrying the item's config id.
     row.setAttribute('data-slip-item', item.cfg);
+    row.setAttribute('data-item-name', item.name);
+    row.setAttribute('data-item-tip', say('homeItemTip', item.count, (findHomeStorage(storageId) || { name: '' }).name));
 
     if (item.icon) {
       var img = make(doc, 'img');
@@ -2775,7 +3058,115 @@
     found.frame.contentWindow.dispatchEvent(new found.frame.contentWindow.Event('resize'));
   }
 
+  // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
+  function live(isLive, key) {
+    hud.isLive = !!isLive;
+    hud.key = key || '';
+    patchHud();
+  }
+
+  var hasReportedHudAccess = false;
+  var hasReportedHudPlaced = false;
+
+  // The HUD is a same-origin iframe the game creates and drops whenever it likes, so the button is checked every poll.
+  function patchHud() {
+    var frames = document.querySelectorAll('iframe');
+
+    for (var i = 0; i < frames.length; i++) {
+      if (!/CoreUI1\.html/.test(frames[i].src || '')) continue;
+
+      var doc = null;
+
+      try {
+        doc = frames[i].contentDocument;
+      } catch (e) {}
+
+      if (!doc) {
+        if (!hasReportedHudAccess) send('diag|cannot reach the HUD page document (root ' + location.protocol + ', iframe ' + frames[i].src + ')');
+        hasReportedHudAccess = true;
+        continue;
+      }
+
+      placeHudButton(doc);
+    }
+  }
+
+  // First in the tool column, as the other mods' buttons are: the column is anchored at the bottom, so the first child
+  // sits on top and the game's own buttons do not move. Drawn again only when the key or the language changed, so the
+  // game's hover state on it is not reset every poll.
+  function placeHudButton(doc) {
+    var column = doc.querySelector('.vertical-tools');
+    var existing = doc.querySelector('.' + HUD_CLASS);
+    var stamp = hud.key + '|' + say('hudTip');
+
+    if (!column || !hud.isLive) {
+      if (existing) existing.remove();
+
+      return;
+    }
+
+    if (existing && existing.parentNode === column && existing.getAttribute('data-stamp') === stamp) return;
+    if (existing) existing.remove();
+
+    var node = hudButton(doc);
+    node.setAttribute('data-stamp', stamp);
+    node.setAttribute('data-etk-dock', DOCK_ORDER);
+    column.insertBefore(node, column.firstChild);
+
+    if (!hasReportedHudPlaced) send('diag|HUD button placed in the tool column');
+    hasReportedHudPlaced = true;
+  }
+
+  // The same markup as the game's bag button: its classes, an svg icon, and the hover tip its stylesheet shows. The
+  // HUD page watches its body for new buttons and tells the game where they are, so a click on this one reaches it.
+  function hudButton(doc) {
+    var node = doc.createElement('button');
+    var svg = doc.createElementNS(SVG_NS, 'svg');
+    var path = doc.createElementNS(SVG_NS, 'path');
+    node.className = 'ui-btn icon-sq interactive-btn has-entry-tip ' + HUD_CLASS;
+    node.setAttribute('data-interactive', '');
+    svg.setAttribute('class', 'icon-svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    path.setAttribute('d', CHEST_PATH);
+    svg.appendChild(path);
+    node.appendChild(svg);
+    node.appendChild(entryTip(doc));
+    node.addEventListener('click', function (e) {
+      e.stopPropagation();
+      send('toggle');
+    });
+
+    return node;
+  }
+
+  function entryTip(doc) {
+    var tip = doc.createElement('div');
+    var title = doc.createElement('div');
+    var body = doc.createElement('div');
+    tip.className = 'entry-tip';
+    title.className = 'entry-tip-title';
+    title.textContent = 'Storage Hub';
+    body.className = 'entry-tip-body';
+    body.textContent = say('hudTip');
+
+    if (hud.key) {
+      var key = doc.createElement('span');
+      key.className = 'entry-tip-key';
+      key.textContent = hud.key;
+      title.appendChild(key);
+    }
+
+    tip.appendChild(title);
+    tip.appendChild(body);
+
+    return tip;
+  }
+
   setInterval(function () {
+    try {
+      patchHud();
+    } catch (e) {}
+
     try {
       patchBackpack();
     } catch (e) {}
@@ -2789,6 +3180,6 @@
     } catch (e) {}
   }, 400);
 
-  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, closePop: shutPop };
+  window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, closePop: shutPop, live: live };
   send('ready');
 })();

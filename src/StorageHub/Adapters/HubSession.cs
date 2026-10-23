@@ -13,6 +13,7 @@ namespace StorageHub.Adapters;
 internal sealed class HubSession
 {
     private const float RefreshSeconds = 1f;
+    private const float LiveCheckSeconds = 1f;
 
     private readonly GameStorages _game;
     private readonly WebPage _page;
@@ -33,6 +34,9 @@ internal sealed class HubSession
     private bool _isVerbose;
     private bool _isKeepOn;
     private bool _isHomeListOn;
+    private bool? _sentLive;
+    private string _sentLiveKey = "";
+    private float _nextLiveCheckAt;
 
     public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, Action<string> log, KeepListKeeper keep)
     {
@@ -64,11 +68,11 @@ internal sealed class HubSession
         foreach (var command in CommandBatch.WithoutRepeatedMoves(TakeQueuedCommands())) HandleSafely(command);
 
         AdvanceBesideBag();
+        SendLive(now);
 
         if (Input.GetKeyDown(_toggleKey))
         {
-            if (_isOpen) Close();
-            else Open();
+            ToggleOpen();
 
             return;
         }
@@ -93,6 +97,30 @@ internal sealed class HubSession
         }
 
         if (now >= _nextRefreshAt) PushView();
+    }
+
+    private void ToggleOpen()
+    {
+        if (_isOpen) Close();
+        else Open();
+    }
+
+    /// <summary>The HUD button shows lit once a save is loaded; it is told only when that or the key changes.</summary>
+    private void SendLive(float now)
+    {
+        if (now < _nextLiveCheckAt) return;
+
+        _nextLiveCheckAt = now + LiveCheckSeconds;
+        var isLive = _game.IsWorldLoaded();
+        var key = _toggleKey.ToString();
+
+        if (_sentLive == isLive && _sentLiveKey == key) return;
+
+        if (_page.Live(isLive, key))
+        {
+            _sentLive = isLive;
+            _sentLiveKey = key;
+        }
     }
 
     private static List<PageCommand> TakeQueuedCommands()
@@ -214,7 +242,7 @@ internal sealed class HubSession
 
         var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
         AddNames(_keep.List.Amounts.Keys);
-        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep.List)));
+        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep.List)), StackingUnits.IsAvailable);
         LogIconsOnce();
 
         return view;
@@ -268,6 +296,15 @@ internal sealed class HubSession
             case PageCommand.TakeOne takeOne:
                 Act("take one", () => TakeOne(takeOne.ConfigId, takeOne.OwnerId));
                 break;
+            case PageCommand.TakeSome takeSome:
+                Act($"take {takeSome.Count}", () => TakeSome(takeSome.ConfigId, takeSome.OwnerId, takeSome.Count));
+                break;
+            case PageCommand.KeepFill:
+                Act("fill the bag from the keep list", KeepFill);
+                break;
+            case PageCommand.Toggle:
+                ToggleOpen();
+                break;
             case PageCommand.PutOne putOne:
                 Act("put one", () => PutOne(putOne.ConfigId, putOne.OwnerId, putOne.TargetOwnerId));
                 break;
@@ -319,6 +356,8 @@ internal sealed class HubSession
                 InputGate.MenuClosed();
                 // Nor does it have a focused field, and a claim left behind would keep Esc from closing the panel.
                 _keyboard.Release();
+                // A reloaded page has lost the HUD button's state, so the next check sends it again.
+                _sentLive = null;
                 ReopenAfterReload();
                 break;
             case PageCommand.NoScript:
@@ -388,6 +427,59 @@ internal sealed class HubSession
         if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
         return Execute(StoragePlan.TakeOne(_inventory, configId, ownerId), MoveOneAndLog);
+    }
+
+    private string TakeSome(int configId, long ownerId, int count)
+    {
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
+
+        var steps = UnitTake.Plan(_inventory, _inventory.Stacks.Where(stack => stack.ConfigId == configId && stack.OwnerId == ownerId), count);
+
+        return UnitTake.Describe(new UnitReport(RunUnits(steps), Array.Empty<int>()), _inventory);
+    }
+
+    /// <summary>Kept items short in the bag come out of the home storages; the ones none of them hold are named.</summary>
+    private string KeepFill()
+    {
+        if (!_keep.TryRead()) return Texts.KeepNotRead.Pick(IsChinese);
+
+        if (!RefreshInventory(out var reason)) return NotAvailable(reason);
+
+        AddNames(_keep.List.Amounts.Keys);
+        var steps = UnitTake.Fill(_inventory, _keep.List);
+        var none = UnitTake.NoneStored(_inventory, _keep.List);
+
+        if (steps.Count == 0 && none.Count == 0) return Texts.KeepFilled.Pick(IsChinese);
+
+        return UnitTake.Describe(new UnitReport(RunUnits(steps), none), _inventory);
+    }
+
+    private IReadOnlyDictionary<int, int> RunUnits(IReadOnlyList<UnitStep> steps)
+    {
+        if (_isVerbose)
+        {
+            foreach (var step in steps) _log($"  plan {step.Units} of {Describe(step.Stack)} -> bag");
+        }
+
+        return UnitTake.Run(steps, MoveAndLog, MoveUnitAndLog);
+    }
+
+    /// <summary>One unit off a stack, or the whole stack's count when the game could only move all of it.</summary>
+    private int MoveUnitAndLog(ItemStack stack, long targetOwnerId)
+    {
+        switch (_game.MoveOne(stack, targetOwnerId))
+        {
+            case UnitMove.One:
+                return 1;
+            case UnitMove.WholeStack:
+                _log($"  {Describe(stack)} moved whole (Stacking is not installed or could not split it)");
+
+                return stack.Count;
+            default:
+                _log($"  move one {Describe(stack)} -> {_inventory.StorageName(targetOwnerId)}: refused");
+
+                return 0;
+        }
     }
 
     private string PutOne(int configId, long ownerId, long targetOwnerId)

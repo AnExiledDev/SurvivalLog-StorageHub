@@ -39,6 +39,9 @@ public static class Texts
     public static readonly Phrase NothingToMove = new("Nothing to move.", "没有需要移动的物品。");
     public static readonly Counted Moved = new(new("Moved 1 stack.", "移动了 1 堆。"), new("Moved {0} stacks.", "移动了 {0} 堆。"));
     public static readonly Phrase Nowhere = new("{0} had nowhere to go: {1}.", "{0} 堆无处可放：{1}。");
+    public static readonly Phrase Took = new("Took {0} into your bag.", "已收进背包：{0}。");
+    public static readonly Phrase NoneStored = new("None in storage: {0}.", "储物家具里没有：{0}。");
+    public static readonly Phrase KeepFilled = new("Your bag already holds everything on the keep list.", "背包里已经有「留在背包」清单上的全部物品。");
     public static readonly Phrase KeptInBag = new("Kept in your bag: {0}.", "留在背包里：{0}。");
 
     /// <summary>{0} is the start of a list cut short, {1} how many entries were left out.</summary>
@@ -167,6 +170,32 @@ public static class Texts
         ("homeNone", new("No storage holds anything for this station.", "没有储物家具放着这里能用的物品。")),
         ("homeEmpty", new("Your home storages are empty.", "家中储物家具都是空的。")),
         ("homeLoading", new("Reading your storages...", "正在读取储物家具…")),
+        ("hudTip", new("Search every storage at home, take items out, and keep what you need in your bag", "搜索家中所有储物家具，取出物品，并把需要的东西留在背包里")),
+        ("itemsTip", new("Everything in your bag and your home storages", "背包和家中储物家具里的所有物品")),
+        ("closeTip", new("Close the panel", "关闭面板")),
+        ("takeAllTip", new("Take every one from every storage into your bag", "把所有储物家具里的这种物品全部收进背包")),
+        ("putAwayTagTip", new("Put the ones in your bag into the storages whose tags want them", "把背包里的这种物品放进标签对应的储物家具")),
+        ("takeN", new("Take {0}", "取出 {0}")),
+        ("takeSomeTip", new("Take {0} from {1} into your bag", "从{1}取出 {0} 个收进背包")),
+        ("takeHere", new("Take all", "全部取出")),
+        ("takeHereTip", new("Take every one from {0} into your bag", "把{0}里的全部收进背包")),
+        ("amountTip", new("Drag to pick how many to take", "拖动选择取出多少")),
+        ("noSplit", new("Taking part of a stack needs the Stacking mod, so each place is taken whole.", "取出一堆中的一部分需要 Stacking 模组，所以每处只能全部取出。")),
+        ("fill", new("Fill bag from storage", "从储物家具补满背包")),
+        ("fillTip", new("Take what your bag is short of from your home storages (never from a drone)", "从家中储物家具取出背包还缺的物品（不会从无人机取）")),
+        ("fillShort", new("{0} short, {1} can be pulled from storage", "缺 {0} 种，可从储物家具补 {1} 种")),
+        ("fillDone", new("Your bag holds everything on the list.", "背包里已有清单上的全部物品。")),
+        ("stored", new("{0} in storage", "储物 {0}")),
+        ("storedTip", new("How many your home storages hold, which Fill can take", "家中储物家具里有多少，补满时可以取出")),
+        ("storedNone", new("None in storage", "储物家具里没有")),
+        ("storedNoneTip", new("No home storage holds any, so Fill cannot bring it", "家中储物家具里一个都没有，无法补满")),
+        ("homeOpenTip", new("Show this storage beside your bag", "把这个储物家具显示在背包旁边")),
+        ("homeTabTip", new("Show the tab of this storage", "显示这个储物家具的标签页")),
+        ("homeCloseTip", new("Close this storage again", "再次关闭这个储物家具")),
+        ("homeShutTip", new("Close the home storage list", "关闭家中储物列表")),
+        ("scopeUsableTip", new("Show only what this station can use", "只显示这里能用的物品")),
+        ("scopeAllTip", new("Show everything in your storages", "显示储物家具里的所有物品")),
+        ("homeItemTip", new("{0} in {1}", "{1}里有 {0} 个")),
     };
 
     public static IReadOnlyList<Phrase> All { get; } = Collect();

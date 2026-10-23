@@ -369,6 +369,9 @@ internal sealed class GameStorages
     }
 
     /// <summary>Whether the bag screen shows; the game skips its bag request while it does.</summary>
+    /// <summary>A save is loaded, so the panel has items to show.</summary>
+    public bool IsWorldLoaded() => GameSingleton.Existing<BattleLogicWorld>()?._ItemManager != null;
+
     public bool IsBackpackShowing() => GameSingleton.Existing<ReduxUISystem>()?.GetWebUILayer()?.IsPageActive("Backpack") == true;
 
     public void CloseBackpack() => Ac_BackpackUI_Close.SendAction();

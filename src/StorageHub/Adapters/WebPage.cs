@@ -57,6 +57,9 @@ internal sealed class WebPage
     /// <summary>The home storage list beside a station; "null" tells the page the list is turned off.</summary>
     public void Station(string stationJson) => Call($"station({stationJson})");
 
+    /// <summary>Whether the HUD button can open the panel (a save is loaded), and the key it names in its tip.</summary>
+    public bool Live(bool isLive, string keyName) => Run($"window.__storagehub&&window.__storagehub.live({(isLive ? "true" : "false")},{HubView.Str(keyName)})");
+
     /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
     public void Status(string text) => Call($"status({HubView.Str(text)},{HubView.Str(StatusTone.Of(text))})");
 

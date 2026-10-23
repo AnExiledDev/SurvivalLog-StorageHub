@@ -37,7 +37,7 @@ Storage Hub keeps nothing of its own in your save and does not edit game files. 
 - "Put bag away" (the big button at the bottom right) and "Put floor away" beside it put away your whole bag, or everything on the floor at home.
 - The result shows on the status line at the bottom, for example `Moved 4 stacks.` or `Moved 3 stacks. 1 had nowhere to go: Rope.` It is green when everything moved, amber when something was left behind and red when something failed. When the panel is closed, results show as a short message near the bottom of the screen instead.
 - Storages with the same name are numbered, like `Wooden Box` and `Wooden Box 2`, so you can tell them apart.
-- Pointing at a button for a moment shows what it does. Pointing at an item shows its item tooltip from [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.5 or later when it is installed (optional), or a short one with its name and where it sits when it is not.
+- Pointing at a button for a moment shows what it does. Pointing at an item shows its item tooltip from [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or later when it is installed (optional), or a short one with its name and where it sits when it is not.
 - The list refreshes every second while the panel is open.
 
 Before a save is loaded, the panel opens empty and says `Not available right now`.
@@ -158,7 +158,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - Survival Log 1.1.19131. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Stacking](https://www.nexusmods.com/survivallog/mods/74). With it, the panel can take part of a stack and "Fill bag from storage" takes just the amount short.
-- Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.5 or newer, for its item tooltips in the panel.
+- Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or newer, for its item tooltips in the panel.
 - Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. Without it, they take effect at the next game start.
 
 ## Install

@@ -5,7 +5,7 @@
 - A chest button at the top of the HUD's tool column opens and closes the panel, with the panel key in its tooltip.
 - Each storage row in an item's detail has "Take all", and with Stacking installed a slider to pick how many to take, with a "Take 5" button.
 - "Fill bag from storage" on the "Keep in bag" tab takes what your bag is short of from your home storages, never from a drone. Each row says how many storage holds, or "None in storage" in red when your bag is short and storage has none.
-- Pointing at a button shows what it does. Pointing at an item shows Info Pack's tooltip with Info Pack 0.8.5 or later, or a short tooltip of its own without it.
+- Pointing at a button shows what it does. Pointing at an item shows Info Pack's tooltip with Info Pack 0.8.7 or later, or a short tooltip of its own without it.
 - Made for Survival Log 1.1.19131.
 
 ## 0.10.1

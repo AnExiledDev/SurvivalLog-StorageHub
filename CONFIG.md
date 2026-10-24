@@ -20,8 +20,8 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `HomeStorageList` | `true` | Add a searchable list of your home storages: a "Home" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and a "Home storage" window in the Mods menu on the inventory screen. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. |
-| `StorageTabs` | `true` | At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station takes, next to the game's own storage tabs. |
+| `HomeStorageList` | `true` | Add a searchable list of your home storages: a "Home" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench and, at home, beside an open storage, the neighbor's basket or the car trunk, and a "Home storage" window in the Mods menu on the inventory screen. At the stove or rat cage, clicking an item the station takes puts it into the station, and anything else goes to your bag. Beside a storage, the basket or the trunk, a click puts the item in it. |
+| `StorageTabs` | `true` | At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station takes, next to the game's own storage tabs. At home, opening a storage, the neighbor's basket or the car trunk also gives every home storage a tab above your bag, empty or not. |
 
 ## Delivery
 

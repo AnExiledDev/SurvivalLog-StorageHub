@@ -2,6 +2,7 @@
 
 ## 0.14.3
 
+- Out exploring, the looting screen's tabs keep the game's own look; the new tab style is only at home.
 - Switching storages with A and D scrolls the tab row to the chosen tab.
 - The tab row scrolls by whole tabs, so the first tab after the arrow is never cut in half. The arrows move to the next tabs not fully shown, and each mouse wheel notch moves one tab.
 - Made for Survival Log 1.1.19611.
@@ -13,7 +14,7 @@
 
 ## 0.14.1
 
-- Fixed: the Storage Hub window (F4) did not open. This broke in 0.13.1.
+- Fixed: the Storage Hub window (F8) did not open. This broke in 0.13.1.
 - Made for Survival Log 1.1.19611.
 
 ## 0.14.0

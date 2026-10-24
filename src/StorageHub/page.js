@@ -2063,19 +2063,20 @@
     '.bag-slot.is-anchored .bag-tabs{min-width:0;overflow-x:auto;scrollbar-width:none}',
     '.bag-slot.is-anchored .bag-tabs::-webkit-scrollbar{display:none}',
     '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:1 0 auto;white-space:nowrap}',
-    // One segmented bar: small tabs split by hairlines, the chosen one filled gold, so more storages fit.
-    '.bag-slot.is-anchored .bag-tabs{gap:0;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
-    '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:0 0 auto;padding:4px 11px 5px;font-size:13px;letter-spacing:.3px;background:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;color:rgba(255,255,255,.55)}',
-    '.bag-slot.is-anchored .bag-tabs>.bag-tab:hover{color:#fff;background-color:rgba(255,255,255,.06)}',
-    '.bag-slot.is-anchored .bag-tabs>.bag-tab.active{color:#1a1408;background-color:#FFC83A;text-shadow:none;font-weight:700}',
+    // One segmented bar: small tabs split by hairlines, the chosen one filled gold, so more storages fit. Only on a bar
+    // the Home tab is in, so looting out exploring keeps the game's own tabs.
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll{gap:0;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.bag-tab{flex:0 0 auto;padding:4px 11px 5px;font-size:13px;letter-spacing:.3px;background:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;color:rgba(255,255,255,.55)}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.bag-tab:hover{color:#fff;background-color:rgba(255,255,255,.06)}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.bag-tab.active{color:#1a1408;background-color:#FFC83A;text-shadow:none;font-weight:700}',
     // The pinned tabs cover the storage tabs scrolling behind them with their own solid fill. The ::before cover would
     // paint over the Home icon and the gold of a chosen pinned tab, since a sticky tab is its own stacking context.
-    '.bag-slot.is-anchored .bag-tabs>.slmh-pin::before{display:none}',
-    '.bag-slot.is-anchored .bag-tabs>.slmh-pin{background-color:#111113}',
-    '.bag-slot.is-anchored .bag-tabs>.slmh-pin:not(.active):hover{background-color:#1c1c1f}',
-    '.bag-slot.is-anchored .bag-tabs>.slmh-tab{padding-left:28px;color:#FFC83A;background-image:url("' + homeIcon('#FFC83A') + '");background-repeat:no-repeat;background-position:10px 50%;background-size:13px}',
-    '.bag-slot.is-anchored .bag-tabs>.slmh-tab.active{color:#1a1408;background-image:url("' + homeIcon('#1a1408') + '")}',
-    '.bag-slot.is-anchored .bag-tabs>.slmh-arrow{width:22px;border:0;border-radius:0;background:#111113;font-size:15px}'
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-pin::before{display:none}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-pin{background-color:#111113}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-pin:not(.active):hover{background-color:#1c1c1f}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-tab{padding-left:28px;color:#FFC83A;background-image:url("' + homeIcon('#FFC83A') + '");background-repeat:no-repeat;background-position:10px 50%;background-size:13px}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-tab.active{color:#1a1408;background-image:url("' + homeIcon('#1a1408') + '")}',
+    '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-arrow{width:22px;border:0;border-radius:0;background:#111113;font-size:15px}'
   ].join('');
 
   function homeIcon(colour) {
@@ -2592,7 +2593,14 @@
       return tab.classList.contains('active') || tab.classList.contains('slmh-was');
     })[0];
 
-    if (!chosen || chosen === tabs.slmhChosen) return;
+    // Back on the bag tab, the next storage tab chosen is a new choice again.
+    if (!chosen) {
+      tabs.slmhChosen = null;
+
+      return;
+    }
+
+    if (chosen === tabs.slmhChosen) return;
 
     tabs.slmhChosen = chosen;
 
@@ -2607,6 +2615,9 @@
     for (var i = 0; i <= index; i++) {
       if (stops[i] >= right - 1) return scrollTabsTo(tabs, stops[i]);
     }
+
+    // A tab wider than the view shows from its start.
+    scrollTabsTo(tabs, stops[index]);
   }
 
   function makeArrows(doc, tabs) {

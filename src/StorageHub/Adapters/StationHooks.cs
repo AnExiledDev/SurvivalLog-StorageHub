@@ -65,7 +65,9 @@ internal static class StationHooks
                 AccessTools.Method(type, method),
                 prefix: prefix == null ? null : new HarmonyMethod(typeof(StationHooks), prefix),
                 postfix: postfix == null ? null : new HarmonyMethod(typeof(StationHooks), postfix));
-            _log($"{station} gets a bag tab for each home storage holding something it takes");
+            _log(type == typeof(Reducer_Web_BackpackUI)
+                ? $"{station} at home gets a bag tab for every home storage"
+                : $"{station} gets a bag tab for each home storage holding something it takes");
         }
         catch (Exception ex)
         {

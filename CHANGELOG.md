@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.2
+
+- Fixed: the search box in the Storage Hub panel now accepts Chinese and other typing that needs an input method.
+- Made for Survival Log 1.1.19611.
+
 ## 0.15.1
 
 - The game no longer stutters the first time you open the panel: item icons now load in the background when the game starts.

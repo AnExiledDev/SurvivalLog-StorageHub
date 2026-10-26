@@ -62,8 +62,8 @@
     // category-dropdown, category-option). These rules only open it upwards there, as the toolbar is the panel's last
     // row, point the caret the way it opens, lay out a row's icon, label and hotkey, and give the button the spacing
     // the game gives its toolbar buttons beside the robot switches. The station pages have no such dropdown, so the
-    // slmm-st rules draw one in the same colours, and slmm-own is the button for a title row with no game button to
-    // copy.
+    // slmm-st rules draw one in the same colours, caret included (pointing the way the menu opens, slmm-st-down for
+    // one that opens downwards), and slmm-own is the button for a title row with no game button to copy.
     var CSS = [
       '.slmm-wrap{display:flex}',
       '.toolbar.has-rsw .slmm-wrap{margin-left:auto}',
@@ -76,6 +76,9 @@
       '.slmm-st{position:relative;align-items:center;margin-left:auto}',
       '.slmm-st .slmm-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}',
       '.slmm-st .slmm-btn svg{flex:none;width:14px;height:14px;fill:currentColor;opacity:.8}',
+      '.slmm-st .slmm-btn::after{content:"";display:inline-block;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor;margin-left:3px;transition:transform .2s;opacity:.9}',
+      '.slmm-st-down .slmm-btn::after{transform:none}',
+      '.slmm-st-down .slmm-btn.open::after{transform:rotate(180deg)}',
       '.slmm-st .slmm-menu{position:absolute;right:0;left:auto;z-index:1000;min-width:100%;padding:4px 0;max-height:240px;overflow-y:auto;background:rgba(20,24,36,.96);border:1px solid rgba(100,120,160,.35);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5)}',
       '.slmm-st .slmm-menu.slmm-down{bottom:auto;top:calc(100% + 4px)}',
       '.slmm-st .slmm-row{padding:7px 14px;font-size:13px;font-weight:normal;letter-spacing:0;text-shadow:none;color:#c8cde0;cursor:pointer;white-space:nowrap}',
@@ -269,7 +272,7 @@
         var wrap = doc.createElement('div');
         var trigger = doc.createElement('button');
 
-        wrap.className = station ? 'slmm-wrap slmm-st' : 'category-dropdown-wrapper slmm-wrap';
+        wrap.className = station ? 'slmm-wrap slmm-st' + (station.down ? ' slmm-st-down' : '') : 'category-dropdown-wrapper slmm-wrap';
         wrap.setAttribute('data-slmm-version', String(VERSION));
         trigger.className = (station ? (before && !station.own ? before.className : 'slmm-own') : 'action-btn category-dropdown-btn') + ' unity-interactive slmm-btn';
         trigger.title = 'Mod actions';

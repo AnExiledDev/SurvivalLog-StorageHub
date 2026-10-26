@@ -136,7 +136,7 @@ internal sealed class BagOrganizer
         {
             if (!_keptApartLogged.Add(configId)) continue;
 
-            _log($"organize, item {configId} ({config.Get_Config_Item(configId)?.ItemName}): {why}");
+            _log($"organize, item {configId} ({GameStorages.ItemRow(config, configId)?.ItemName}): {why}");
         }
     }
 
@@ -155,7 +155,7 @@ internal sealed class BagOrganizer
 
             if (data == null) return null;
 
-            var row = config.Get_Config_Item(data.ItemConfigId);
+            var row = GameStorages.ItemRow(config, data.ItemConfigId);
             var size = data.ItemSize;
             var at = new Cell(data.BagPos.x, data.BagPos.y);
 
@@ -294,7 +294,7 @@ internal sealed class BagOrganizer
 
             var size = data.ItemSize;
             var at = data.BagPos;
-            var category = config.Get_Config_Item(data.ItemConfigId)?.Category ?? 0;
+            var category = GameStorages.ItemRow(config, data.ItemConfigId)?.Category ?? 0;
 
             bag.Add(new Held(data, new BagItem(new PackItem(data.InstanceId, size.x, size.y, data.ItemConfigId, category), new Cell(at.x, at.y))));
         }

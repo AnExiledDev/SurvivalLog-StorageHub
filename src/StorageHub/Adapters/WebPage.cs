@@ -19,6 +19,7 @@ internal sealed class WebPage
     private const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
 
     private readonly Action<string> _log;
+    private readonly WordsOnce _words = new();
     private string _toggleKey = "F8";
     private string? _script;
     private float _nextCheckAt;
@@ -29,7 +30,7 @@ internal sealed class WebPage
         _log = log;
     }
 
-    /// <summary>The page's words name the panel key, and every call sends them again.</summary>
+    /// <summary>The page's words name the panel key; a new key sends them again with the next call.</summary>
     public void UseToggleKey(string toggleKey) => _toggleKey = toggleKey;
 
     public void KeepInstalled(float now)
@@ -42,7 +43,14 @@ internal sealed class WebPage
 
     public void Install()
     {
-        if (Run(Words() + Script())) _log("page script sent to the web UI");
+        // A fresh script means a fresh page, which has no words until this sends them.
+        _words.Forget();
+        var words = Words();
+
+        if (!Run(words + Script())) return;
+
+        _words.Sent(words);
+        _log("page script sent to the web UI");
     }
 
     public void Open(string viewJson) => Call($"open({viewJson})");
@@ -54,8 +62,8 @@ internal sealed class WebPage
     /// <summary>Every named item in the game, for the keep list's search; sent when the page asks, once per page load.</summary>
     public void Catalog(string catalogJson) => Call($"catalog({catalogJson})");
 
-    /// <summary>The home storage list beside a station; "null" tells the page the list is turned off.</summary>
-    public void Station(string stationJson) => Call($"station({stationJson})");
+    /// <summary>The home storage list beside a station; "null" tells the page the list is turned off. False when it could not be sent.</summary>
+    public bool Station(string stationJson) => Call($"station({stationJson})");
 
     /// <summary>Whether the HUD button can open the panel (a save is loaded), and the key it names in its tip.</summary>
     public bool Live(bool isLive, string keyName) => Run($"window.__storagehub&&window.__storagehub.live({(isLive ? "true" : "false")},{HubView.Str(keyName)})");
@@ -67,7 +75,20 @@ internal sealed class WebPage
     /// and the home storage window opened from it.</summary>
     public void CloseMenu() => Run("window.__slmodmenu&&window.__slmodmenu.close();window.__storagehub&&window.__storagehub.closePop&&window.__storagehub.closePop()");
 
-    private void Call(string expression) => Run($"{Words()}window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}");
+    /// <summary>
+    /// The words go in front only when the page does not have them yet (a new language or key): they are a few
+    /// kilobytes, and once went out with every call.
+    /// </summary>
+    private bool Call(string expression)
+    {
+        var words = Words();
+
+        if (!Run($"{_words.Pending(words)}window.__storagehub?window.__storagehub.{expression}:{NoScriptReply}")) return false;
+
+        _words.Sent(words);
+
+        return true;
+    }
 
     private string Words() => PageWords.Script(GameLanguage.IsChinese(), _toggleKey);
 

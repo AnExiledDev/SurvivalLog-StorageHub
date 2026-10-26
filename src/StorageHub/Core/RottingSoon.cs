@@ -46,6 +46,12 @@ public static class RottingSoon
         return days == 0 ? Texts.HoursLeft.Say(isChinese, hours) : Texts.DaysLeft.Say(isChinese, days, hours);
     }
 
+    /// <summary>
+    /// The hour the list would put a stack in, by the same rule as Rows, or int.MinValue for one the list leaves out.
+    /// Two readings with the same key put the stack in the same row.
+    /// </summary>
+    public static int HourKey(float daysLeft) => Spoils(daysLeft) ? HoursLeft(daysLeft) : int.MinValue;
+
     /// <summary>The game answers -1 for an item that never spoils or has stopped, and Freshness.NeverSpoils stands in when the game cannot be asked.</summary>
     private static bool Spoils(float daysLeft) => daysLeft >= 0f && daysLeft < Freshness.NeverSpoils && !float.IsNaN(daysLeft);
 

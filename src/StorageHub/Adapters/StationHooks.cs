@@ -75,81 +75,133 @@ internal static class StationHooks
         }
     }
 
-    private static void BeforeCooking(Ac_Item_GetCookingBagList ac, State_Data_Item state) =>
-        Guard(() =>
-        {
-            if (ac != null) ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Cooking, state, ac.OwnerId, ac.TargetId);
-        });
+    // Each hook checks the switch before anything else and runs its body in a plain try, with no closure, so a hook
+    // with the tabs turned off costs a field read and nothing more.
+    private static void BeforeCooking(Ac_Item_GetCookingBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
 
-    private static void BeforeRatCage(Ac_Item_GetRatCageBagList ac, State_Data_Item state) =>
-        Guard(() =>
+        try
         {
-            if (ac != null) ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.RatCage, state, ac.OwnerId, ac.TargetId);
-        });
-
-    private static void BeforeBrew(Ac_Item_GetBrewBagList ac, State_Data_Item state) =>
-        Guard(() =>
+            ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Cooking, state, ac.OwnerId, ac.TargetId);
+        }
+        catch (Exception ex)
         {
-            if (ac != null) ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Brew, state, ac.OwnerId, ac.TargetId);
-        });
+            ReportFailure(ex);
+        }
+    }
 
-    private static void BeforeDye(Ac_Item_GetDyeBagList ac, State_Data_Item state) =>
-        Guard(() =>
+    private static void BeforeRatCage(Ac_Item_GetRatCageBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
+
+        try
         {
-            if (ac != null) ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Dye, state, ac.OwnerId, ac.TargetId);
-        });
-
-    private static void BeforeShredder(Ac_Item_GetShredderBagList ac, State_Data_Item state) =>
-        Guard(() =>
+            ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.RatCage, state, ac.OwnerId, ac.TargetId);
+        }
+        catch (Exception ex)
         {
-            if (ac == null) return;
+            ReportFailure(ex);
+        }
+    }
 
+    private static void BeforeBrew(Ac_Item_GetBrewBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
+
+        try
+        {
+            ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Brew, state, ac.OwnerId, ac.TargetId);
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
+
+    private static void BeforeDye(Ac_Item_GetDyeBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
+
+        try
+        {
+            ac.Fridges = WithFridgeTabs(ac.Fridges, StationKind.Dye, state, ac.OwnerId, ac.TargetId);
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
+
+    private static void BeforeShredder(Ac_Item_GetShredderBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
+
+        try
+        {
             var shown = new HashSet<long> { ac.OwnerId, ac.TargetId, ac.TrayOwnerId };
 
             AddOwners(shown, ac.Cabinets);
             ac.Cabinets = WithCabinetTabs(ac.Cabinets, StoragesToAdd(StationKind.Shredder, state, shown));
-        });
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
 
     // The press lists fridges as well; a storage goes in with the cabinets, as a fridge tab carries the freezer's rules.
-    private static void BeforeCompressor(Ac_Item_GetCompressorBagList ac, State_Data_Item state) =>
-        Guard(() =>
-        {
-            if (ac == null) return;
+    private static void BeforeCompressor(Ac_Item_GetCompressorBagList ac, State_Data_Item state)
+    {
+        if (!_isOn || ac == null) return;
 
+        try
+        {
             var shown = new HashSet<long> { ac.OwnerId, ac.TargetId, ac.TrayOwnerId };
 
             AddOwners(shown, ac.Cabinets);
             AddOwners(shown, ac.Fridges);
             ac.Cabinets = WithCabinetTabs(ac.Cabinets, StoragesToAdd(StationKind.Compressor, state, shown));
-        });
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
 
     // Parameters by position: OwnerId, TargetId and Cabinets of the static SendAction.
     private static void BeforeWorkbench(long __0, long __1, ref Il2CppCabinets __5)
     {
-        var cabinets = __5;
+        if (!_isOn) return;
 
-        Guard(() =>
+        try
         {
-            var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+            var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(GameStorages.ItemDataType);
 
             if (state == null) return;
 
             var shown = new HashSet<long> { __0, __1 };
 
-            AddOwners(shown, cabinets);
-            cabinets = WithCabinetTabs(cabinets, StoragesToAdd(StationKind.Workbench, state, shown));
-        });
-
-        __5 = cabinets;
+            AddOwners(shown, __5);
+            __5 = WithCabinetTabs(__5, StoragesToAdd(StationKind.Workbench, state, shown))!;
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
     }
 
     private static void AfterTradeContainers(long droneOwnerId, ref Il2CppTradeContainers __result)
     {
-        var containers = __result;
+        if (!_isOn) return;
 
-        Guard(() =>
+        try
         {
-            var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+            var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(GameStorages.ItemDataType);
+
+            if (state == null) return;
+
+            var containers = __result;
             var shown = new HashSet<long> { droneOwnerId };
 
             if (containers != null)
@@ -160,16 +212,20 @@ internal static class StationHooks
                 }
             }
 
-            var storages = state == null ? new List<HomeStorage>() : StoragesToAdd(StationKind.Trade, state, shown);
+            var storages = StoragesToAdd(StationKind.Trade, state, shown);
 
             if (storages.Count == 0) return;
 
             containers ??= new Il2CppTradeContainers();
 
             foreach (var storage in storages) containers.Add(new TradeContainerInfo { OwnerId = storage.OwnerId, FurnitureConfigId = storage.ConfigId, IsFridge = false, Pinned = false });
-        });
 
-        __result = containers;
+            __result = containers;
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
     }
 
     /// <summary>
@@ -180,8 +236,11 @@ internal static class StationHooks
     /// RA_OpenUI), so they are appended right after. The game names every tab it does not know "Backpack", so each
     /// storage tab is given the name the Home list shows.
     /// </summary>
-    private static void AfterBuildATabs(State_Web_BackpackUI state, State_Data_Item itemState) =>
-        Guard(() =>
+    private static void AfterBuildATabs(State_Web_BackpackUI state, State_Data_Item itemState)
+    {
+        if (!_isOn) return;
+
+        try
         {
             var agents = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager;
 
@@ -191,26 +250,32 @@ internal static class StationHooks
 
             for (var i = 0; i < state.ATabOwnerIds.Count; i++) shown.Add(state.ATabOwnerIds[i]);
 
-            var homes = GameStorages.HomeFurnitures(agents).Select(furniture => new LootTabs.Place(furniture.InstanceId, StrangerTradeActiveManager.TripOf(furniture) != null));
-            var added = LootTabs.ToAdd(state.IsDualBag, GameStorages.IsExploring(), homes, shown);
+            // One walk of the game's furniture serves both the tabs and their names.
+            var homes = GameStorages.HomeFurnitures(agents);
+            var places = homes.Select(furniture => new LootTabs.Place(furniture.InstanceId, StrangerTradeActiveManager.TripOf(furniture) != null));
+            var added = LootTabs.ToAdd(state.IsDualBag, GameStorages.IsExploring(), places, shown);
 
             if (added.Count == 0) return;
 
             foreach (var ownerId in added) state.ATabOwnerIds.Add(ownerId);
 
-            state.ATabsJson.Value = BagTabNames.Rename(Reducer_Web_BackpackUI.BuildATabsJson(state, itemState), StorageTabNames(state));
-        });
+            state.ATabsJson.Value = BagTabNames.Rename(Reducer_Web_BackpackUI.BuildATabsJson(state, itemState), StorageTabNames(state, homes));
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
 
     /// <summary>Each tab showing a home storage, by its place in the tab list, with the name the Home list gives it.</summary>
-    private static Dictionary<int, string> StorageTabNames(State_Web_BackpackUI state)
+    private static Dictionary<int, string> StorageTabNames(State_Web_BackpackUI state, List<Furniture> homes)
     {
         var byIndex = new Dictionary<int, string>();
-        var agents = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager;
         var config = GameSingleton.Existing<ConfigManager>();
 
-        if (agents == null || config == null) return byIndex;
+        if (config == null) return byIndex;
 
-        var names = GameStorages.HomeStorageNames(agents, config);
+        var names = GameStorages.HomeStorageNames(homes, config);
 
         for (var i = 0; i < state.ATabOwnerIds.Count; i++)
         {
@@ -311,20 +376,11 @@ internal static class StationHooks
     }
 
     /// <summary>An exception must never escape into the game's code, so a failing hook logs once and leaves the tabs alone.</summary>
-    private static void Guard(Action addTabs)
+    private static void ReportFailure(Exception ex)
     {
-        if (!_isOn) return;
+        if (_hasReportedHookFailure) return;
 
-        try
-        {
-            addTabs();
-        }
-        catch (Exception ex)
-        {
-            if (_hasReportedHookFailure) return;
-
-            _hasReportedHookFailure = true;
-            _log("adding storage tabs to a station failed, it keeps the game's own tabs (only the first failure is logged): " + ex);
-        }
+        _hasReportedHookFailure = true;
+        _log("adding storage tabs to a station failed, it keeps the game's own tabs (only the first failure is logged): " + ex);
     }
 }

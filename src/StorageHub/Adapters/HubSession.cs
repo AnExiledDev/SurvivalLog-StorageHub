@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using StorageHub.Core;
 using UnityEngine;
 
@@ -15,6 +17,9 @@ internal sealed class HubSession
     private const float RefreshSeconds = 1f;
     private const float LiveCheckSeconds = 1f;
 
+    /// <summary>How long the catalog build may run in one frame.</summary>
+    private static readonly long SliceTicks = (long)(2.0 * Stopwatch.Frequency / 1000.0);
+
     private readonly GameStorages _game;
     private readonly WebPage _page;
     private readonly WebKeyboard _keyboard;
@@ -22,8 +27,17 @@ internal sealed class HubSession
     private readonly KeepListKeeper _keep;
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
+    private readonly BuiltView _built = new();
+    private readonly StationAnswers _stationAnswers = new();
+    private readonly Func<bool> _isSliceSpent;
 
     private IconIndex? _icons;
+    private Task<(IconIndex Icons, string Note)>? _iconScan;
+    private SlicedJob? _catalogJob;
+    private CatalogKey _catalogJobKey;
+    private CatalogKey _catalogKey;
+    private string? _catalogJson;
+    private long _sliceEndsAt;
     private BesideBagStep _besideBag = new BesideBagStep.Idle();
     private Inventory _inventory = Inventory.Empty;
     private string _shownView = "";
@@ -31,12 +45,16 @@ internal sealed class HubSession
     private bool _isOpen;
     private bool _hasLoggedIcons;
     private KeyCode _toggleKey = KeyCode.F8;
+    private string _toggleKeyName = nameof(KeyCode.F8);
     private bool _isVerbose;
     private bool _isKeepOn;
     private bool _isHomeListOn;
     private bool? _sentLive;
     private string _sentLiveKey = "";
     private float _nextLiveCheckAt;
+
+    /// <summary>What a built catalog was built from: the item table, the world (whose load drops the names) and the language.</summary>
+    private readonly record struct CatalogKey(long Table, long World, bool IsChinese);
 
     public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, Action<string> log, KeepListKeeper keep)
     {
@@ -45,6 +63,7 @@ internal sealed class HubSession
         _keyboard = keyboard;
         _log = log;
         _keep = keep;
+        _isSliceSpent = () => Stopwatch.GetTimestamp() >= _sliceEndsAt;
     }
 
     /// <summary>
@@ -54,10 +73,11 @@ internal sealed class HubSession
     public void Use(KeyCode toggleKey, bool isVerbose, bool isKeepOn, bool isHomeListOn)
     {
         _toggleKey = toggleKey;
+        _toggleKeyName = toggleKey.ToString();
         _isVerbose = isVerbose;
         _isKeepOn = isKeepOn;
         _isHomeListOn = isHomeListOn;
-        _page.UseToggleKey(toggleKey.ToString());
+        _page.UseToggleKey(_toggleKeyName);
     }
 
     public void Update()
@@ -65,8 +85,15 @@ internal sealed class HubSession
         var now = Time.unscaledTime;
         _page.KeepInstalled(now);
 
-        foreach (var command in CommandBatch.WithoutRepeatedMoves(TakeQueuedCommands())) HandleSafely(command);
+        // The icon folder is walked on a worker thread from the first frame, long before anyone opens the panel.
+        if (_icons == null) AreIconsIn();
 
+        if (PageMessages.HasQueued)
+        {
+            foreach (var command in CommandBatch.WithoutRepeatedMoves(TakeQueuedCommands())) HandleSafely(command);
+        }
+
+        AdvanceCatalog();
         AdvanceBesideBag();
         SendLive(now);
 
@@ -112,7 +139,7 @@ internal sealed class HubSession
 
         _nextLiveCheckAt = now + LiveCheckSeconds;
         var isLive = _game.IsWorldLoaded();
-        var key = _toggleKey.ToString();
+        var key = _toggleKeyName;
 
         if (_sentLive == isLive && _sentLiveKey == key) return;
 
@@ -234,37 +261,59 @@ internal sealed class HubSession
         if (_status.Refreshed(notReady) is { } status) _page.Status(status);
     }
 
-    /// <summary>The view JSON, and why the inventory could not be read when it could not (the view is then empty).</summary>
+    /// <summary>
+    /// The view JSON, and why the inventory could not be read when it could not (the view is then empty). The game is
+    /// read every time, but the view is built only when its print moved: an idle panel's view comes out the same
+    /// second after second, and building it means sorting and writing out every item.
+    /// </summary>
     private string ReadView(out string? notReady)
     {
         _nextRefreshAt = Time.unscaledTime + RefreshSeconds;
         notReady = RefreshInventory(out var reason) ? null : NotAvailable(reason);
 
-        var rot = notReady == null ? ReadRottingSoon() : Array.Empty<RotRow>();
-        AddNames(_keep.List.Amounts.Keys);
-        var view = HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep.List)), StackingUnits.IsAvailable);
+        // The floor counts in the "Rotting soon" list; floor kinds no storage holds get their names added first.
+        var floor = notReady == null ? _game.ReadFloor() : Array.Empty<ItemStack>();
+        AddNames(floor);
+        AddNames(_keep.List);
+
+        var print = ViewPrint.Of(_inventory, floor, _game.DaysLeft, _keep.List, _isKeepOn, StackingUnits.IsAvailable, _icons != null);
+
+        if (_built.TryGet(print, out var view)) return view;
+
+        var rot = notReady == null ? RottingSoon.Rows(_inventory, floor, _game.DaysLeft) : Array.Empty<RotRow>();
+        view = _built.Keep(print, HubView.Build(_inventory, IconPath, rot, new KeepView(_isKeepOn, BagKeep.Rows(_inventory, _keep.List)), StackingUnits.IsAvailable));
         LogIconsOnce();
 
         return view;
     }
 
-    /// <summary>The "Rotting soon" list, floor included; floor kinds no storage holds get their names added first.</summary>
-    private IReadOnlyList<RotRow> ReadRottingSoon()
+    /// <summary>Names for floor items the storage read did not see.</summary>
+    private void AddNames(IReadOnlyList<ItemStack> stacks)
     {
-        var floor = _game.ReadFloor();
-        AddNames(floor.Select(stack => stack.ConfigId));
+        Dictionary<int, string>? names = null;
 
-        return RottingSoon.Rows(_inventory, floor, _game.DaysLeft);
+        foreach (var stack in stacks) AddName(ref names, stack.ConfigId);
+
+        if (names != null) _inventory = _inventory with { ItemNames = names };
     }
 
-    /// <summary>Names for items the storage read did not see, such as floor items and kept items the player does not hold.</summary>
-    private void AddNames(IEnumerable<int> configIds)
+    /// <summary>Names for kept items the player does not hold.</summary>
+    private void AddNames(KeepList keep)
     {
-        var names = _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
+        Dictionary<int, string>? names = null;
 
-        foreach (var configId in configIds) names.TryAdd(configId, _game.NameOf(configId));
+        foreach (var configId in keep.Amounts.Keys) AddName(ref names, configId);
 
-        _inventory = _inventory with { ItemNames = names };
+        if (names != null) _inventory = _inventory with { ItemNames = names };
+    }
+
+    /// <summary>The read's names are copied only once one is missing, which most seconds none is.</summary>
+    private void AddName(ref Dictionary<int, string>? names, int configId)
+    {
+        if (names?.ContainsKey(configId) ?? _inventory.ItemNames.ContainsKey(configId)) return;
+
+        names ??= _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
+        names[configId] = _game.NameOf(configId);
     }
 
     private bool RefreshInventory(out string reason)
@@ -330,7 +379,7 @@ internal sealed class HubSession
                 SendCatalog();
                 break;
             case PageCommand.StationList stationList:
-                SendStation(stationList.Kind);
+                SendStation(stationList.Kind, stationList.HasList);
                 break;
             case PageCommand.OpenStorage openStorage:
                 OpenBesideBag(openStorage.OwnerId);
@@ -356,8 +405,9 @@ internal sealed class HubSession
                 InputGate.MenuClosed();
                 // Nor does it have a focused field, and a claim left behind would keep Esc from closing the panel.
                 _keyboard.Release();
-                // A reloaded page has lost the HUD button's state, so the next check sends it again.
+                // A reloaded page has lost the HUD button's state, so the next check sends it again; the same for its station list.
                 _sentLive = null;
+                _stationAnswers.Forget();
                 ReopenAfterReload();
                 break;
             case PageCommand.NoScript:
@@ -464,7 +514,7 @@ internal sealed class HubSession
 
         if (!RefreshInventory(out var reason)) return NotAvailable(reason);
 
-        AddNames(_keep.List.Amounts.Keys);
+        AddNames(_keep.List);
         var steps = UnitTake.Fill(_inventory, _keep.List);
         var none = UnitTake.NoneStored(_inventory, _keep.List);
 
@@ -577,30 +627,92 @@ internal sealed class HubSession
 
     private static string NotAvailable(string reason) => Texts.NotAvailable.Say(IsChinese, reason);
 
-    /// <summary>A failed catalog is answered with an empty one, which the page takes as "ask again later".</summary>
+    /// <summary>
+    /// The keep list's catalog. A few thousand items once went out in one frame; now the build takes a slice of each
+    /// frame (<see cref="AdvanceCatalog"/>) and the result is kept, so asking again for the same tables, world and
+    /// language sends the kept one at once. A failed catalog is answered with an empty one, which the page takes as
+    /// "ask again later".
+    /// </summary>
     private void SendCatalog()
     {
         try
         {
-            var catalog = _game.Catalog();
-            _page.Catalog(HubView.Catalog(catalog, IconPath));
-            _log($"keep list catalog sent: {catalog.Count} items");
+            var isChinese = IsChinese;
+
+            if (GameStorages.CatalogNow(isChinese) is not { } source)
+            {
+                _log("the item table is not loaded yet, the page will ask for the catalog again");
+                _page.Catalog("[]");
+
+                return;
+            }
+
+            var key = new CatalogKey(source.Table, source.World, isChinese);
+
+            if (_catalogJson != null && _catalogKey == key)
+            {
+                _page.Catalog(_catalogJson);
+
+                return;
+            }
+
+            // The build already running sends its catalog when it ends.
+            if (_catalogJob != null && _catalogJobKey == key) return;
+
+            _catalogJobKey = key;
+            _catalogJob = new SlicedJob(CatalogBuild.Steps(AreIconsIn, source.Ids, source.EntryOf, IconPath, (items, json) =>
+            {
+                // An empty catalog (a table not filled in yet) is not kept, so the page's next ask builds it again.
+                if (items.Count > 0)
+                {
+                    _catalogKey = key;
+                    _catalogJson = json;
+                }
+
+                _page.Catalog(json);
+                _log($"keep list catalog sent: {items.Count} items");
+            }));
         }
         catch (Exception ex)
         {
-            _log($"reading the item catalog failed, the page will ask again: {ex}");
-            _page.Catalog("[]");
+            FailCatalog(ex);
         }
     }
 
+    /// <summary>Runs the catalog build for up to 2 ms of this frame.</summary>
+    private void AdvanceCatalog()
+    {
+        if (_catalogJob == null) return;
+
+        try
+        {
+            _sliceEndsAt = Stopwatch.GetTimestamp() + SliceTicks;
+
+            if (_catalogJob.Advance(_isSliceSpent)) _catalogJob = null;
+        }
+        catch (Exception ex)
+        {
+            FailCatalog(ex);
+        }
+    }
+
+    private void FailCatalog(Exception ex)
+    {
+        _catalogJob = null;
+        _log($"reading the item catalog failed, the page will ask again: {ex}");
+        _page.Catalog("[]");
+    }
+
     /// <summary>
-    /// The home storage list beside a station, read fresh since the page asks after every click. An inventory that
-    /// cannot be read yet sends nothing, and the page asks again.
+    /// The home storage list beside a station, read fresh since the page asks after every click and every few seconds.
+    /// An answer the page already holds is not sent again; an inventory that cannot be read yet sends nothing, and the
+    /// page asks again.
     /// </summary>
-    private void SendStation(StationKind kind)
+    private void SendStation(StationKind kind, bool pageHasList)
     {
         if (!_isHomeListOn)
         {
+            _stationAnswers.Forget();
             _page.Station("null");
 
             return;
@@ -610,27 +722,35 @@ internal sealed class HubSession
         {
             if (!RefreshInventory(out _)) return;
 
-            if (kind == StationKind.Basket)
-            {
-                var (tabs, wish) = _game.ReadBasketScreen();
+            var answer = StationAnswer(kind);
 
-                _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish), tabs));
-            }
-            else if (kind == StationKind.Storage)
-            {
-                var isAway = GameStorages.IsExploring();
+            if (!_stationAnswers.IsNew(answer, pageHasList)) return;
 
-                _page.Station(StationView.Build(_inventory, kind, isAway ? _ => false : _game.Usable(kind), IconPath, tabs: _game.ReadLootScreen(), isAway: isAway));
-            }
-            else
-            {
-                _page.Station(StationView.Build(_inventory, kind, _game.Usable(kind), IconPath));
-            }
+            if (_page.Station(answer)) _stationAnswers.Sent(answer);
         }
         finally
         {
             _game.Forget();
         }
+    }
+
+    private string StationAnswer(StationKind kind)
+    {
+        if (kind == StationKind.Basket)
+        {
+            var (tabs, wish) = _game.ReadBasketScreen();
+
+            return StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish), tabs);
+        }
+
+        if (kind == StationKind.Storage)
+        {
+            var isAway = GameStorages.IsExploring();
+
+            return StationView.Build(_inventory, kind, isAway ? _ => false : _game.Usable(kind), IconPath, tabs: _game.ReadLootScreen(), isAway: isAway);
+        }
+
+        return StationView.Build(_inventory, kind, _game.Usable(kind), IconPath);
     }
 
     private void OpenBesideBag(long ownerId)
@@ -686,7 +806,7 @@ internal sealed class HubSession
 
         if (floor.Count == 0) return Texts.NothingOnFloor.Pick(IsChinese);
 
-        AddNames(floor.Select(stack => stack.ConfigId));
+        AddNames(floor);
 
         return Execute(StoragePlan.PutAwayFloor(_inventory, floor, LoggedFacts), PickUpAndLog);
     }
@@ -747,13 +867,53 @@ internal sealed class HubSession
 
     private string Describe(ItemStack stack) => $"{_inventory.ItemName(stack.ConfigId)} x{stack.Count} (item {stack.ItemId}) from {_inventory.StorageName(stack.OwnerId)}";
 
+    /// <summary>
+    /// The item's web icon, or null (a letter) while the icon folder is still being read; the view's print counts the
+    /// icons arriving, so the panel is drawn again with them. A path, once found, is kept: neither the files nor the
+    /// item table change while the game runs.
+    /// </summary>
     private string? IconPath(int configId)
     {
+        if (_icons == null) return null;
+
         if (_iconPaths.TryGetValue(configId, out var cached)) return cached;
 
-        _icons ??= WebIcons.Load(_log);
-
         return _iconPaths[configId] = _icons.Resolve(_game.IconName(configId));
+    }
+
+    /// <summary>
+    /// Whether the icon folder has been read, starting the read (on a worker thread) the first time it is asked. The
+    /// result is taken in here, on the main thread, so the panel never sees a half-built index.
+    /// </summary>
+    private bool AreIconsIn()
+    {
+        if (_icons != null) return true;
+
+        _iconScan ??= StartIconScan();
+
+        if (!_iconScan.IsCompleted) return false;
+
+        var (icons, note) = _iconScan.Status == TaskStatus.RanToCompletion
+            ? _iconScan.Result
+            : (IconIndex.Empty, "no web icons, items will show letters instead: " + (_iconScan.Exception?.GetBaseException().Message ?? "the read was cancelled"));
+
+        _icons = icons;
+        _iconScan = null;
+        _log(note);
+
+        return true;
+    }
+
+    private static Task<(IconIndex Icons, string Note)> StartIconScan()
+    {
+        try
+        {
+            return WebIcons.StartScan();
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult((IconIndex.Empty, "no web icons, items will show letters instead: " + ex.Message));
+        }
     }
 
     /// <summary>The icon name format is a guess from the file names, so the first view logs how well it matched.</summary>

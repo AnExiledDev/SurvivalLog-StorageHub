@@ -24,8 +24,12 @@ internal sealed class DeliveryPutAway
     private readonly WebPage _page;
     private readonly Action<string> _log;
 
+    private readonly List<ItemStack> _held = new();
+
     private List<Landing> _waiting = new();
     private LandingGroup? _group;
+    private IReadOnlyList<long> _owners = Array.Empty<long>();
+    private IReadOnlyList<ItemStack> _before = Array.Empty<ItemStack>();
     private float _startedAt;
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
     private bool _skipRobotPutOff;
@@ -62,10 +66,25 @@ internal sealed class DeliveryPutAway
             return;
         }
 
-        var (group, waiting) = Delivery.Absorb(watched, _waiting);
-        _group = group;
-        _waiting = waiting.ToList();
-        var seenNow = Delivery.Delivered(group.Before, group.Owners.SelectMany(owner => GameStorages.ReadHeld(items, owner)).ToList());
+        var group = watched;
+
+        if (_waiting.Count > 0)
+        {
+            var (grown, waiting) = Delivery.Absorb(watched, _waiting);
+
+            if (grown.Landings.Count != watched.Landings.Count)
+            {
+                group = Watch(grown);
+                _waiting = waiting.ToList();
+            }
+        }
+
+        // Read every frame of the watch, so the bags go into one list kept for it, against owners and a before read once a group.
+        _held.Clear();
+
+        foreach (var owner in _owners) GameStorages.AddHeld(items, owner, _held);
+
+        var seenNow = Delivery.Delivered(_before, _held);
 
         switch (Delivery.Check(_seenLastTime, seenNow, Time.unscaledTime - _startedAt, LimitSeconds))
         {
@@ -95,17 +114,30 @@ internal sealed class DeliveryPutAway
     {
         if (_waiting.Count == 0) return null;
 
-        _group = new LandingGroup(new[] { _waiting[0] });
+        var group = Watch(new LandingGroup(new[] { _waiting[0] }));
         _waiting.RemoveAt(0);
         _startedAt = Time.unscaledTime;
         _seenLastTime = Array.Empty<ItemStack>();
 
-        return _group;
+        return group;
+    }
+
+    /// <summary>The group's owners and before read are worked out from its landings on each ask, so they are taken once here.</summary>
+    private LandingGroup Watch(LandingGroup group)
+    {
+        _group = group;
+        _owners = group.Owners;
+        _before = group.Before;
+
+        return group;
     }
 
     private void Finish()
     {
         _group = null;
+        _owners = Array.Empty<long>();
+        _before = Array.Empty<ItemStack>();
+        _held.Clear();
         _seenLastTime = Array.Empty<ItemStack>();
     }
 

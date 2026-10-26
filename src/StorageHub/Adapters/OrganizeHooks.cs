@@ -78,24 +78,46 @@ internal static class OrganizeHooks
         }
     }
 
-    private static void AfterOpen(State_Web_BackpackUI __result) =>
-        Record(() =>
-        {
-            if (_isOrganizeOnOpen && __result != null) Requests.Opened(ReadScreen(__result));
-        });
+    // Each hook body is a plain try with no lambda, so a hook whose setting is off returns before anything is allocated.
+    private static void AfterOpen(State_Web_BackpackUI __result)
+    {
+        if (!_isOrganizeOnOpen || __result == null) return;
 
-    private static void AfterSort(Ac_BackpackUI_Sort ac, State_Web_BackpackUI __result) =>
-        Record(() =>
+        try
         {
-            if (_isCompactSort && __result != null) Requests.Sorted(ac?.Side, ReadScreen(__result));
-        });
+            var screen = ReadScreen(__result);
+
+            lock (Gate) Requests.Opened(screen);
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
+
+    private static void AfterSort(Ac_BackpackUI_Sort ac, State_Web_BackpackUI __result)
+    {
+        if (!_isCompactSort || __result == null) return;
+
+        try
+        {
+            var screen = ReadScreen(__result);
+
+            lock (Gate) Requests.Sorted(ac?.Side, screen);
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
 
     /// <summary>The trade window shows one bag tab at a time; an offer list that cannot be read leaves it as the game sorted it.</summary>
-    private static void AfterTradeSort(State_Web_TradeUI __result) =>
-        Record(() =>
-        {
-            if (!_isCompactSort || __result == null) return;
+    private static void AfterTradeSort(State_Web_TradeUI __result)
+    {
+        if (!_isCompactSort || __result == null) return;
 
+        try
+        {
             if (OfferedStacks.Read(__result.GiveJson) is not { } onOffer)
             {
                 _log("the trade window's offer list could not be read, so its Sort button only sorts the game's way");
@@ -103,25 +125,35 @@ internal static class OrganizeHooks
                 return;
             }
 
-            Requests.TradeSorted(__result.BagOwnerId, new GridSize(__result.BagW, __result.BagH), onOffer);
-        });
+            var bag = new GridSize(__result.BagW, __result.BagH);
 
-    private static void AfterClose() => Record(() => Requests.Closed());
-
-    /// <summary>An exception must never escape into the game's reducer, so a failing hook logs once and records nothing.</summary>
-    private static void Record(Action record)
-    {
-        try
-        {
-            lock (Gate) record();
+            lock (Gate) Requests.TradeSorted(__result.BagOwnerId, bag, onOffer);
         }
         catch (Exception ex)
         {
-            if (_hasReportedHookFailure) return;
-
-            _hasReportedHookFailure = true;
-            _log("a bag screen hook failed (only the first failure is logged): " + ex);
+            ReportFailure(ex);
         }
+    }
+
+    private static void AfterClose()
+    {
+        try
+        {
+            lock (Gate) Requests.Closed();
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(ex);
+        }
+    }
+
+    /// <summary>An exception must never escape into the game's reducer, so a failing hook logs once and records nothing.</summary>
+    private static void ReportFailure(Exception ex)
+    {
+        if (_hasReportedHookFailure) return;
+
+        _hasReportedHookFailure = true;
+        _log("a bag screen hook failed (only the first failure is logged): " + ex);
     }
 
     private static BagScreen ReadScreen(State_Web_BackpackUI state) =>

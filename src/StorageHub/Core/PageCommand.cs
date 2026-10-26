@@ -54,8 +54,8 @@ public abstract record PageCommand
     /// <summary>The keep list's search wants every item in the game, not just the ones the player owns.</summary>
     public sealed record SendCatalog : PageCommand;
 
-    /// <summary>The home storage list beside a station wants its storages and items.</summary>
-    public sealed record StationList(StationKind Kind) : PageCommand;
+    /// <summary>The home storage list beside a station wants its storages and items; HasList says the page still holds the last list it got.</summary>
+    public sealed record StationList(StationKind Kind, bool HasList = false) : PageCommand;
 
     /// <summary>Open one home storage beside the bag on the inventory screen; -1 closes it again.</summary>
     public sealed record OpenStorage(long OwnerId) : PageCommand;
@@ -101,6 +101,7 @@ public abstract record PageCommand
             ("keepRemove", 2) when TryInt(parts[1], out var configId) => new RemoveKeep(configId),
             ("catalog", 1) => new SendCatalog(),
             ("station", 2) when StationView.Parse(parts[1]) is { } kind => new StationList(kind),
+            ("station", 3) when parts[2] == "1" && StationView.Parse(parts[1]) is { } kind => new StationList(kind, HasList: true),
             ("openStorage", 2) when TryLong(parts[1], out var ownerId) => new OpenStorage(ownerId),
             ("close", 1) => new Close(),
             ("focus", 2) when parts[1] is "0" or "1" => new Focus(parts[1] == "1"),

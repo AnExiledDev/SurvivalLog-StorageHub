@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using GameCore.HotUpdate.Battle.Logic;
 using HarmonyLib;
 using StorageHub.Core;
@@ -67,7 +66,11 @@ internal static class DeliveryHooks
 
             var hub = StrangerTradeActiveManager.GetDockHub(drone);
             var landing = new Landing(drone.InstanceId, hub?.InstanceId, trip.TripType, Array.Empty<ItemStack>());
-            landing = landing with { Before = landing.Owners.SelectMany(owner => GameStorages.ReadHeld(items, owner)).ToList() };
+            var before = new List<ItemStack>();
+
+            foreach (var owner in landing.Owners) GameStorages.AddHeld(items, owner, before);
+
+            landing = landing with { Before = before };
 
             lock (Gate) Landings.Enqueue(landing);
         }

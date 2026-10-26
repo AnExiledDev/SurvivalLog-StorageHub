@@ -24,7 +24,7 @@ internal static class StationRules
     {
         try
         {
-            var row = config.Get_Config_Item(item.ItemConfigId);
+            var row = GameStorages.ItemRow(config, item.ItemConfigId);
 
             if (row == null) return false;
 

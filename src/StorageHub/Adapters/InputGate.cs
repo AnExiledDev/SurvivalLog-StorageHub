@@ -78,7 +78,19 @@ internal static class InputGate
         }
     }
 
-    private static bool SkipWhileBlocked() => !(_isPanelOpen || _isMenuOpen || _isTyping || Time.frameCount <= _blockedThroughFrame);
+    /// <summary>Runs before every frame's hotkeys, so the frame count (a call into the engine) is read only while a close is still being held off.</summary>
+    private static bool SkipWhileBlocked()
+    {
+        if (_isPanelOpen || _isMenuOpen || _isTyping) return false;
+
+        if (_blockedThroughFrame < 0) return true;
+
+        if (Time.frameCount <= _blockedThroughFrame) return false;
+
+        _blockedThroughFrame = -1;
+
+        return true;
+    }
 
     private static void RouteClicksToPanel(ref bool __result)
     {

@@ -161,6 +161,22 @@ public class TextsTests
         Assert.All(Texts.Page, word => Assert.Contains(HubView.Str(word.Key) + ":" + HubView.Str(word.Phrase.Zh), script));
     }
 
+    /// <summary>Here rather than with the other cost tests: the statement is kept in one static, which only this class also uses.</summary>
+    [Fact]
+    public void The_words_statement_is_built_once_per_language_and_key()
+    {
+        var first = PageWords.Script(isChinese: false, "F7");
+
+        Assert.Same(first, PageWords.Script(isChinese: false, "F7"));
+
+        var chinese = PageWords.Script(isChinese: true, "F7");
+        var otherKey = PageWords.Script(isChinese: false, "F9");
+
+        Assert.Contains(HubView.Str("homeTab") + ":" + HubView.Str(Texts.Page.Single(word => word.Key == "homeTab").Phrase.Zh), chinese);
+        Assert.Contains("window.__storagehubToggleKey=\"F9\";", otherKey);
+        Assert.Contains("window.__storagehubToggleKey=\"F7\";", PageWords.Script(isChinese: false, "F7"));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -171,6 +187,13 @@ public class TextsTests
         Assert.Contains("window.__storagehubToggleKey=\"Insert\";", script);
         Assert.Contains("{0} / Esc", Texts.Page.Single(word => word.Key == "closeKeys").Phrase.Pick(isChinese));
         Assert.Contains("say('closeKeys', window.__storagehubToggleKey", PageScript());
+    }
+
+    /// <summary>The trailing 1 is what lets the plugin hold back a list the page already shows.</summary>
+    [Fact]
+    public void A_station_ask_tells_the_plugin_when_the_page_still_holds_its_list()
+    {
+        Assert.Contains("send('station|' + home.station.kind + (hasList ? '|1' : ''));", PageScript());
     }
 
     [Fact]

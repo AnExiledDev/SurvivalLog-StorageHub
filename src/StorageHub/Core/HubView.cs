@@ -41,15 +41,15 @@ public static class HubView
     }
 
     /// <summary>Every catalog item as [{id, name, icon}], sorted by name, for the keep list's search.</summary>
-    public static string Catalog(IEnumerable<CatalogItem> items, Func<int, string?> iconOf)
-    {
-        var rows = items
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(item => item.ConfigId)
-            .Select(item => $"{{\"id\":{Num(item.ConfigId)},\"name\":{Str(item.Name)},\"icon\":{Icon(iconOf(item.ConfigId))}}}");
+    public static string Catalog(IEnumerable<CatalogItem> items, Func<int, string?> iconOf) =>
+        "[" + string.Join(",", CatalogOrder(items).Select(item => CatalogRow(item, iconOf(item.ConfigId)))) + "]";
 
-        return "[" + string.Join(",", rows) + "]";
-    }
+    /// <summary>The catalog's order: by name, then by id.</summary>
+    public static List<CatalogItem> CatalogOrder(IEnumerable<CatalogItem> items) =>
+        items.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.ConfigId).ToList();
+
+    /// <summary>One catalog item as the page reads it.</summary>
+    public static string CatalogRow(CatalogItem item, string? icon) => $"{{\"id\":{Num(item.ConfigId)},\"name\":{Str(item.Name)},\"icon\":{Icon(icon)}}}";
 
     /// <summary>A JavaScript string literal, safe to paste into a script.</summary>
     public static string Str(string? text)

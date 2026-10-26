@@ -31,6 +31,11 @@ internal static class PageMessages
         }
     }
 
+    private static readonly PageCommand Nothing = new PageCommand.Unknown("");
+
+    /// <summary>Whether a message is waiting, so a frame with none skips the take entirely.</summary>
+    public static bool HasQueued => !Queue.IsEmpty;
+
     public static bool TryTake(out PageCommand command)
     {
         if (Queue.TryDequeue(out var queued))
@@ -40,7 +45,7 @@ internal static class PageMessages
             return true;
         }
 
-        command = new PageCommand.Unknown("");
+        command = Nothing;
 
         return false;
     }

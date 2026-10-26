@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.1
+
+- The game no longer stutters the first time you open the panel: item icons now load in the background when the game starts.
+- The game no longer stutters when you open the item list for Keep in bag.
+- The panel no longer causes small hitches while it is open: it only rebuilds its list when something in your storages changes.
+- The Home tab at stations and the putting away of drone deliveries do less work, so the game runs smoother at stations and when a drone lands.
+- Made for Survival Log 1.1.19611.
+
 ## 0.15.0
 
 - "Put away by tag" and "Put away floor" are now also in the Mods button on the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, so you can put your bag away without going back to the inventory.

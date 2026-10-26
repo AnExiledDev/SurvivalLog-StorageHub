@@ -17,6 +17,9 @@ internal abstract record InventoryRead
     public sealed record NotReady(string Reason) : InventoryRead;
 }
 
+/// <summary>The item table and world a catalog is built from (by address), its ids, and the entry for each id.</summary>
+internal sealed record CatalogSource(long Table, long World, IEnumerable<int> Ids, Func<int, CatalogItem?> EntryOf);
+
 /// <summary>
 /// The only code that reads or moves the game's items. Reads go through the UI store's item cache, the same
 /// source ItemTotals and BetterCrafting use; moves go through the game's own quick-move.
@@ -31,12 +34,23 @@ internal sealed class GameStorages
     /// <summary>What an item's spoil clock reads, for the fridge tag rules.</summary>
     private readonly record struct ShelfClock(float StartTime, float TimeLeft, float PresetShelfScale);
 
+    // What the game's tables answer, kept while the tables and the language stay the same: the panel reads the
+    // inventory every second it is open, and the names and rows in it never change in between. Shared by every reader
+    // (the panel, the drone delivery, the station hooks), all on the main thread.
+    private static readonly TableCache<int, Config_Item?> ItemRows = new();
+    private static readonly TableCache<int, string> ItemNames = new();
+    private static readonly TableCache<int, string?> FurnitureNames = new();
+    private static readonly TableCache<int, bool> MaterialRacks = new();
+
+    private static Il2CppSystem.Type? _itemDataType;
+    private static Il2CppSystem.Type? _backpackScreenType;
+    private static IntPtr _namedWorld;
+
     private readonly Action<string> _log;
     private readonly Dictionary<long, Furniture> _furnitures = new();
     private readonly Dictionary<long, ShelfClock> _clocks = new();
-    private readonly Dictionary<int, string> _itemNames = new();
     private readonly Dictionary<long, float> _daysLeft = new();
-    private IntPtr _namedWorld;
+    private Il2CppSystem.Collections.Generic.List<DropItem>? _floorFound;
     private bool _hasReportedRankFailure;
     private bool _hasReportedRackRankFailure;
     private bool _hasReportedRackCheckFailure;
@@ -59,7 +73,7 @@ internal sealed class GameStorages
     {
         Forget();
 
-        var cache = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>())?.OwnerCache;
+        var cache = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(ItemDataType)?.OwnerCache;
         var world = GameSingleton.Existing<BattleLogicWorld>();
         var agents = world?._AgentManager;
         var player = agents?.GetLeadingRole();
@@ -73,12 +87,48 @@ internal sealed class GameStorages
         ForgetNamesOfOtherWorld(world);
 
         var storages = new List<Storage> { new(player.InstanceId, Texts.Bag.Pick(isChinese), StorageKind.Bag) };
-        storages.AddRange(HomeStorages(agents, config));
+        AddHomeStorages(agents, config, isChinese, storages);
         storages.Add(new Storage(WorkbenchDrawerConfig.DrawerOwnerId, Texts.WorkbenchDrawer.Pick(isChinese), StorageKind.Drawer));
         var stacks = ReadStacks(cache, storages, config, NowHours(world));
-        var names = stacks.Select(stack => stack.ConfigId).Distinct().ToDictionary(id => id, id => ItemName(config, id));
+        var names = new Dictionary<int, string>();
+
+        foreach (var stack in stacks)
+        {
+            if (!names.ContainsKey(stack.ConfigId)) names[stack.ConfigId] = ItemName(config, stack.ConfigId, isChinese);
+        }
 
         return new InventoryRead.Ready(new Inventory(storages, stacks, names, isChinese));
+    }
+
+    /// <summary>
+    /// Names are dropped when another world loads, as they always were: a language pack picked in the menu can rename
+    /// things without the table or the Chinese setting changing.
+    /// </summary>
+    private static void ForgetNamesOfOtherWorld(BattleLogicWorld world)
+    {
+        if (world.Pointer == _namedWorld) return;
+
+        ItemNames.Clear();
+        FurnitureNames.Clear();
+        _namedWorld = world.Pointer;
+    }
+
+    /// <summary>The UI store's item data type, looked up once.</summary>
+    public static Il2CppSystem.Type ItemDataType => _itemDataType ??= Il2CppType.Of<State_Data_Item>();
+
+    /// <summary>
+    /// The item table's row for an item, or null when it has none. Read straight from the table rather than through
+    /// Get_Config_Item, and kept per table, so a row is looked up once a run. A table not loaded yet keeps nothing.
+    /// </summary>
+    public static Config_Item? ItemRow(ConfigManager config, int configId)
+    {
+        ItemRows.Use(config.Pointer.ToInt64(), isChinese: false);
+
+        if (ItemRows.TryGet(configId, out var cached)) return cached;
+
+        if (config._Config_Item_Dict is not { } table) return null;
+
+        return ItemRows.Set(configId, table.TryGetValue(configId, out var row) ? row : null);
     }
 
     /// <summary>
@@ -106,9 +156,14 @@ internal sealed class GameStorages
 
         var nowHours = NowHours(world);
         var stacks = new List<ItemStack>();
+        var held = items.GetItemDataList(ownerId);
 
-        foreach (var item in Held(items, ownerId))
+        for (var i = 0; held != null && i < held.Count; i++)
         {
+            var item = held[i];
+
+            if (!IsHeld(item, ownerId)) continue;
+
             _clocks[item.InstanceId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
             _daysLeft[item.InstanceId] = FallbackDaysLeft(config, item.ItemConfigId, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
             stacks.Add(new ItemStack(item.InstanceId, item.ItemConfigId, item.ItemCount, ownerId));
@@ -118,10 +173,16 @@ internal sealed class GameStorages
     }
 
     /// <summary>The stacks one bag holds, read only: safe to call from a hook, since it keeps nothing and changes nothing.</summary>
-    public static IReadOnlyList<ItemStack> ReadHeld(ItemManager items, long ownerId) =>
-        Held(items, ownerId).Select(item => new ItemStack(item.InstanceId, item.ItemConfigId, item.ItemCount, ownerId)).ToList();
+    public static IReadOnlyList<ItemStack> ReadHeld(ItemManager items, long ownerId)
+    {
+        var stacks = new List<ItemStack>();
+        AddHeld(items, ownerId, stacks);
 
-    private static IEnumerable<ItemData> Held(ItemManager items, long ownerId)
+        return stacks;
+    }
+
+    /// <summary>ReadHeld into a list the caller keeps, for a reader that runs every frame.</summary>
+    public static void AddHeld(ItemManager items, long ownerId, List<ItemStack> into)
     {
         var held = items.GetItemDataList(ownerId);
 
@@ -129,10 +190,12 @@ internal sealed class GameStorages
         {
             var item = held[i];
 
-            // A pooled item can sit in a list it no longer belongs to, the same ghost the UI cache keeps.
-            if (item != null && item.OwnerId == ownerId && item.ItemCount > 0) yield return item;
+            if (IsHeld(item, ownerId)) into.Add(new ItemStack(item!.InstanceId, item.ItemConfigId, item.ItemCount, ownerId));
         }
     }
+
+    /// <summary>A pooled item can sit in a list it no longer belongs to, the same ghost the UI cache keeps.</summary>
+    private static bool IsHeld(ItemData? item, long ownerId) => item != null && item.OwnerId == ownerId && item.ItemCount > 0;
 
     /// <summary>What the game says about each stack and storage, read through the storages from the last Read.</summary>
     public PutFacts Facts => new(Rank, RackRank);
@@ -170,7 +233,8 @@ internal sealed class GameStorages
 
         try
         {
-            var itemConfig = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(stack.ConfigId);
+            var config = GameSingleton.Existing<ConfigManager>();
+            var itemConfig = config == null ? null : ItemRow(config, stack.ConfigId);
 
             if (itemConfig == null) return null;
 
@@ -229,25 +293,35 @@ internal sealed class GameStorages
 
         if (drops == null) return Array.Empty<ItemStack>();
 
-        var found = new Il2CppSystem.Collections.Generic.List<DropItem>();
+        // One game list, reused by every read and emptied after it, so the floor is not a new game object each second.
+        var found = _floorFound ??= new Il2CppSystem.Collections.Generic.List<DropItem>();
+        found.Clear();
         drops.GetDropItemsInHome(found);
         var stacks = new List<ItemStack>();
         var config = GameSingleton.Existing<ConfigManager>();
         var nowHours = NowHours(GameSingleton.Existing<BattleLogicWorld>());
 
-        for (var i = 0; i < found.Count; i++)
+        try
         {
-            var drop = found[i];
+            for (var i = 0; i < found.Count; i++)
+            {
+                var drop = found[i];
 
-            if (drop == null || !drop.HasItem || drop.IsWaveLoot) continue;
+                if (drop == null || !drop.HasItem || drop.IsWaveLoot) continue;
 
-            var item = drop.Item;
+                var item = drop.Item;
 
-            if (PickupId(drops, drop) is not { } pickupId) continue;
+                if (PickupId(drops, drop) is not { } pickupId) continue;
 
-            _clocks[pickupId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
-            _daysLeft[pickupId] = FallbackDaysLeft(config, item.ItemConfigId, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
-            stacks.Add(new ItemStack(pickupId, item.ItemConfigId, item.ItemCount, Inventory.FloorOwnerId));
+                _clocks[pickupId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
+                _daysLeft[pickupId] = FallbackDaysLeft(config, item.ItemConfigId, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
+                stacks.Add(new ItemStack(pickupId, item.ItemConfigId, item.ItemCount, Inventory.FloorOwnerId));
+            }
+        }
+        finally
+        {
+            // Emptied so the reused list pins none of the game's drops between reads.
+            found.Clear();
         }
 
         return stacks;
@@ -277,44 +351,49 @@ internal sealed class GameStorages
     public string NameOf(int configId)
     {
         var config = GameSingleton.Existing<ConfigManager>();
+        var isChinese = GameLanguage.IsChinese();
 
-        return config == null ? Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId) : ItemName(config, configId);
+        return config == null ? Texts.UnnamedItem.Say(isChinese, configId) : ItemName(config, configId, isChinese);
+    }
+
+    /// <summary>What the keep list's catalog is read from right now, or null before the game has loaded its tables.</summary>
+    public static CatalogSource? CatalogNow(bool isChinese)
+    {
+        var config = GameSingleton.Existing<ConfigManager>();
+
+        if (config == null) return null;
+
+        var world = GameSingleton.Existing<BattleLogicWorld>();
+
+        if (world != null) ForgetNamesOfOtherWorld(world);
+
+        return new CatalogSource(config.Pointer.ToInt64(), world?.Pointer.ToInt64() ?? 0, CatalogIds(config), configId => CatalogEntry(config, configId, isChinese));
     }
 
     /// <summary>
-    /// Every item in the game's item table (ConfigManager._Config_Item_Dict, which GetAll_Config_Item reads, RVA
-    /// 0x2c9f860) that has a real name, for the keep list's search: a name that is still the raw ItemName key has no
-    /// translation and is left out. Config_Item.InCodex is not used: CodexManager::IsInCodex (RVA 0x2fe3050) reads it
-    /// for the Food and Prey codex pages only, so it says nothing about tools or materials. Empty until the game has
-    /// loaded its tables.
+    /// Every id in the game's item table (ConfigManager._Config_Item_Dict, which GetAll_Config_Item reads, RVA
+    /// 0x2c9f860), walked lazily so the catalog can take a few each frame; empty until the game has loaded its tables.
+    /// Pair with <see cref="CatalogEntry"/>.
     /// </summary>
-    public IReadOnlyList<CatalogItem> Catalog()
+    public static IEnumerable<int> CatalogIds(ConfigManager config)
     {
-        var config = GameSingleton.Existing<ConfigManager>();
-        var table = config?._Config_Item_Dict;
-        var catalog = new List<CatalogItem>();
+        if (config._Config_Item_Dict is not { } table) yield break;
 
-        if (config == null || table == null) return catalog;
-
-        foreach (var item in table.Values)
-        {
-            if (item == null) continue;
-
-            var name = ItemName(config, item.ID);
-
-            if (name != $"Item {item.ID}" && name != item.ItemName) catalog.Add(new CatalogItem(item.ID, name));
-        }
-
-        return catalog;
+        foreach (var id in table.Keys) yield return id;
     }
 
-    /// <summary>Names are cached for the life of one world; a new world may come with a different language.</summary>
-    private void ForgetNamesOfOtherWorld(BattleLogicWorld world)
+    /// <summary>
+    /// The item as the keep list's search lists it, or null when it has no real name: a name that is still the raw
+    /// ItemName key has no translation and is left out. Config_Item.InCodex is not used: CodexManager::IsInCodex (RVA
+    /// 0x2fe3050) reads it for the Food and Prey codex pages only, so it says nothing about tools or materials.
+    /// </summary>
+    public static CatalogItem? CatalogEntry(ConfigManager config, int configId, bool isChinese)
     {
-        if (world.Pointer == _namedWorld) return;
+        if (ItemRow(config, configId) is not { } item) return null;
 
-        _itemNames.Clear();
-        _namedWorld = world.Pointer;
+        var name = ItemName(config, configId, isChinese);
+
+        return name != $"Item {item.ID}" && name != item.ItemName ? new CatalogItem(item.ID, name) : null;
     }
 
     /// <summary>The id the game's pickup looks a floor item up by: the drop's own id, or failing that its item's.</summary>
@@ -335,7 +414,8 @@ internal sealed class GameStorages
     /// <summary>The icon the item table names for the web UI, falling back to the in-world icon.</summary>
     public string? IconName(int configId)
     {
-        var item = GameSingleton.Existing<ConfigManager>()?.Get_Config_Item(configId);
+        var config = GameSingleton.Existing<ConfigManager>();
+        var item = config == null ? null : ItemRow(config, configId);
 
         return NonEmpty(item?.WebIcon) ?? NonEmpty(item?.Icon);
     }
@@ -344,37 +424,30 @@ internal sealed class GameStorages
     /// Every piece of home furniture with a bag that counts as the player's storage; read only, so a hook may call it.
     /// The neighbor's basket is left out: what sits in it is staged for her or is her gift.
     /// </summary>
-    public static List<Furniture> HomeFurnitures(AgentManager agents)
+    public static List<Furniture> HomeFurnitures(AgentManager agents) => HomeFurnituresAndBasket(agents).Homes;
+
+    /// <summary>
+    /// The home storages and the neighbor's basket (if this character has one and it is built) from one walk of the
+    /// game's furniture list.
+    /// </summary>
+    private static (List<Furniture> Homes, Furniture? Basket) HomeFurnituresAndBasket(AgentManager agents)
     {
         var found = agents.GetFurnituresWithBag(agents.GetHomeMapId(), true, true);
         var homes = new List<Furniture>();
         var basketId = BasketConfigId();
+        Furniture? basket = null;
 
         for (var i = 0; found != null && i < found.Count; i++)
         {
             var furniture = found[i];
 
-            if (furniture != null && !ItemManager.IsExcludedFromCostPool(furniture.InstanceId) && !IsBasket(furniture, basketId)) homes.Add(furniture);
+            if (furniture == null) continue;
+
+            if (IsBasket(furniture, basketId)) basket ??= furniture;
+            else if (!ItemManager.IsExcludedFromCostPool(furniture.InstanceId)) homes.Add(furniture);
         }
 
-        return homes;
-    }
-
-    /// <summary>The neighbor's basket at home, if this character has one and it is built.</summary>
-    public static Furniture? HomeBasket(AgentManager agents)
-    {
-        var basketId = BasketConfigId();
-
-        if (basketId <= 0) return null;
-
-        var found = agents.GetFurnituresWithBag(agents.GetHomeMapId(), true, true);
-
-        for (var i = 0; found != null && i < found.Count; i++)
-        {
-            if (IsBasket(found[i], basketId)) return found[i];
-        }
-
-        return null;
+        return (homes, basket);
     }
 
     /// <summary>The basket's furniture id for this character: the girl's or the boy's, 0 when there is no neighbor.</summary>
@@ -388,7 +461,7 @@ internal sealed class GameStorages
     /// </summary>
     public Func<ItemStack, bool> Usable(StationKind kind)
     {
-        var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(Il2CppType.Of<State_Data_Item>());
+        var state = GameSingleton.Existing<ReduxUISystem>()?.GetData<State_Data_Item>(ItemDataType);
         var cache = state?.OwnerCache;
         var config = GameSingleton.Existing<ConfigManager>();
 
@@ -437,14 +510,14 @@ internal sealed class GameStorages
     {
         var config = GameSingleton.Existing<ConfigManager>();
 
-        return configId => config?.Get_Config_Item(configId) is { } row && wish.Wants(row.Category);
+        return configId => config != null && ItemRow(config, configId) is { } row && wish.Wants(row.Category);
     }
 
     /// <summary>The bag screen's state while it shows.</summary>
     public static State_Web_BackpackUI? BackpackScreen()
     {
         var ui = GameSingleton.Existing<ReduxUISystem>();
-        var screen = Il2CppType.Of<WebUI_BackpackUI>();
+        var screen = _backpackScreenType ??= Il2CppType.Of<WebUI_BackpackUI>();
 
         if (ui == null || !ui.IsUIActive(screen)) return null;
 
@@ -491,10 +564,12 @@ internal sealed class GameStorages
     }
 
     /// <summary>Each home storage's name as the Home list shows it, numbered where names repeat.</summary>
-    public static Dictionary<long, string> HomeStorageNames(AgentManager agents, ConfigManager config)
+    public static Dictionary<long, string> HomeStorageNames(AgentManager agents, ConfigManager config) => HomeStorageNames(HomeFurnitures(agents), config);
+
+    /// <summary>The same names for a furniture list the caller already read.</summary>
+    public static Dictionary<long, string> HomeStorageNames(List<Furniture> homes, ConfigManager config)
     {
-        var homes = HomeFurnitures(agents);
-        var names = StorageNames.Distinct(homes.Select(furniture => FurnitureName(config, furniture)).ToList());
+        var names = DistinctNames(homes, config, GameLanguage.IsChinese());
         var byId = new Dictionary<long, string>();
 
         for (var i = 0; i < homes.Count; i++) byId[homes[i].InstanceId] = names[i];
@@ -502,10 +577,19 @@ internal sealed class GameStorages
         return byId;
     }
 
-    private IEnumerable<Storage> HomeStorages(AgentManager agents, ConfigManager config)
+    private static IReadOnlyList<string> DistinctNames(List<Furniture> homes, ConfigManager config, bool isChinese)
     {
-        var homes = HomeFurnitures(agents);
-        var names = StorageNames.Distinct(homes.Select(furniture => FurnitureName(config, furniture)).ToList());
+        var names = new List<string>(homes.Count);
+
+        foreach (var furniture in homes) names.Add(FurnitureName(config, furniture, isChinese));
+
+        return StorageNames.Distinct(names);
+    }
+
+    private void AddHomeStorages(AgentManager agents, ConfigManager config, bool isChinese, List<Storage> storages)
+    {
+        var (homes, basket) = HomeFurnituresAndBasket(agents);
+        var names = DistinctNames(homes, config, isChinese);
 
         for (var i = 0; i < homes.Count; i++)
         {
@@ -513,10 +597,10 @@ internal sealed class GameStorages
 
             var isRack = IsMaterialRack(config, homes[i]);
 
-            yield return new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), isRack, isRack && IsRobotPutOff(homes[i]));
+            storages.Add(new Storage(homes[i].InstanceId, names[i], StorageKind.Furniture, DroneBayOf(homes[i]), isRack, isRack && IsRobotPutOff(homes[i])));
         }
 
-        if (HomeBasket(agents) is { } basket) yield return new Storage(basket.InstanceId, FurnitureName(config, basket), StorageKind.Basket);
+        if (basket != null) storages.Add(new Storage(basket.InstanceId, FurnitureName(config, basket, isChinese), StorageKind.Basket));
     }
 
     /// <summary>The rack's own switch that stops robots putting items in, failing soft to "on" so the rack stays a target.</summary>
@@ -539,9 +623,15 @@ internal sealed class GameStorages
     /// <summary>A material rack by the game's own rack table, so any rack the game adds counts too.</summary>
     private bool IsMaterialRack(ConfigManager config, Furniture furniture)
     {
+        var configId = furniture.AgentConfigId;
+
+        MaterialRacks.Use(config.Pointer.ToInt64(), isChinese: false);
+
+        if (MaterialRacks.TryGet(configId, out var isRack)) return isRack;
+
         try
         {
-            return config.IsMaterialRackFurniture(furniture.AgentConfigId);
+            return MaterialRacks.Set(configId, config.IsMaterialRackFurniture(configId));
         }
         catch (Exception ex)
         {
@@ -598,7 +688,7 @@ internal sealed class GameStorages
     /// </summary>
     private float ShelfLifeDays(ConfigManager config, Data_Item item, float nowHours)
     {
-        var row = config.Get_Config_Item(item.ItemConfigId);
+        var row = ItemRow(config, item.ItemConfigId);
 
         if (row == null) return NeverSpoilsByGame;
 
@@ -620,33 +710,41 @@ internal sealed class GameStorages
     // TimeScale is left out on purpose: the game's own shelf life read leaves it out too, so this matches its tooltip.
     private static float FallbackDaysLeft(ConfigManager? config, int configId, float startTime, float timeLeft, float presetShelfScale, float nowHours)
     {
-        var row = config?.Get_Config_Item(configId);
+        var row = config == null ? null : ItemRow(config, configId);
 
         return row == null ? NeverSpoilsByGame : Freshness.DaysLeft(row.Life, startTime, timeLeft, presetShelfScale, nowHours);
     }
 
-    /// <summary>Resolved once per item per world: the view is rebuilt every second and the names do not change in between.</summary>
-    private string ItemName(ConfigManager config, int configId)
+    /// <summary>Resolved once per item per table and language: the view is rebuilt every second and the names do not change in between.</summary>
+    private static string ItemName(ConfigManager config, int configId, bool isChinese)
     {
-        if (_itemNames.TryGetValue(configId, out var cached)) return cached;
+        ItemNames.Use(config.Pointer.ToInt64(), isChinese);
 
-        return _itemNames[configId] = ResolveItemName(config, configId);
+        if (ItemNames.TryGet(configId, out var cached)) return cached;
+
+        var item = ItemRow(config, configId);
+
+        // An id with no row is not kept: the unnamed text is cheap, and the cache stays the size of the real table.
+        if (item == null) return Texts.UnnamedItem.Say(isChinese, configId);
+
+        return ItemNames.Set(configId, Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName) ?? Texts.UnnamedItem.Say(isChinese, configId));
     }
 
-    private static string ResolveItemName(ConfigManager config, int configId)
+    /// <summary>A furniture's name by its kind, kept per table and language; a kind with no name falls back to its own instance.</summary>
+    private static string FurnitureName(ConfigManager config, Furniture furniture, bool isChinese)
     {
-        var item = config.Get_Config_Item(configId);
+        var configId = furniture.AgentConfigId;
 
-        if (item == null) return Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId);
+        FurnitureNames.Use(config.Pointer.ToInt64(), isChinese);
 
-        return Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName) ?? Texts.UnnamedItem.Say(GameLanguage.IsChinese(), configId);
-    }
+        if (!FurnitureNames.TryGet(configId, out var name))
+        {
+            var key = config._Config_Furniture_Dict is { } table && table.TryGetValue(configId, out var row) ? row?.Name : null;
 
-    private static string FurnitureName(ConfigManager config, Furniture furniture)
-    {
-        var name = config.Get_Config_Furniture(furniture.AgentConfigId)?.Name;
+            name = FurnitureNames.Set(configId, Translate(config, key) ?? NonEmpty(key));
+        }
 
-        return Translate(config, name) ?? NonEmpty(name) ?? Texts.UnnamedStorage.Say(GameLanguage.IsChinese(), furniture.InstanceId);
+        return name ?? Texts.UnnamedStorage.Say(isChinese, furniture.InstanceId);
     }
 
     private static string? Translate(ConfigManager config, string? key)

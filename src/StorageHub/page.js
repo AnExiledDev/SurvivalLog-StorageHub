@@ -540,7 +540,7 @@
   // The take slider's last amount per item and storage ("item|storage"), so a refresh does not reset it.
   var takeAmounts = {};
   // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
-  var hud = { isLive: false, key: '' };
+  var hud = { isLive: false, key: '', button: null };
 
   // The panel's words, used until the plugin sends them in the game's language (window.__storagehubWords) before each call.
   var ENGLISH = {
@@ -2271,7 +2271,7 @@
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
   // switchingUntil: a Home click is switching the game's tab until then, so that switch does not close the list.
-  var home = { data: null, isOff: false, isAway: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, isMenuOpen: false, reopen: null };
+  var home = { data: null, isOff: false, isAway: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', shownTabs: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, isMenuOpen: false, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -2290,9 +2290,11 @@
     }
 
     // The tabs decide which storages get an Open button, so a change of tabs redraws too.
-    var json = JSON.stringify(data) + '|' + tabOwners().join(',');
+    var owners = tabOwners().join(',');
+    var json = JSON.stringify(data) + '|' + owners;
 
     home.data = data;
+    home.shownTabs = owners;
 
     if (!isInventory()) addHomeTab();
 
@@ -2303,10 +2305,9 @@
     renderHome();
   }
 
-  function patchStations() {
+  // found: this poll's findStation, looked up once for the cage slots and the stations.
+  function patchStations(found) {
     if (home.isOff) return;
-
-    var found = findStation();
 
     if (!found) {
       dropHome();
@@ -2367,17 +2368,31 @@
     return null;
   }
 
+  // The trailing 1 tells the plugin this page still holds the list it last sent for these tabs, so an unchanged list
+  // is not sent again.
   function askStation() {
+    var hasList = !!home.data && home.shownTabs === tabOwners().join(',');
+
     home.askedAt = Date.now();
-    send('station|' + home.station.kind);
+    send('station|' + home.station.kind + (hasList ? '|1' : ''));
   }
 
+  // A run of clicks asks once soon after the first and once after the last, not twice for every click.
+  var stationAskSoon = { first: 0, last: 0 };
+
   function askStationSoon() {
-    STATION_AFTER_CLICK_MS.forEach(function (delay) {
-      setTimeout(function () {
+    if (!stationAskSoon.first) {
+      stationAskSoon.first = setTimeout(function () {
+        stationAskSoon.first = 0;
         if (home.station) askStation();
-      }, delay);
-    });
+      }, STATION_AFTER_CLICK_MS[0]);
+    }
+
+    clearTimeout(stationAskSoon.last);
+    stationAskSoon.last = setTimeout(function () {
+      stationAskSoon.last = 0;
+      if (home.station) askStation();
+    }, STATION_AFTER_CLICK_MS[1]);
   }
 
   function dropHome() {
@@ -2390,6 +2405,7 @@
     home.doc = null;
     home.data = null;
     home.shownJson = '';
+    home.shownTabs = '';
     home.openId = null;
     home.isShown = false;
     home.isAway = false;
@@ -2835,17 +2851,48 @@
 
       if (tab && !tab.classList.contains('slmh-tab') && !tab.classList.contains('locked') && !tab.disabled) hideHome();
     }, true);
-    home.observer = new doc.defaultView.MutationObserver(function () {
-      try {
-        addHomeTab();
-      } catch (e) {}
+    // A burst of the game's changes is answered by one pass on the next frame, and the changes that pass makes itself
+    // are dropped afterwards, so it does not wake itself again.
+    var isPassDue = false;
+    var observer = new doc.defaultView.MutationObserver(function (records) {
+      if (isPassDue || !records.some(isGameMutation)) return;
+
+      isPassDue = true;
+      doc.defaultView.requestAnimationFrame(function () {
+        isPassDue = false;
+
+        if (home.observer !== observer) return;
+
+        try {
+          addHomeTab();
+        } catch (e) {}
+
+        if (home.observer) home.observer.takeRecords();
+      });
     });
+    home.observer = observer;
     // Classes too: the drone trade's Vue rewrites a tab's class when the chosen tab changes, without a redraw.
     home.observer.observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
     // The same function every time, so a page adopted again does not add a second listener. Capture on the document
     // runs before the trade page's own mouseup listener on its window.
     if (home.station.model === 'trade') doc.addEventListener('mouseup', takeBackOnHomeDrop, true);
+  }
+
+  // Our own tabs and arrows changing, or only being put in, is no news; anything else, a removal of ours included, is.
+  function isGameMutation(record) {
+    if (isHomeTabNode(record.target)) return false;
+    if (record.type !== 'childList' || record.removedNodes.length || !record.addedNodes.length) return true;
+
+    for (var i = 0; i < record.addedNodes.length; i++) {
+      if (!isHomeTabNode(record.addedNodes[i])) return true;
+    }
+
+    return false;
+  }
+
+  function isHomeTabNode(node) {
+    return !!node && (node === home.tab || node === home.back || (!!home.arrows && (node === home.arrows.back || node === home.arrows.on)));
   }
 
   // A drag off the drone let go over the Home list takes that offer back, as a right click on the drone does, and
@@ -3557,9 +3604,7 @@
     '#mouseSlots::-webkit-scrollbar-thumb{background:rgba(164,181,70,.45);border-radius:3px}'
   ].join('');
 
-  function patchCageSlots() {
-    var found = findStation();
-
+  function patchCageSlots(found) {
     if (!found || found.station.kind !== 'ratcage' || found.doc.getElementById('slmh-cage-style')) return;
 
     var style = make(found.doc, 'style');
@@ -3608,9 +3653,13 @@
   // sits on top and the game's own buttons do not move. Drawn again only when the key or the language changed, so the
   // game's hover state on it is not reset every poll.
   function placeHudButton(doc) {
+    var stamp = hud.key + '|' + say('hudTip');
+
+    // The button this page last placed, still in place and current, needs no lookups.
+    if (hud.isLive && hud.button && hud.button.ownerDocument === doc && hud.button.isConnected && hud.button.getAttribute('data-stamp') === stamp) return;
+
     var column = doc.querySelector('.vertical-tools');
     var existing = doc.querySelector('.' + HUD_CLASS);
-    var stamp = hud.key + '|' + say('hudTip');
 
     if (!column || !hud.isLive) {
       if (existing) existing.remove();
@@ -3618,10 +3667,16 @@
       return;
     }
 
-    if (existing && existing.parentNode === column && existing.getAttribute('data-stamp') === stamp) return;
+    if (existing && existing.parentNode === column && existing.getAttribute('data-stamp') === stamp) {
+      hud.button = existing;
+
+      return;
+    }
+
     if (existing) existing.remove();
 
     var node = hudButton(doc);
+    hud.button = node;
     node.setAttribute('data-stamp', stamp);
     node.setAttribute('data-etk-dock', DOCK_ORDER);
     column.insertBefore(node, column.firstChild);
@@ -3684,12 +3739,20 @@
       refreshMenu();
     } catch (e) {}
 
+    var found = null;
+
     try {
-      patchCageSlots();
+      found = findStation();
+    } catch (e) {
+      return;
+    }
+
+    try {
+      patchCageSlots(found);
     } catch (e) {}
 
     try {
-      patchStations();
+      patchStations(found);
     } catch (e) {}
   }, 400);
 

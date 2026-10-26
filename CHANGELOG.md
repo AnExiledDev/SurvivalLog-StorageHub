@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0
+
+- "Put away by tag" and "Put away floor" are now also in the Mods button on the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens, so you can put your bag away without going back to the inventory.
+- Made for Survival Log 1.1.19611.
+
 ## 0.14.3
 
 - Out exploring, the looting screen's tabs keep the game's own look; the new tab style is only at home.

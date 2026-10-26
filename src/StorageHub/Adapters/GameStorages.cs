@@ -50,6 +50,12 @@ internal sealed class GameStorages
     private readonly Dictionary<long, Furniture> _furnitures = new();
     private readonly Dictionary<long, ShelfClock> _clocks = new();
     private readonly Dictionary<long, float> _daysLeft = new();
+    private readonly RawItemCache _raw;
+    private readonly List<RawItemCache.Item> _rawItems = new();
+    private readonly StackReuse _stacks = new();
+    private readonly HashSet<int> _namedIds = new();
+    private Dictionary<int, string>? _lastNames;
+    private NamesKey _lastNamesKey;
     private Il2CppSystem.Collections.Generic.List<DropItem>? _floorFound;
     private bool _hasReportedRankFailure;
     private bool _hasReportedRackRankFailure;
@@ -58,9 +64,13 @@ internal sealed class GameStorages
     private bool _hasReportedUnpickableDrop;
     private bool _hasReportedShelfLifeFailure;
 
+    /// <summary>What a kept set of names was read from: the item table, the world (whose load drops the names) and the language.</summary>
+    private readonly record struct NamesKey(IntPtr Table, IntPtr World, bool IsChinese);
+
     public GameStorages(Action<string> log)
     {
         _log = log;
+        _raw = new RawItemCache(log);
     }
 
     /// <summary>
@@ -69,7 +79,11 @@ internal sealed class GameStorages
     /// </summary>
     public IReadOnlyDictionary<long, float> DaysLeft => _daysLeft;
 
-    public InventoryRead Read()
+    /// <summary>
+    /// The home's storages and stacks. Without clocks the spoil clocks and days left are not read: a station's list
+    /// shows neither, and they cost the game's shelf life read per stack.
+    /// </summary>
+    public InventoryRead Read(bool withClocks = true)
     {
         Forget();
 
@@ -89,15 +103,40 @@ internal sealed class GameStorages
         var storages = new List<Storage> { new(player.InstanceId, Texts.Bag.Pick(isChinese), StorageKind.Bag) };
         AddHomeStorages(agents, config, isChinese, storages);
         storages.Add(new Storage(WorkbenchDrawerConfig.DrawerOwnerId, Texts.WorkbenchDrawer.Pick(isChinese), StorageKind.Drawer));
-        var stacks = ReadStacks(cache, storages, config, NowHours(world));
-        var names = new Dictionary<int, string>();
+        var stacks = ReadStacks(cache, storages, config, NowHours(world), withClocks);
+
+        return new InventoryRead.Ready(new Inventory(storages, stacks, Names(config, stacks, isChinese), isChinese));
+    }
+
+    /// <summary>
+    /// The names of every kind of item read. The last read's names are handed back when they cover exactly the same
+    /// kinds from the same table, world and language, which is what an idle home reads second after second.
+    /// </summary>
+    private Dictionary<int, string> Names(ConfigManager config, List<ItemStack> stacks, bool isChinese)
+    {
+        var key = new NamesKey(config.Pointer, _namedWorld, isChinese);
+        var last = key == _lastNamesKey ? _lastNames : null;
+        var isSame = last != null;
+
+        _namedIds.Clear();
 
         foreach (var stack in stacks)
         {
-            if (!names.ContainsKey(stack.ConfigId)) names[stack.ConfigId] = ItemName(config, stack.ConfigId, isChinese);
+            if (!_namedIds.Add(stack.ConfigId)) continue;
+
+            if (isSame && !last!.ContainsKey(stack.ConfigId)) isSame = false;
         }
 
-        return new InventoryRead.Ready(new Inventory(storages, stacks, names, isChinese));
+        if (isSame && last!.Count == _namedIds.Count) return last;
+
+        var names = new Dictionary<int, string>(_namedIds.Count);
+
+        foreach (var configId in _namedIds) names[configId] = ItemName(config, configId, isChinese);
+
+        _lastNames = names;
+        _lastNamesKey = key;
+
+        return names;
     }
 
     /// <summary>
@@ -112,6 +151,9 @@ internal sealed class GameStorages
         FurnitureNames.Clear();
         _namedWorld = world.Pointer;
     }
+
+    /// <summary>The loaded item tables by address, 0 before they load: what the stations' rules read, so a reload shows as a change.</summary>
+    public static long ItemTable() => GameSingleton.Existing<ConfigManager>()?.Pointer.ToInt64() ?? 0;
 
     /// <summary>The UI store's item data type, looked up once.</summary>
     public static Il2CppSystem.Type ItemDataType => _itemDataType ??= Il2CppType.Of<State_Data_Item>();
@@ -297,6 +339,10 @@ internal sealed class GameStorages
         var found = _floorFound ??= new Il2CppSystem.Collections.Generic.List<DropItem>();
         found.Clear();
         drops.GetDropItemsInHome(found);
+
+        // Most seconds nothing lies on the floor, and an empty floor makes no list.
+        if (found.Count == 0) return Array.Empty<ItemStack>();
+
         var stacks = new List<ItemStack>();
         var config = GameSingleton.Existing<ConfigManager>();
         var nowHours = NowHours(GameSingleton.Existing<BattleLogicWorld>());
@@ -457,7 +503,8 @@ internal sealed class GameStorages
 
     /// <summary>
     /// Whether a station takes each stack from the last Read, by the game's own checks on the item the UI cache holds.
-    /// A stack the cache no longer has is not taken.
+    /// A stack the cache no longer has is not taken. Every station but the rat cage judges an item by its kind alone,
+    /// so each kind is asked once per list rather than once per stack, and no stack is looked up in the cache.
     /// </summary>
     public Func<ItemStack, bool> Usable(StationKind kind)
     {
@@ -466,6 +513,8 @@ internal sealed class GameStorages
         var config = GameSingleton.Existing<ConfigManager>();
 
         if (kind == StationKind.Inventory || state == null || cache == null || config == null) return _ => false;
+
+        if (StationView.TakesByKindOnly(kind)) return StationView.UsableByKind(configId => StationRules.TakesKindOf(kind, configId, config));
 
         return stack => cache.TryGetValue(stack.OwnerId, out var held) && held != null && held.TryGetValue(stack.ItemId, out var item) && item != null && StationRules.Takes(kind, item, state, config);
     }
@@ -649,26 +698,78 @@ internal sealed class GameStorages
         return StrangerTradeActiveManager.TripOf(furniture) != null ? DroneBay.Drone : DroneBay.None;
     }
 
-    private List<ItemStack> ReadStacks(Il2CppItems cache, IEnumerable<Storage> storages, ConfigManager config, float nowHours)
+    /// <summary>
+    /// Every stack in the storages, read straight from the cache's memory while that works and through the game's
+    /// objects for the rest, each stack the same object as last read while nothing about it changed.
+    /// </summary>
+    private List<ItemStack> ReadStacks(Il2CppItems cache, List<Storage> storages, ConfigManager config, float nowHours, bool withClocks)
     {
-        var stacks = new List<ItemStack>();
+        var stacks = new List<ItemStack>(_stacks.LastCount + 16);
+        var isDirect = _raw.TryOpen(cache);
+        _stacks.Begin();
 
         foreach (var storage in storages)
         {
-            if (!cache.TryGetValue(storage.OwnerId, out var held) || held == null) continue;
-
-            foreach (var item in held.Values)
+            if (isDirect)
             {
-                // The cache can keep stale entries whose OwnerId points elsewhere (BetterCrafting calls them ghosts); the game would refuse to move them.
-                if (item == null || item.OwnerId != storage.OwnerId) continue;
+                _rawItems.Clear();
 
-                _clocks[item.LogicId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
-                _daysLeft[item.LogicId] = ShelfLifeDays(config, item, nowHours);
-                stacks.Add(new ItemStack(item.LogicId, item.ItemConfigId, item.ItemCount, storage.OwnerId));
+                if (_raw.TryAddHeld(storage.OwnerId, _rawItems))
+                {
+                    foreach (var item in _rawItems)
+                    {
+                        // The cache can keep stale entries whose OwnerId points elsewhere (BetterCrafting calls them ghosts); the game would refuse to move them.
+                        if (item.OwnerId != storage.OwnerId) continue;
+
+                        if (withClocks)
+                        {
+                            _clocks[item.LogicId] = new ShelfClock(item.StartTime, item.TimeLeft, item.PresetShelfScale);
+                            _daysLeft[item.LogicId] = ShelfLifeDays(config, item.ConfigId, null, item.Pointer, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
+                        }
+
+                        stacks.Add(_stacks.Get(item.LogicId, item.ConfigId, item.Count, storage.OwnerId));
+                    }
+
+                    continue;
+                }
+
+                // Nothing from this storage was added; it and the rest go through the game's objects.
+                isDirect = false;
             }
+
+            AddStacksByObjects(cache, storage, config, nowHours, withClocks, stacks);
         }
 
+        _rawItems.Clear();
+        _stacks.End();
+
         return stacks;
+    }
+
+    private void AddStacksByObjects(Il2CppItems cache, Storage storage, ConfigManager config, float nowHours, bool withClocks, List<ItemStack> stacks)
+    {
+        if (!cache.TryGetValue(storage.OwnerId, out var held) || held == null) return;
+
+        foreach (var item in held.Values)
+        {
+            // The cache can keep stale entries whose OwnerId points elsewhere (BetterCrafting calls them ghosts); the game would refuse to move them.
+            if (item == null || item._OwnerId_k__BackingField != storage.OwnerId) continue;
+
+            var itemId = item._LogicId_k__BackingField;
+            var configId = item._ItemConfigId_k__BackingField;
+
+            if (withClocks)
+            {
+                var startTime = item._StartTime_k__BackingField;
+                var timeLeft = item._TimeLeft_k__BackingField;
+                var shelfScale = item._PresetShelfScale_k__BackingField;
+
+                _clocks[itemId] = new ShelfClock(startTime, timeLeft, shelfScale);
+                _daysLeft[itemId] = ShelfLifeDays(config, configId, item, IntPtr.Zero, startTime, timeLeft, shelfScale, nowHours);
+            }
+
+            stacks.Add(_stacks.Get(itemId, configId, item._ItemCount_k__BackingField, storage.OwnerId));
+        }
     }
 
     /// <summary>
@@ -683,18 +784,24 @@ internal sealed class GameStorages
     }
 
     /// <summary>
-    /// The backpack's own shelf life (Reducer_Web_BackpackUI.GetShelfLifeDaysRaw, RVA 0x2880900), so the list agrees
+    /// The backpack's own shelf life (Reducer_Web_BackpackUI.GetShelfLifeDaysRaw, RVA 0x2a63af0), so the list agrees
     /// with the game's tooltip, compost freezing and storage shelf factors included. Failing that, the fridge rules' formula.
+    /// The game answers "never spoils" before anything else for an item whose row has no shelf life, so that answer is
+    /// given here without the call, and without making an object for an item read straight from memory.
     /// </summary>
-    private float ShelfLifeDays(ConfigManager config, Data_Item item, float nowHours)
+    private float ShelfLifeDays(ConfigManager config, int configId, Data_Item? item, IntPtr pointer, int startTime, int timeLeft, float presetShelfScale, float nowHours)
     {
-        var row = ItemRow(config, item.ItemConfigId);
+        var row = ItemRow(config, configId);
 
         if (row == null) return NeverSpoilsByGame;
 
+        var life = row._Life_k__BackingField;
+
+        if (life <= 0) return NeverSpoilsByGame;
+
         try
         {
-            return Reducer_Web_BackpackUI.GetShelfLifeDaysRaw(row, item, nowHours);
+            return Reducer_Web_BackpackUI.GetShelfLifeDaysRaw(row, item ?? new Data_Item(pointer), nowHours);
         }
         catch (Exception ex)
         {
@@ -702,7 +809,7 @@ internal sealed class GameStorages
 
             _hasReportedShelfLifeFailure = true;
 
-            return Freshness.DaysLeft(row.Life, item.StartTime, item.TimeLeft, item.PresetShelfScale, nowHours);
+            return Freshness.DaysLeft(life, startTime, timeLeft, presetShelfScale, nowHours);
         }
     }
 

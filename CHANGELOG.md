@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.3
+
+- Fixed: the game could stutter for a moment when you opened the stove, brewing barrel, workbench or another station with the Home tab on.
+- The Home tab at stations now only rebuilds its list when something in your storages changes, so stations run smoother while they are open.
+- The panel and the Home tab read your storages faster and do less work each second, so the game runs smoother with them open.
+- Made for Survival Log 1.1.19611.
+
 ## 0.15.2
 
 - Fixed: the search box in the Storage Hub panel now accepts Chinese and other typing that needs an input method.

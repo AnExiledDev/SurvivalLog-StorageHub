@@ -47,6 +47,25 @@ public static class StationView
         return json.Append('}').ToString();
     }
 
+    /// <summary>
+    /// Whether the station judges an item by its kind and the item table alone. The rat cage is the one that does not:
+    /// it looks at each stack's spoilage and whether a mouse is intact.
+    /// </summary>
+    public static bool TakesByKindOnly(StationKind kind) => kind != StationKind.RatCage;
+
+    /// <summary>A station's check asked once per kind of item, however many stacks of it the list holds.</summary>
+    public static Func<ItemStack, bool> UsableByKind(Func<int, bool> takes)
+    {
+        var answers = new Dictionary<int, bool>();
+
+        return stack =>
+        {
+            if (!answers.TryGetValue(stack.ConfigId, out var answer)) answers[stack.ConfigId] = answer = takes(stack.ConfigId);
+
+            return answer;
+        };
+    }
+
     public static string KindName(StationKind kind) => kind switch
     {
         StationKind.Inventory => "inventory",

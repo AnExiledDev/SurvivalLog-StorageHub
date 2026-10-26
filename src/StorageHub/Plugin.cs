@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
@@ -16,7 +17,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.15.2";
+    private const string Version = "0.15.3";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
@@ -69,7 +70,27 @@ public sealed class Plugin : BasePlugin
         AddComponent<StoragePanel>();
         StartOrganizer(harmony, log);
         StartDeliveryPutAway(harmony, page, log);
+        WarmUpInBackground(log);
     }
+
+    /// <summary>
+    /// The first panel, station list and page message of a session would otherwise compile the mod's view and message
+    /// code on the game's frame. WarmUp is pure .NET on objects of its own, so it runs on a worker; a failure only costs
+    /// that first open its head start, and is noted in the mod's file only (the BepInEx console is left to the game's thread).
+    /// </summary>
+    private static void WarmUpInBackground(HubLog log) =>
+        Task.Run(() =>
+        {
+            try
+            {
+                WarmUp.Run();
+                PageMessages.WarmUp();
+            }
+            catch (Exception ex)
+            {
+                log.WriteFileOnly("warm-up failed, the first panel may take a moment longer: " + ex.Message);
+            }
+        });
 
     private void StartDeliveryPutAway(Harmony harmony, WebPage page, HubLog log)
     {

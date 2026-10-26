@@ -28,32 +28,60 @@ internal static class StationRules
 
             if (row == null) return false;
 
-            return kind switch
-            {
-                StationKind.Cooking => Reducer_Web_Cooking.IsCookableIngredient(row),
-                StationKind.RatCage => Reducer_Web_RatCage.CheckFoodAdmissionSilent(item, state) || Reducer_Web_RatCage.IsIntactLiveMouse(item, row),
-                StationKind.Brew => row.CanBrew,
-                StationKind.Dye => config.IsPlantProduct(item.ItemConfigId),
-                StationKind.Shredder => config.IsShredableItem(item.ItemConfigId),
-                StationKind.Compressor => IsPressable(row, item.ItemConfigId),
-                StationKind.Trade => row.TradeValue > 0,
-                StationKind.Workbench => RecipeMaterials(config).Contains(item.ItemConfigId),
-                StationKind.Basket => !NeighborRules.IsBasketForbidItem(item.ItemConfigId),
-                StationKind.Storage => true,
-                StationKind.Inventory => false,
-                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown station"),
-            };
+            return kind == StationKind.RatCage
+                ? Reducer_Web_RatCage.CheckFoodAdmissionSilent(item, state) || Reducer_Web_RatCage.IsIntactLiveMouse(item, row)
+                : TakesKind(kind, row, item.ItemConfigId, config);
         }
         catch (Exception ex)
         {
-            lock (Gate)
-            {
-                if (!_hasReportedFailure) _log($"the game's check of what the {StationView.KindName(kind)} takes failed, treating the item as not taken (reported once): {ex}");
-
-                _hasReportedFailure = true;
-            }
+            ReportFailure(kind, ex);
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// The same answer as Takes for a station that judges an item by its kind alone (every one but the rat cage, see
+    /// StationView.TakesByKindOnly), asked by config id.
+    /// </summary>
+    public static bool TakesKindOf(StationKind kind, int configId, ConfigManager config)
+    {
+        try
+        {
+            var row = GameStorages.ItemRow(config, configId);
+
+            return row != null && TakesKind(kind, row, configId, config);
+        }
+        catch (Exception ex)
+        {
+            ReportFailure(kind, ex);
+
+            return false;
+        }
+    }
+
+    private static bool TakesKind(StationKind kind, Config_Item row, int configId, ConfigManager config) => kind switch
+    {
+        StationKind.Cooking => Reducer_Web_Cooking.IsCookableIngredient(row),
+        StationKind.Brew => row.CanBrew,
+        StationKind.Dye => config.IsPlantProduct(configId),
+        StationKind.Shredder => config.IsShredableItem(configId),
+        StationKind.Compressor => IsPressable(row, configId),
+        StationKind.Trade => row.TradeValue > 0,
+        StationKind.Workbench => RecipeMaterials(config).Contains(configId),
+        StationKind.Basket => !NeighborRules.IsBasketForbidItem(configId),
+        StationKind.Storage => true,
+        StationKind.Inventory => false,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "not a station judged by item kind"),
+    };
+
+    private static void ReportFailure(StationKind kind, Exception ex)
+    {
+        lock (Gate)
+        {
+            if (!_hasReportedFailure) _log($"the game's check of what the {StationView.KindName(kind)} takes failed, treating the item as not taken (reported once): {ex}");
+
+            _hasReportedFailure = true;
         }
     }
 

@@ -12,29 +12,15 @@ public static class ViewPrint
 {
     public static long Of(Inventory inventory, IReadOnlyList<ItemStack> floor, IReadOnlyDictionary<long, float> daysLeft, KeepList keep, bool isKeepOn, bool canSplit, bool hasIcons)
     {
-        var print = 0UL;
-
-        foreach (var storage in inventory.Storages)
-        {
-            print = Add(print, (ulong)storage.OwnerId);
-            print = Add(print, Text(storage.Name));
-            print = Add(print, (ulong)storage.Kind << 8 | (ulong)storage.Bay << 4 | (storage.IsMaterialRack ? 2UL : 0UL) | (storage.IsRobotPutOff ? 1UL : 0UL));
-        }
-
-        print = Add(print, (ulong)inventory.Storages.Count);
+        var print = AddStorages(0UL, inventory.Storages);
         print = AddStacks(print, inventory.Stacks, daysLeft);
         print = AddStacks(print, floor, daysLeft);
-
-        var names = 0UL;
-
-        foreach (var entry in inventory.ItemNames) names += Scramble((ulong)(uint)entry.Key << 32 ^ Text(entry.Value));
 
         var kept = 0UL;
 
         foreach (var entry in keep.Amounts) kept += Scramble((ulong)(uint)entry.Key << 32 | (uint)entry.Value);
 
-        print = Add(print, names);
-        print = Add(print, (ulong)inventory.ItemNames.Count);
+        print = AddNames(print, inventory.ItemNames);
         print = Add(print, kept);
         print = Add(print, (ulong)keep.Amounts.Count);
         print = Add(print, (inventory.IsChinese ? 8UL : 0UL) | (isKeepOn ? 4UL : 0UL) | (canSplit ? 2UL : 0UL) | (hasIcons ? 1UL : 0UL));
@@ -42,10 +28,87 @@ public static class ViewPrint
         return (long)print;
     }
 
+    /// <summary>
+    /// A fingerprint of everything a station's home list is built from: the station, the storages, every stack, the
+    /// names, the item table its rules read (by address), the screen's tabs, the basket's wish, whether the player is
+    /// away and whether icons are in. Null for the rat cage, whose answer turns on each stack's spoilage and so is
+    /// built every time; every other station judges an item by its kind and the table alone.
+    /// </summary>
+    public static long? OfStation(Inventory inventory, StationKind kind, long table, IReadOnlyList<long>? tabs, BasketWish? wish, bool isAway, bool hasIcons)
+    {
+        if (!StationView.TakesByKindOnly(kind)) return null;
+
+        var print = Add(0UL, (ulong)kind);
+        print = Add(print, (ulong)table);
+        print = AddStorages(print, inventory.Storages);
+
+        for (var i = 0; i < inventory.Stacks.Count; i++)
+        {
+            var stack = inventory.Stacks[i];
+
+            print = Add(print, (ulong)stack.ItemId);
+            print = Add(print, (ulong)(uint)stack.ConfigId << 32 | (uint)stack.Count);
+            print = Add(print, (ulong)stack.OwnerId);
+        }
+
+        print = Add(print, (ulong)inventory.Stacks.Count);
+        print = AddNames(print, inventory.ItemNames);
+
+        if (tabs == null) print = Add(print, ulong.MaxValue);
+        else
+        {
+            for (var i = 0; i < tabs.Count; i++) print = Add(print, (ulong)tabs[i]);
+
+            print = Add(print, (ulong)tabs.Count);
+        }
+
+        if (wish == null) print = Add(print, ulong.MaxValue);
+        else
+        {
+            var categories = 0UL;
+
+            foreach (var category in wish.Categories) categories += Scramble((ulong)(uint)category);
+
+            print = Add(print, categories);
+            print = Add(print, (ulong)wish.Categories.Count);
+            print = Add(print, wish.CrisisCategory is { } crisis ? (uint)crisis : ulong.MaxValue);
+            print = Add(print, (wish.IsActive ? 8UL : 0UL) | (wish.IsPending ? 4UL : 0UL) | (wish.IsAway ? 2UL : 0UL) | (wish.IsDying ? 1UL : 0UL));
+        }
+
+        return (long)Add(print, (inventory.IsChinese ? 4UL : 0UL) | (isAway ? 2UL : 0UL) | (hasIcons ? 1UL : 0UL));
+    }
+
+    private static ulong AddStorages(ulong print, IReadOnlyList<Storage> storages)
+    {
+        for (var i = 0; i < storages.Count; i++)
+        {
+            var storage = storages[i];
+
+            print = Add(print, (ulong)storage.OwnerId);
+            print = Add(print, Text(storage.Name));
+            print = Add(print, (ulong)storage.Kind << 8 | (ulong)storage.Bay << 4 | (storage.IsMaterialRack ? 2UL : 0UL) | (storage.IsRobotPutOff ? 1UL : 0UL));
+        }
+
+        return Add(print, (ulong)storages.Count);
+    }
+
+    private static ulong AddNames(ulong print, IReadOnlyDictionary<int, string> itemNames)
+    {
+        var names = 0UL;
+
+        foreach (var entry in itemNames) names += Scramble((ulong)(uint)entry.Key << 32 ^ Text(entry.Value));
+
+        print = Add(print, names);
+
+        return Add(print, (ulong)itemNames.Count);
+    }
+
     private static ulong AddStacks(ulong print, IReadOnlyList<ItemStack> stacks, IReadOnlyDictionary<long, float> daysLeft)
     {
-        foreach (var stack in stacks)
+        for (var i = 0; i < stacks.Count; i++)
         {
+            var stack = stacks[i];
+
             print = Add(print, (ulong)stack.ItemId);
             print = Add(print, (ulong)(uint)stack.ConfigId << 32 | (uint)stack.Count);
             print = Add(print, (ulong)stack.OwnerId);

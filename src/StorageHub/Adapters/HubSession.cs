@@ -28,8 +28,16 @@ internal sealed class HubSession
     private readonly Dictionary<int, string?> _iconPaths = new();
     private readonly StatusLine _status = new();
     private readonly BuiltView _built = new();
+    private readonly BuiltView _builtStation = new();
     private readonly StationAnswers _stationAnswers = new();
     private readonly Func<bool> _isSliceSpent;
+
+    /// <summary>The session's clock starts here: Unity's time getters make an object on every call.</summary>
+    private static readonly long StartTicks = Stopwatch.GetTimestamp();
+
+    // The read's names with the floor's and the keep list's added, kept while the read hands back the same names.
+    private IReadOnlyDictionary<int, string>? _namesCopiedFrom;
+    private Dictionary<int, string>? _namesCopy;
 
     private IconIndex? _icons;
     private Task<(IconIndex Icons, string Note)>? _iconScan;
@@ -82,7 +90,7 @@ internal sealed class HubSession
 
     public void Update()
     {
-        var now = Time.unscaledTime;
+        var now = Now();
         _page.KeepInstalled(now);
 
         // The icon folder is walked on a worker thread from the first frame, long before anyone opens the panel.
@@ -97,7 +105,10 @@ internal sealed class HubSession
         AdvanceBesideBag();
         SendLive(now);
 
-        if (Input.GetKeyDown(_toggleKey))
+        // One call says whether any key went down this frame; most frames none did, and each key check is a call into the game.
+        var isAnyKeyDown = Input.anyKeyDown;
+
+        if (isAnyKeyDown && Input.GetKeyDown(_toggleKey))
         {
             ToggleOpen();
 
@@ -105,7 +116,7 @@ internal sealed class HubSession
         }
 
         // The menu is the inventory's top layer, so Esc closes it before the panel or the inventory.
-        if (InputGate.IsMenuOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (isAnyKeyDown && InputGate.IsMenuOpen && Input.GetKeyDown(KeyCode.Escape))
         {
             _page.CloseMenu();
             InputGate.MenuClosed();
@@ -116,7 +127,7 @@ internal sealed class HubSession
         if (!_isOpen) return;
 
         // While a page field holds the keyboard, Esc is the page's: it puts a typed amount back before it closes.
-        if (!_keyboard.IsClaimed && Input.GetKeyDown(KeyCode.Escape))
+        if (isAnyKeyDown && !_keyboard.IsClaimed && Input.GetKeyDown(KeyCode.Escape))
         {
             Close();
 
@@ -125,6 +136,9 @@ internal sealed class HubSession
 
         if (now >= _nextRefreshAt) PushView();
     }
+
+    /// <summary>Seconds since the session's clock started.</summary>
+    private static float Now() => (float)((Stopwatch.GetTimestamp() - StartTicks) / (double)Stopwatch.Frequency);
 
     private void ToggleOpen()
     {
@@ -268,7 +282,7 @@ internal sealed class HubSession
     /// </summary>
     private string ReadView(out string? notReady)
     {
-        _nextRefreshAt = Time.unscaledTime + RefreshSeconds;
+        _nextRefreshAt = Now() + RefreshSeconds;
         notReady = RefreshInventory(out var reason) ? null : NotAvailable(reason);
 
         // The floor counts in the "Rotting soon" list; floor kinds no storage holds get their names added first.
@@ -307,18 +321,37 @@ internal sealed class HubSession
         if (names != null) _inventory = _inventory with { ItemNames = names };
     }
 
-    /// <summary>The read's names are copied only once one is missing, which most seconds none is.</summary>
+    /// <summary>
+    /// The read's names are copied only once one is missing, which most seconds none is. While the read hands back the
+    /// same names as before, the copy made then already holds the added ones, so a kept item the player does not hold
+    /// costs no copy every second.
+    /// </summary>
     private void AddName(ref Dictionary<int, string>? names, int configId)
     {
         if (names?.ContainsKey(configId) ?? _inventory.ItemNames.ContainsKey(configId)) return;
 
-        names ??= _inventory.ItemNames.ToDictionary(entry => entry.Key, entry => entry.Value);
+        if (names == null)
+        {
+            if (_namesCopy != null && (ReferenceEquals(_inventory.ItemNames, _namesCopy) || ReferenceEquals(_inventory.ItemNames, _namesCopiedFrom)))
+            {
+                names = _namesCopy;
+            }
+            else
+            {
+                names = new Dictionary<int, string>(_inventory.ItemNames);
+                _namesCopiedFrom = _inventory.ItemNames;
+                _namesCopy = names;
+            }
+
+            if (names.ContainsKey(configId)) return;
+        }
+
         names[configId] = _game.NameOf(configId);
     }
 
-    private bool RefreshInventory(out string reason)
+    private bool RefreshInventory(out string reason, bool withClocks = true)
     {
-        switch (_game.Read())
+        switch (_game.Read(withClocks))
         {
             case InventoryRead.Ready ready:
                 _inventory = ready.Inventory;
@@ -720,7 +753,8 @@ internal sealed class HubSession
 
         try
         {
-            if (!RefreshInventory(out _)) return;
+            // The list shows no spoilage, so the spoil clocks are not read.
+            if (!RefreshInventory(out _, withClocks: false)) return;
 
             var answer = StationAnswer(kind);
 
@@ -734,21 +768,40 @@ internal sealed class HubSession
         }
     }
 
+    /// <summary>
+    /// The list is built only when its print moved: the page asks every few seconds while a station is open, and an
+    /// unchanged home answers the very same string without grouping and writing out every item again.
+    /// </summary>
     private string StationAnswer(StationKind kind)
     {
+        List<long>? tabs = null;
+        BasketWish? wish = null;
+        var isAway = false;
+
         if (kind == StationKind.Basket)
         {
-            var (tabs, wish) = _game.ReadBasketScreen();
-
-            return StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish), tabs);
+            (tabs, wish) = _game.ReadBasketScreen();
         }
-
-        if (kind == StationKind.Storage)
+        else if (kind == StationKind.Storage)
         {
-            var isAway = GameStorages.IsExploring();
-
-            return StationView.Build(_inventory, kind, isAway ? _ => false : _game.Usable(kind), IconPath, tabs: _game.ReadLootScreen(), isAway: isAway);
+            isAway = GameStorages.IsExploring();
+            tabs = _game.ReadLootScreen();
         }
+
+        var print = ViewPrint.OfStation(_inventory, kind, GameStorages.ItemTable(), tabs, wish, isAway, _icons != null);
+
+        if (print is { } unchanged && _builtStation.TryGet(unchanged, out var kept)) return kept;
+
+        var answer = BuildStation(kind, tabs, wish, isAway);
+
+        return print is { } fresh ? _builtStation.Keep(fresh, answer) : answer;
+    }
+
+    private string BuildStation(StationKind kind, List<long>? tabs, BasketWish? wish, bool isAway)
+    {
+        if (kind == StationKind.Basket) return StationView.Build(_inventory, kind, _game.Usable(kind), IconPath, GameStorages.IsWished(wish!), tabs);
+
+        if (kind == StationKind.Storage) return StationView.Build(_inventory, kind, isAway ? _ => false : _game.Usable(kind), IconPath, tabs: tabs, isAway: isAway);
 
         return StationView.Build(_inventory, kind, _game.Usable(kind), IconPath);
     }

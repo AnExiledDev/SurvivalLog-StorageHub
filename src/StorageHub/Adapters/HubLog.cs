@@ -38,6 +38,12 @@ internal sealed class HubLog
         lock (_gate) AppendToFile($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}");
     }
 
+    /// <summary>To the file only: safe from a worker thread, where the BepInEx log must not be written.</summary>
+    public void WriteFileOnly(string message)
+    {
+        lock (_gate) AppendToFile($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}");
+    }
+
     /// <summary>One writer stays open so a busy frame is not paying for an open and close per line.</summary>
     private void AppendToFile(string line)
     {

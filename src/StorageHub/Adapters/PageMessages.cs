@@ -50,6 +50,9 @@ internal static class PageMessages
         return false;
     }
 
+    /// <summary>Runs the hook once on a message that is not ours, so it is compiled before the game's first web message.</summary>
+    public static void WarmUp() => TakeOurs("warm-up");
+
     /// <summary>A throw here would break every web message in the game, so any failure lets the game handle the message.</summary>
     private static bool TakeOurs(string serializedMessage)
     {

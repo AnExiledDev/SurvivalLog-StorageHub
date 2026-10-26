@@ -2109,9 +2109,21 @@
 
   // The home list's entry waits for the plugin to say the list is turned on; it stays off station screens, which
   // have the list as a bag tab of their own.
+  // Each entry's wanted flag is handed over only when it, or the shared menu holding it, changed: an unchanged one would
+  // copy the entry every poll for nothing.
+  var menuWanted = {};
+
   function refreshMenu() {
     relabelMenu();
-    menuEntries.forEach(function (entry) { slmodMenu.setWanted(entry.id, entry.id !== 'storagehub.home' || !home.isOff); });
+    menuEntries.forEach(function (entry) {
+      var isWanted = entry.id !== 'storagehub.home' || !home.isOff;
+      var sent = menuWanted[entry.id];
+
+      if (sent && sent.isWanted === isWanted && sent.hub === window.__slmodmenu) return;
+
+      slmodMenu.setWanted(entry.id, isWanted);
+      menuWanted[entry.id] = { isWanted: isWanted, hub: window.__slmodmenu };
+    });
     slmodMenu.placeAll();
   }
 
@@ -2348,12 +2360,30 @@
     return merged;
   }
 
+  // Live, so the poll reads the page's frames without a fresh list each time.
+  var allFrames = document.getElementsByTagName('iframe');
+
+  // The station pages a frame address can be, worked out once per address instead of every poll.
+  var stationPagesBySrc = {};
+
+  function stationPagesFor(src) {
+    var known = stationPagesBySrc[src];
+
+    if (known) return known;
+
+    known = STATION_PAGES.filter(function (station) { return station.page.test(src); });
+    stationPagesBySrc[src] = known;
+
+    return known;
+  }
+
   function findStation() {
-    var frames = document.querySelectorAll('iframe');
+    var frames = allFrames;
 
     for (var i = 0; i < frames.length; i++) {
-      for (var s = 0; s < STATION_PAGES.length; s++) {
-        if (!STATION_PAGES[s].page.test(frames[i].src || '')) continue;
+      var pages = stationPagesFor(frames[i].src || '');
+
+      for (var s = 0; s < pages.length; s++) {
 
         var doc = null;
 
@@ -2361,7 +2391,7 @@
           doc = frames[i].contentDocument;
         } catch (e) {}
 
-        if (doc && doc.querySelector(STATION_PAGES[s].host)) return { station: STATION_PAGES[s], frame: frames[i], doc: doc };
+        if (doc && doc.querySelector(pages[s].host)) return { station: pages[s], frame: frames[i], doc: doc };
       }
     }
 
@@ -3616,6 +3646,19 @@
     found.frame.contentWindow.dispatchEvent(new found.frame.contentWindow.Event('resize'));
   }
 
+  // The key and the tip in the plugin's language: worked out again only when either changed, not every poll.
+  var hudStampFor = { key: null, words: null, stamp: '' };
+
+  function hudStamp() {
+    if (hudStampFor.key !== hud.key || hudStampFor.words !== words()) {
+      hudStampFor.key = hud.key;
+      hudStampFor.words = words();
+      hudStampFor.stamp = hud.key + '|' + say('hudTip');
+    }
+
+    return hudStampFor.stamp;
+  }
+
   // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
   function live(isLive, key) {
     hud.isLive = !!isLive;
@@ -3628,10 +3671,10 @@
 
   // The HUD is a same-origin iframe the game creates and drops whenever it likes, so the button is checked every poll.
   function patchHud() {
-    var frames = document.querySelectorAll('iframe');
+    var frames = allFrames;
 
     for (var i = 0; i < frames.length; i++) {
-      if (!/CoreUI1\.html/.test(frames[i].src || '')) continue;
+      if ((frames[i].src || '').indexOf('CoreUI1.html') < 0) continue;
 
       var doc = null;
 
@@ -3653,7 +3696,7 @@
   // sits on top and the game's own buttons do not move. Drawn again only when the key or the language changed, so the
   // game's hover state on it is not reset every poll.
   function placeHudButton(doc) {
-    var stamp = hud.key + '|' + say('hudTip');
+    var stamp = hudStamp();
 
     // The button this page last placed, still in place and current, needs no lookups.
     if (hud.isLive && hud.button && hud.button.ownerDocument === doc && hud.button.isConnected && hud.button.getAttribute('data-stamp') === stamp) return;

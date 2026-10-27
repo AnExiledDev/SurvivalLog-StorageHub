@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.4
+
+- The Storage Hub panel, its tips, its short messages and the Storage Hub window on the inventory screen follow the UI size setting of Exiled's Toolkit 0.10.0 or newer. A change shows at once, and a bigger panel still fits the game's window. The Home tab inside the game's storage and station screens keeps the game's size.
+- Made for Survival Log 1.1.19611.
+
 ## 0.15.3
 
 - Fixed: the game could stutter for a moment when you opened the stove, brewing barrel, workbench or another station with the Home tab on.

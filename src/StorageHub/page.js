@@ -705,6 +705,34 @@
     clearTimeout(busyTimer);
   }
 
+  // Hands a panel to Exiled's Toolkit to be drawn at the player's UI size. Before the Toolkit's script has loaded it
+  // waits in a list the Toolkit reads; without the Toolkit nothing happens.
+  function uiSize(node, options) {
+    var toolkit = window.ExiledUi;
+
+    if (toolkit) {
+      toolkit.size(node, options);
+      return;
+    }
+
+    var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
+    waiting.push([node, options]);
+    if (waiting.length > 32) waiting.shift();
+  }
+
+  // The zoom node is drawn at by the panels the Toolkit sizes that hold it, its own included; 1 without the Toolkit.
+  function uiZoom(node) {
+    var toolkit = window.ExiledUi;
+
+    if (!toolkit || typeof toolkit.zoomAt !== 'function') return 1;
+
+    try {
+      return Number(toolkit.zoomAt(node)) || 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+
   function el(tag, className, text) {
     var node = document.createElement(tag);
 
@@ -956,6 +984,10 @@
 
     document.body.appendChild(root);
     document.body.appendChild(toast);
+    // The mask fills the screen at any size, so the plate on it is what follows the UI size and has to fit. A one-line
+    // message is never shrunk.
+    uiSize(plate);
+    uiSize(toast, { fit: false });
 
     root.addEventListener('click', onClick);
     watchTips(document, root);
@@ -1948,22 +1980,29 @@
     }
 
     tip.appendChild(doc.createTextNode(target.getAttribute(isItem ? 'data-item-tip' : 'data-tip') || ''));
+
+    // The tip sits on the page's body, outside the panel, so it takes the zoom of the panel its target is in.
+    var zoom = uiZoom(target);
+
+    tip.style.zoom = zoom === 1 ? '' : String(zoom);
     tip.style.display = 'block';
-    placeTip(doc, tip, target.getBoundingClientRect());
+    placeTip(doc, tip, target.getBoundingClientRect(), zoom);
   }
 
-  // Below the target, or above it when there is no room below, and never off the side of the page.
-  function placeTip(doc, tip, rect) {
+  // Below the target, or above it when there is no room below, and never off the side of the page. The target's box
+  // and the window are in screen pixels; the tip's left and top are in its own zoomed pixels.
+  function placeTip(doc, tip, rect, zoom) {
     var win = doc.defaultView;
-    var width = tip.offsetWidth;
-    var height = tip.offsetHeight;
+    var width = tip.offsetWidth * zoom;
+    var height = tip.offsetHeight * zoom;
+    var gap = 8 * zoom;
     var left = Math.max(6, Math.min(rect.left + rect.width / 2 - width / 2, win.innerWidth - width - 6));
-    var top = rect.bottom + 8;
+    var top = rect.bottom + gap;
 
-    if (top + height > win.innerHeight - 6) top = Math.max(6, rect.top - height - 8);
+    if (top + height > win.innerHeight - 6) top = Math.max(6, rect.top - height - gap);
 
-    tip.style.left = Math.round(left) + 'px';
-    tip.style.top = Math.round(top) + 'px';
+    tip.style.left = Math.round(left / zoom) + 'px';
+    tip.style.top = Math.round(top / zoom) + 'px';
   }
 
   function hideTip(doc) {
@@ -3188,23 +3227,29 @@
     root.appendChild(head);
     buildHomeBody(doc, root, root, sub);
     doc.body.appendChild(root);
+    // Never shrunk, as placePop keeps it inside the window at any size, and placed again for each new size.
+    uiSize(root, { fit: false, onZoom: function () { if (home.ui && home.ui.root === root) placePop(); } });
     placePop();
     renderHome();
   }
 
   // Beside the inventory's panels, the open storage's included: left if there is room, else right, else at the edge.
+  // As tall as the panels, so a bigger UI size shows bigger rows rather than a taller window. The panels' box and the
+  // window are in screen pixels; the window's own left, top and height are in its zoomed pixels.
   function placePop() {
     var win = home.doc.defaultView;
+    var root = home.ui.root;
+    var zoom = uiZoom(root);
+    var width = POP_WIDTH * zoom;
     var box = panelsBox(home.doc);
-    var height = Math.min(win.innerHeight - 2 * POP_EDGE, Math.max(POP_MIN_HEIGHT, box.bottom - box.top));
+    var height = Math.min(win.innerHeight - 2 * POP_EDGE, Math.max(POP_MIN_HEIGHT * zoom, box.bottom - box.top));
     var top = Math.max(POP_EDGE, Math.min(box.top, win.innerHeight - POP_EDGE - height));
     var left = POP_EDGE;
 
-    if (box.left - POP_GAP - POP_WIDTH >= POP_EDGE) left = box.left - POP_GAP - POP_WIDTH;
-    else if (box.right + POP_GAP + POP_WIDTH <= win.innerWidth - POP_EDGE) left = box.right + POP_GAP;
+    if (box.left - POP_GAP - width >= POP_EDGE) left = box.left - POP_GAP - width;
+    else if (box.right + POP_GAP + width <= win.innerWidth - POP_EDGE) left = box.right + POP_GAP;
 
-    var place = { left: left + 'px', top: top + 'px', width: POP_WIDTH + 'px', height: height + 'px' };
-    var root = home.ui.root;
+    var place = { left: Math.round(left / zoom) + 'px', top: Math.round(top / zoom) + 'px', width: POP_WIDTH + 'px', height: Math.round(height / zoom) + 'px' };
 
     Object.keys(place).forEach(function (side) {
       if (root.style[side] !== place[side]) root.style[side] = place[side];

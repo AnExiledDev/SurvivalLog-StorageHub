@@ -2,6 +2,8 @@ Name: Storage Hub
 Summary: Find anything you own in seconds: F8 opens one searchable list of everything in your bag and home storages. Put your whole bag away into the right tagged storages in one click, keep chosen items on you, and get a Home tab at the stove, workbench and other stations. Drone deliveries put themselves away and storages tidy themselves.
 
 Description (BBCode):
+[center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
+
 Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds one panel that lists every item in your bag, your storages at home and the workbench drawer, in the game's own style, and puts things away for you. Every move goes through the game's own quick-move, so freshness and durability are kept.
 
 [size=5]Main features[/size]

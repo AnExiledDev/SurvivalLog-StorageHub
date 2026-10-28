@@ -22,10 +22,13 @@ internal sealed class DroneRetrieves
     private const int RetrieveSuppliesActionId = 9010;
 
     private readonly Action<string> _log;
+    private readonly Action<string> _note;
 
-    public DroneRetrieves(Action<string> log)
+    /// <param name="note">Writes a routine line to storage-hub.log only; failures go to <paramref name="log"/>.</param>
+    public DroneRetrieves(Action<string> log, Action<string> note)
     {
         _log = log;
+        _note = note;
     }
 
     /// <summary>Whether the drone is back, its cargo settled into its own bag, and waits for the player to retrieve it.</summary>
@@ -66,7 +69,7 @@ internal sealed class DroneRetrieves
     {
         try
         {
-            if (TryFinish(droneId)) _log($"drone {droneId} is empty, its retrieve is done");
+            if (TryFinish(droneId)) _note($"drone {droneId} is empty, its retrieve is done");
         }
         catch (Exception ex)
         {
@@ -109,7 +112,7 @@ internal sealed class DroneRetrieves
             if (GameSingleton.Existing<BattleLogicWorld>()?._DynamicEventManager is not { } events) return;
 
             events.OnActionCompleted(RetrieveSuppliesActionId);
-            _log($"drone {droneId}: reported its retrieve (action {RetrieveSuppliesActionId}) to events");
+            _note($"drone {droneId}: reported its retrieve (action {RetrieveSuppliesActionId}) to events");
         }
         catch (Exception ex)
         {

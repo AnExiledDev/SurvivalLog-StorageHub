@@ -5,16 +5,19 @@ using System.Linq;
 namespace StorageHub.Core;
 
 /// <summary>
-/// Runs what the first panel, the first station list and the first page messages run once, on a throwaway inventory,
-/// so the runtime compiles that code before the player opens anything. Without it the first open of a session pays
-/// for all of it on the game's frame. Pure .NET and touches nothing shared, so it can run on any thread.
+/// Runs what the first panel, the first station list, the first page messages and the first drone delivery run once,
+/// on a throwaway inventory, so the runtime compiles that code before the player opens anything or a drone comes home.
+/// Without it the first of each in a session pays for all of it on the game's frame. Pure .NET and touches nothing
+/// shared, so it can run on any thread.
 /// </summary>
 public static class WarmUp
 {
     private const long Bag = 100;
     private const long Box = 300;
+    private const long Hub = 400;
+    private const long Drone = 500;
 
-    /// <returns>The panel view and every station list it built, for the test that it went all the way through.</returns>
+    /// <returns>The panel view, the move count, the delivery line and every station list it built, for the test that it went all the way through.</returns>
     public static string Run()
     {
         var commands = new List<PageCommand>();
@@ -41,7 +44,7 @@ public static class WarmUp
 
         var rot = RottingSoon.Rows(inventory, floor, daysLeft);
         var view = HubView.Build(inventory, _ => null, rot, new KeepView(true, BagKeep.Rows(inventory, keep)), canSplit: true);
-        var lists = new List<string> { view, moves.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+        var lists = new List<string> { view, moves.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), Delivered() };
         var wish = new BasketWish(true, false, false, false, new List<int> { 1 }, null);
 
         foreach (StationKind kind in Enum.GetValues(typeof(StationKind)))
@@ -51,6 +54,35 @@ public static class WarmUp
         }
 
         return string.Join("\n", lists);
+    }
+
+    /// <summary>Two drones land on one hub: the box takes the two apples, and the rope nothing wants stays in the drone.</summary>
+    private static string Delivered()
+    {
+        var before = new[] { new ItemStack(5, 2, 1, Hub) };
+        var (group, _) = Delivery.Absorb(new LandingGroup(new[] { new Landing(Drone, Hub, 1, before) }), new[] { new Landing(Drone + 1, Hub, 1, before) });
+        var landed = new[] { new ItemStack(5, 2, 1, Hub), new ItemStack(6, 1, 2, Hub), new ItemStack(7, 2, 1, Drone) };
+        var delivered = Delivery.Delivered(group.Before, landed);
+
+        Delivery.Check(Array.Empty<ItemStack>(), delivered, 0.5f, 5f);
+
+        if (Delivery.Check(delivered, delivered, 1f, 5f) is not DeliveryCheck.Landed) throw new InvalidOperationException("the warm-up delivery did not land");
+
+        var home = new Inventory(
+            new[]
+            {
+                new Storage(Bag, "Bag", StorageKind.Bag), new Storage(Box, "Box", StorageKind.Furniture),
+                new Storage(Hub, "Drone Hub", StorageKind.Furniture, DroneBay.Hub), new Storage(Drone, "Drone", StorageKind.Furniture, DroneBay.Drone),
+            },
+            landed,
+            new Dictionary<int, string> { [1] = "Apple", [2] = "Rope" });
+        var facts = new PutFacts((stack, storage) => storage.OwnerId == Box && stack.ConfigId == 1 ? new PutRank(1, 1) : null, (_, _) => null);
+        var placements = Delivery.Place(Delivery.Plan(home, delivered, group.Owners, facts, skipRobotPutOff: true), (_, target) => target == Box);
+
+        Delivery.RetrievesToFinish(group, landed, _ => true);
+        Delivery.RetrievesDone(group, _ => true);
+
+        return Delivery.Describe(placements, home);
     }
 
     private static readonly string[] Messages =

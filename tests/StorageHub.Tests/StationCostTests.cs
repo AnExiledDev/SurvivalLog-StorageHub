@@ -263,8 +263,10 @@ public class StationCostTests
         var first = WarmUp.Run();
 
         Assert.Equal(first, WarmUp.Run());
-        // The panel view, the move count, then one list per station.
-        Assert.Equal(2 + Enum.GetValues<StationKind>().Length, first.Split('\n').Length);
+        // The panel view, the move count, the delivery line, then one list per station.
+        Assert.Equal(3 + Enum.GetValues<StationKind>().Length, first.Split('\n').Length);
+        // The made-up delivery went through planning and placing: the box took the apples, the rope stayed in the drone.
+        Assert.Equal("Drone delivery: 2 Apple to Box. Stayed in Drone: 1 Rope.", first.Split('\n')[2]);
     }
 
     // ---- The page's poll ----

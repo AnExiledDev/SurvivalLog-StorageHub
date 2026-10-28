@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
@@ -17,7 +19,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.15.4";
+    private const string Version = "0.15.5";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
@@ -74,9 +76,10 @@ public sealed class Plugin : BasePlugin
     }
 
     /// <summary>
-    /// The first panel, station list and page message of a session would otherwise compile the mod's view and message
-    /// code on the game's frame. WarmUp is pure .NET on objects of its own, so it runs on a worker; a failure only costs
-    /// that first open its head start, and is noted in the mod's file only (the BepInEx console is left to the game's thread).
+    /// The first panel, station list, page message and drone delivery of a session would otherwise compile the mod's code
+    /// on the game's frame. WarmUp is pure .NET on objects of its own, so it runs on a worker, and then the rest of the
+    /// code is compiled without being run, so nothing here touches the game. A failure only costs those firsts their head
+    /// start, and is noted in the mod's file only (the BepInEx console is left to the game's thread).
     /// </summary>
     private static void WarmUpInBackground(HubLog log) =>
         Task.Run(() =>
@@ -85,12 +88,35 @@ public sealed class Plugin : BasePlugin
             {
                 WarmUp.Run();
                 PageMessages.WarmUp();
+
+                foreach (var type in typeof(WarmUp).Assembly.GetTypes())
+                {
+                    if (type.Namespace is CoreNamespace or AdaptersNamespace && !typeof(MonoBehaviour).IsAssignableFrom(type)) Prepare(type);
+                }
             }
             catch (Exception ex)
             {
                 log.WriteFileOnly("warm-up failed, the first panel may take a moment longer: " + ex.Message);
             }
         });
+
+    private const string CoreNamespace = "StorageHub.Core";
+    private const string AdaptersNamespace = "StorageHub.Adapters";
+    private const BindingFlags Declared = BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+    /// <summary>
+    /// Compiles every method the type declares without running any. GetTypes lists nested types on their own, so the
+    /// lambdas and records inside a type get theirs too. The game's components are left to the game.
+    /// </summary>
+    private static void Prepare(Type type)
+    {
+        if (type.ContainsGenericParameters) return;
+
+        foreach (var method in type.GetMethods(Declared))
+        {
+            if (!method.IsAbstract && !method.ContainsGenericParameters) RuntimeHelpers.PrepareMethod(method.MethodHandle);
+        }
+    }
 
     private void StartDeliveryPutAway(Harmony harmony, WebPage page, HubLog log)
     {
@@ -102,7 +128,7 @@ public sealed class Plugin : BasePlugin
             "When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. Default: off.\n" +
             "开启后，无人机送货不会放进关闭了机器人放入开关的材料架，和游戏里机器人的做法一样。关闭时，送货会放进任何有对应格子的材料架。默认关闭。");
 
-        var deliveries = new DeliveryPutAway(DeliveryHooks.TakeNext, new GameStorages(log.Write), new DroneRetrieves(log.Write), page, log.Write);
+        var deliveries = new DeliveryPutAway(DeliveryHooks.TakeNext, new GameStorages(log.Write), new DroneRetrieves(log.Write, log.WriteFileOnly), page, log.Write, log.WriteFileOnly);
 
         OptionalLive.Watch(() =>
         {

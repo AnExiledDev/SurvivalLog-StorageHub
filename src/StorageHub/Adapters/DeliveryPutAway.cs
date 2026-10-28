@@ -11,7 +11,8 @@ namespace StorageHub.Adapters;
 /// Puts a drone's delivery away into the tagged storages, the same way the bag's put-away does, a few frames after the
 /// drone settles: the hook only records the landing, and the cargo is moved here, outside the game's own settle. What
 /// no storage takes stays where the game put it, and a drone left empty has its retrieve finished for it. One line per
-/// delivery goes to the log and the toast.
+/// delivery goes to the toast and to storage-hub.log only, since a BepInEx line is written on the game's frame; failures
+/// go to both logs.
 /// </summary>
 internal sealed class DeliveryPutAway
 {
@@ -23,6 +24,7 @@ internal sealed class DeliveryPutAway
     private readonly DroneRetrieves _retrieves;
     private readonly WebPage _page;
     private readonly Action<string> _log;
+    private readonly Action<string> _note;
 
     private readonly List<ItemStack> _held = new();
 
@@ -34,13 +36,15 @@ internal sealed class DeliveryPutAway
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
     private bool _skipRobotPutOff;
 
-    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log)
+    /// <param name="note">Writes a routine line to storage-hub.log only.</param>
+    public DeliveryPutAway(Func<Landing?> takeNext, GameStorages game, DroneRetrieves retrieves, WebPage page, Action<string> log, Action<string> note)
     {
         _takeNext = takeNext;
         _game = game;
         _retrieves = retrieves;
         _page = page;
         _log = log;
+        _note = note;
     }
 
     /// <summary>Called on the main thread at start and after each change. The next delivery put away goes by it.</summary>
@@ -92,7 +96,7 @@ internal sealed class DeliveryPutAway
                 _seenLastTime = seenNow;
                 break;
             case DeliveryCheck.NothingLanded:
-                _log($"{Drones(group)}: nothing new arrived");
+                _note($"{Drones(group)}: nothing new arrived");
                 CountDoneRetrieves(group);
                 Finish();
                 break;
@@ -149,7 +153,7 @@ internal sealed class DeliveryPutAway
         try
         {
             var line = PutAway(group);
-            _log($"{Drones(group)}: {line}");
+            _note($"{Drones(group)}: {line}");
             _page.Status(line);
         }
         catch (Exception ex)

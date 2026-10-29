@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.3
+
+- Clearer descriptions for the `AutoPutAway` and `CompactSmallItems` settings.
+- Made for Survival Log 1.1.20151.
+
 ## 0.16.2
 
 - Fixed: the Home list in a station's bag panel (rat cage, cooking, brewing barrel and the others) ignored `UiScale`. It now follows it, with bigger rows in the same space.

@@ -24,6 +24,9 @@ public static class Texts
     private const string Log = "BepInEx/storage-hub.log";
 
     // Results on the status line.
+    /// <summary>Who a toast is from, on its first line.</summary>
+    public static readonly Phrase Source = new("Storage Hub", "储物中心");
+
     public static readonly Phrase Failed = new($"That failed, see {Log}.", $"操作失败，详情见 {Log}。");
     public static readonly Phrase KeepNotRead = new($"Could not read the keep list, see {Log}.", $"无法读取「留在背包」清单，详情见 {Log}。");
     public static readonly Phrase KeepNotSaved = new($"Could not save the keep list, see {Log}.", $"无法保存「留在背包」清单，详情见 {Log}。");

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using ExiledToolkit;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.ReduxUI;
 using StorageHub.Core;
@@ -19,15 +20,17 @@ internal sealed class WebPage
     private const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
 
     private readonly Action<string> _log;
+    private readonly Func<bool> _isPanelOpen;
     private readonly WordsOnce _words = new();
     private string _toggleKey = "F8";
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
 
-    public WebPage(Action<string> log)
+    public WebPage(Action<string> log, Func<bool> isPanelOpen)
     {
         _log = log;
+        _isPanelOpen = isPanelOpen;
     }
 
     /// <summary>The page's words name the panel key; a new key sends them again with the next call.</summary>
@@ -68,8 +71,25 @@ internal sealed class WebPage
     /// <summary>Whether the HUD button can open the panel (a save is loaded), and the key it names in its tip.</summary>
     public bool Live(bool isLive, string keyName) => Run($"window.__storagehub&&window.__storagehub.live({(isLive ? "true" : "false")},{HubView.Str(keyName)})");
 
-    /// <summary>A result line: in the panel's footer while it is open, as a toast otherwise.</summary>
-    public void Status(string text) => Call($"status({HubView.Str(text)},{HubView.Str(StatusTone.Of(text))})");
+    /// <summary>A result line: in the panel's footer while it is open, as an Exiled's Toolkit toast otherwise.</summary>
+    public void Status(string text)
+    {
+        var tone = StatusTone.Of(text);
+
+        Call($"status({HubView.Str(text)},{HubView.Str(tone)})");
+
+        if (_isPanelOpen() || string.IsNullOrEmpty(text)) return;
+
+        Toasts.Show(new ToastRequest(Texts.Source.Pick(GameLanguage.IsChinese()), text) { Kind = ToastKindOf(tone) });
+    }
+
+    private static ToastKind ToastKindOf(string tone) => tone switch
+    {
+        "ok" => ToastKind.Success,
+        "warn" => ToastKind.Warning,
+        "bad" => ToastKind.Error,
+        _ => ToastKind.Info,
+    };
 
     /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made,
     /// and the home storage window opened from it.</summary>

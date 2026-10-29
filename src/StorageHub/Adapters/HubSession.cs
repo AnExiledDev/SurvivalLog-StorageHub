@@ -88,6 +88,9 @@ internal sealed class HubSession
         _page.UseToggleKey(_toggleKeyName);
     }
 
+    /// <summary>Whether the Storage Hub panel is on screen, so a result line goes to its footer instead of a toast.</summary>
+    public bool IsOpen => _isOpen;
+
     public void Update()
     {
         var now = Now();

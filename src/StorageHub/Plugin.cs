@@ -14,20 +14,18 @@ using UnityEngine;
 namespace StorageHub;
 
 [BepInPlugin(Guid, "Storage Hub", Version)]
-[BepInDependency(OptionalLive.ToolkitGuid, BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency(OptionalLive.ToolkitGuid, OptionalLive.ToolkitVersion)]
 [BepInDependency(StackingGuid, BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.16.0";
+    private const string Version = "0.16.1";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
 
     public override void Load()
     {
-        if (!OptionalLive.IsToolkitInstalled) Log.LogInfo(OptionalLive.MissingNote);
-
         OptionalUiSize.Bind(Config);
 
         var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8,
@@ -48,9 +46,10 @@ public sealed class Plugin : BasePlugin
         var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
         var harmony = new Harmony(Guid);
 
-        var page = new WebPage(log.Write);
+        HubSession? session = null;
+        var page = new WebPage(log.Write, () => session?.IsOpen == true);
         var keep = new KeepListKeeper(new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json")), () => DateTime.Now, log.Write);
-        var session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), log.Write, keep);
+        session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), log.Write, keep);
 
         log.Write($"===== Storage Hub {Version} started");
         StationRules.UseLog(log.Write);

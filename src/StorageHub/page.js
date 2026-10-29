@@ -530,7 +530,6 @@
   // Amounts the player has changed and the game has not yet answered, by item id: { amount, timer, isSent }.
   var pendingKeep = {};
   var ui = null;
-  var toastTimer = 0;
   var isBusy = false;
   var busyTimer = 0;
   // A redraw between a mouse press and its click would take the pressed button away and lose the click, so redraws
@@ -903,11 +902,7 @@
     '.sh-pick:hover{background:rgba(255,240,210,.05);border-color:var(--soft)}',
     '.sh-pick .sh-pname{flex:1;min-width:0;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.sh-chip{flex:none;padding:1px 7px;border-radius:3px;font-size:11px;color:var(--text3);background:rgba(255,240,210,.07)}',
-    '.sh-chip.sh-on{color:var(--accent);background:rgba(255,200,58,.12)}',
-    '#sh-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;padding:10px 18px;border-radius:4px;border:1px solid rgba(220,188,120,.28);background:linear-gradient(180deg,#3a3129,#241e18);color:#f0e8d8;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}',
-    '#sh-toast.sh-ok{color:#8cc56a}',
-    '#sh-toast.sh-warn{color:#e9b955}',
-    '#sh-toast.sh-bad{color:#e0876a}'
+    '.sh-chip.sh-on{color:var(--accent);background:rgba(255,200,58,.12)}'
   ].join('\n');
 
   function build() {
@@ -980,15 +975,9 @@
     plate.appendChild(foot);
     root.appendChild(plate);
 
-    var toast = el('div');
-    toast.id = 'sh-toast';
-
     document.body.appendChild(root);
-    document.body.appendChild(toast);
-    // The mask fills the screen at any size, so the plate on it is what follows the UI size and has to fit. A one-line
-    // message is never shrunk.
+    // The mask fills the screen at any size, so the plate on it is what follows the UI size and has to fit.
     uiSize(plate);
-    uiSize(toast, { fit: false });
 
     root.addEventListener('click', onClick);
     watchTips(document, root);
@@ -1018,7 +1007,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, x: x, sub: sub, tabs: tabNodes, tools: tools, leftTools: leftTools, rightTools: rightTools, search: search, place: place, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status, toast: toast };
+    ui = { root: root, x: x, sub: sub, tabs: tabNodes, tools: tools, leftTools: leftTools, rightTools: rightTools, search: search, place: place, bagButton: bagButton, floorButton: floorButton, closeKeys: closeKeys, list: list, detail: detail, status: status };
   }
 
   // The click comes straight after mouseup, so the held redraw runs once it is through.
@@ -2082,26 +2071,12 @@
     settleSentKeeps();
     var toneClass = TONE_ICON[tone] ? ' sh-' + tone : '';
 
-    if (state.isOpen) {
-      ui.status.className = 'sh-status' + toneClass;
-      ui.status.innerHTML = text && TONE_ICON[tone] ? TONE_ICON[tone] : '';
-      ui.status.appendChild(el('span', '', text));
+    // With the panel closed the plugin shows the line as an Exiled's Toolkit toast instead.
+    if (!state.isOpen) return;
 
-      return;
-    }
-
-    // An empty status only clears the line; as a toast it would be an empty box.
-    if (!text) {
-      ui.toast.style.display = 'none';
-
-      return;
-    }
-
-    ui.toast.className = toneClass.trim();
-    ui.toast.textContent = text;
-    ui.toast.style.display = 'block';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { ui.toast.style.display = 'none'; }, 3500);
+    ui.status.className = 'sh-status' + toneClass;
+    ui.status.innerHTML = text && TONE_ICON[tone] ? TONE_ICON[tone] : '';
+    ui.status.appendChild(el('span', '', text));
   }
 
   // "Put away by tag" and "Put away floor" in the shared Mods menu, on the inventory's bag item tab and in the bag

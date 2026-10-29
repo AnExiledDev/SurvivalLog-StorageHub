@@ -11,20 +11,30 @@ namespace StorageHub.Tests;
 /// </summary>
 public class UiSizeTests
 {
-    /// <summary>The mask fills the screen at any size, so only the plate on it can be fitted; a message is never shrunk.</summary>
+    /// <summary>The mask fills the screen at any size, so only the plate on it can be fitted.</summary>
     [Fact]
-    public void The_plate_is_handed_over_to_be_fitted_and_the_message_never_shrunk()
+    public void The_plate_is_handed_over_to_be_fitted()
     {
         var page = new Page();
 
         page.Run("window.__storagehub.status('Saved', 'ok')");
 
-        Assert.Equal(2, page.Number("handed.length"));
-        Assert.Equal(2, page.Number("handed.filter(function (h) { return h.options.mod === 'StorageHub'; }).length"));
+        Assert.Equal(1, page.Number("handed.length"));
+        Assert.Equal("StorageHub", page.Text("handed[0].options.mod"));
         Assert.Equal(1, page.Number("handedWith('sh-plate').length"));
         Assert.True(page.Is("handedWith('sh-plate')[0].options === undefined || handedWith('sh-plate')[0].options.fit !== false"));
-        Assert.Equal(1, page.Number("handedId('sh-toast').length"));
-        Assert.True(page.Is("handedId('sh-toast')[0].options.fit === false"));
+    }
+
+    /// <summary>With the panel closed a result line is the plugin's Toolkit toast, so the page draws no box of its own.</summary>
+    [Fact]
+    public void A_result_with_the_panel_closed_draws_nothing_on_the_page()
+    {
+        var page = new Page();
+
+        page.Run("window.__storagehub.status('Saved', 'ok')");
+
+        Assert.False(page.Is("document.getElementById('sh-toast')"));
+        Assert.Equal(0, page.Number("handedId('sh-toast').length"));
     }
 
     [Fact]
@@ -34,9 +44,8 @@ public class UiSizeTests
 
         page.Run("window.__storagehub.status('Saved', 'ok')");
 
-        Assert.Equal(2, page.Number("window.__exiledUiWait.length"));
+        Assert.Equal(1, page.Number("window.__exiledUiWait.length"));
         Assert.True(page.Is("window.__exiledUiWait[0][0].classList.contains('sh-plate')"));
-        Assert.True(page.Is("window.__exiledUiWait[1][0].id === 'sh-toast'"));
     }
 
     /// <summary>

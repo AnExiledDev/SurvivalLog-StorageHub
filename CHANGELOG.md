@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0
+
+- New: `UiScale` under Interface sets the size of Storage Hub's own windows on their own, from 75% to 200%, whatever Exiled's Toolkit's UI size is. At 0, the default, they follow the Toolkit's. Needs Exiled's Toolkit 0.11.0 or newer.
+- Made for Survival Log 1.1.19611.
+
 ## 0.15.5
 
 - Fixed: the game could stutter for a moment when a drone came home with a delivery, most of all the first one of a session, and the first time you opened a station with the Home tab on.

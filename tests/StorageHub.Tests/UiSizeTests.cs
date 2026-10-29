@@ -20,6 +20,7 @@ public class UiSizeTests
         page.Run("window.__storagehub.status('Saved', 'ok')");
 
         Assert.Equal(2, page.Number("handed.length"));
+        Assert.Equal(2, page.Number("handed.filter(function (h) { return h.options.mod === 'StorageHub'; }).length"));
         Assert.Equal(1, page.Number("handedWith('sh-plate').length"));
         Assert.True(page.Is("handedWith('sh-plate')[0].options === undefined || handedWith('sh-plate')[0].options.fit !== false"));
         Assert.Equal(1, page.Number("handedId('sh-toast').length"));

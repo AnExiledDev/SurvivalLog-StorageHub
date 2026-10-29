@@ -163,7 +163,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Stacking](https://www.nexusmods.com/survivallog/mods/74). With it, the panel can take part of a stack and "Fill bag from storage" takes just the amount short.
 - Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or newer, for its item tooltips in the panel.
-- Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. With 0.10.0 or newer, its UI size setting also draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Without it, settings take effect at the next game start.
+- Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. With 0.10.0 or newer, its UI size setting also draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. With 0.11.0 or newer, Storage Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's. Without it, settings take effect at the next game start.
 
 ## Install
 

@@ -19,7 +19,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.15.5";
+    private const string Version = "0.16.0";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
@@ -27,6 +27,8 @@ public sealed class Plugin : BasePlugin
     public override void Load()
     {
         if (!OptionalLive.IsToolkitInstalled) Log.LogInfo(OptionalLive.MissingNote);
+
+        OptionalUiSize.Bind(Config);
 
         var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8,
             "The key that opens and closes the Storage Hub panel. Default: F8.\n" +

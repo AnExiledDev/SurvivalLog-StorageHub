@@ -41,6 +41,12 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 `MergeStacks` only runs as part of a tidy, so it does nothing while both `OrganizeOnOpen` and `CompactSmallItems` are off. With those two off, the mod leaves your storages and the Sort button exactly as the game makes them.
 
+## Interface
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `UiScale` | `0` | How big Storage Hub's own windows, panels and messages are drawn, in percent, from 75 to 200. At `0` they follow the UI size set in Exiled's Toolkit (its `UiScale`). Needs Exiled's Toolkit 0.11.0 or newer. |
+
 ## Diagnostics
 
 | Setting | Default | What it does |

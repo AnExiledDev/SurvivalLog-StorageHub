@@ -45,7 +45,7 @@ Works in English and Chinese.
 [*]Survival Log 1.1.19611. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [*]Optional: [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url], to take part of a stack.[/*]
-[*]Optional: [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. With 0.10.0 or newer, its UI size setting also draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Without it, settings take effect at the next game start.[/*]
+[*]Optional: [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. With 0.10.0 or newer, its UI size setting also draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. With 0.11.0 or newer, Storage Hub's own UiScale setting can set a size for this mod alone. Without it, settings take effect at the next game start.[/*]
 [/list]
 
 [size=5]Installation[/size]
@@ -111,7 +111,7 @@ Storage Hub 不在你的存档里保存任何自己的数据，也不修改游�
 [*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url]，用于取出一堆中的一部分。[/*]
-[*]可选：[url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 或更新版本。装了它，在 Mod Manager 的「模组」界面改动的设置无需重启游戏即可生效；0.10.0 或更新版本还能用它的界面大小设置放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。没装的话，改动在下次启动游戏时生效。[/*]
+[*]可选：[url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 或更新版本。装了它，在 Mod Manager 的「模组」界面改动的设置无需重启游戏即可生效；0.10.0 或更新版本还能用它的界面大小设置放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。0.11.0 或更新版本还可以用 Storage Hub 自己的 UiScale 设置单独调整本模组的大小。没装的话，改动在下次启动游戏时生效。[/*]
 [/list]
 
 [size=5]安装[/size]

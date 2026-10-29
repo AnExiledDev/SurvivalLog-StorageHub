@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.2
+
+- Fixed: the Home list in a station's bag panel (rat cage, cooking, brewing barrel and the others) ignored `UiScale`. It now follows it, with bigger rows in the same space.
+- Made for Survival Log 1.1.19611.
+
 ## 0.16.1
 
 - Results shown while the panel is closed, such as a drone delivery put away, are now Exiled's Toolkit toasts, so they appear beside the game's HUD and in the Notifications history.

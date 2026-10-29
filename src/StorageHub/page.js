@@ -3088,19 +3088,25 @@
     buildHomeBody(doc, root, root, make(doc, 'span'));
     home.panel.appendChild(root);
     home.panel.classList.add('slmh-on');
+    // Never shrunk, as it stays inside the bag panel at any size: a bigger size shows bigger rows in the same box.
+    // Placed again for each new size.
+    uiSize(root, { fit: false, onZoom: function () { if (home.ui && home.ui.root === root) placePane(); } });
     renderHome();
   }
 
-  // The pane covers the panel below its tab bar, inside the panel's padding.
+  // The pane covers the panel below its tab bar, inside the panel's padding. Those are the panel's own pixels, and
+  // the pane's zoom scales its offsets, so they are written over its zoom to keep the same box at any size.
   function placePane() {
     var root = home.ui.root;
     var tabs = home.tabsEl;
     var style = home.doc.defaultView.getComputedStyle(home.panel);
+    var zoom = uiZoom(root);
+    var inset = function (px) { return Math.round((parseFloat(px) || 0) / zoom) + 'px'; };
     var place = {
-      top: offsetTopIn(tabs, home.panel) + tabs.offsetHeight + PANE_TAB_GAP + 'px',
-      left: style.paddingLeft,
-      right: style.paddingRight,
-      bottom: style.paddingBottom
+      top: inset(offsetTopIn(tabs, home.panel) + tabs.offsetHeight + PANE_TAB_GAP),
+      left: inset(style.paddingLeft),
+      right: inset(style.paddingRight),
+      bottom: inset(style.paddingBottom)
     };
 
     Object.keys(place).forEach(function (side) {

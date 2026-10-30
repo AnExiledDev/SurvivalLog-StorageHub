@@ -2,11 +2,11 @@
 
 One searchable list of everything in your bag and your storages at home, buttons that put things away where their tags say they belong, a keep list for what you always carry, tidier storages, and drone deliveries that put themselves away.
 
-Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened with `F8`, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage whose tags fit it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's own quick-move and pickup, so freshness and durability are kept.
+Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened from a chest button in the HUD, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage whose tags fit it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's own quick-move and pickup, so freshness and durability are kept.
 
 ## Features
 
-- **The panel**: `F8` opens a list of every kind of item in your bag, your storages at home and the workbench drawer, with icons, totals and a search box. Pick an item to see where it sits and how many are in each place, and take it or put it away from there.
+- **The panel**: the chest button in the HUD opens a list of every kind of item in your bag, your storages at home and the workbench drawer, with icons, totals and a search box. Pick an item to see where it sits and how many are in each place, and take it or put it away from there.
 - **Put away by tag**: "Put bag away" sends everything in your bag to the storages whose tags want it. "Put floor away" does the same for what is lying on the floor at home, and puts anything no storage takes into your bag.
 - **Mods menu**: both put-away actions are also in the Mods menu on the game's inventory screen and in the bag panel of most station screens, so you don't need the panel for them.
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
@@ -27,7 +27,7 @@ Storage Hub keeps nothing of its own in your save and does not edit game files. 
 
 ## The panel
 
-`F8` opens and closes it (the key can be changed in the settings), and so does the chest button at the top of the HUD's tool column, which shows once a save is loaded. `Esc` and the `x` in the top-right corner close it too. While the panel is open, the game's hotkeys are paused, so typing in the search box does not also open a game menu.
+The chest button at the top of the HUD's tool column opens and closes it once a save is loaded. A key can do the same: `ToggleKey` is unbound by default, so set one in the settings if you want it, and it does nothing while you type in a text box. `Esc` and the `x` in the top-right corner close it too. While the panel is open, the game's hotkeys are paused, so typing in the search box does not also open a game menu.
 
 - Three tabs along the top switch between "Items", "Rotting soon" and "Keep in bag". Each shows how many rows it holds; the "Rotting soon" count turns red when something has spoiled or has under an hour left.
 - The search box filters the list by name. With several words, an item has to match all of them. The "All places" drop-down beside it shows only the items in one storage, or in your bag.
@@ -163,7 +163,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Stacking](https://www.nexusmods.com/survivallog/mods/74). With it, the panel can take part of a stack and "Fill bag from storage" takes just the amount short.
 - Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or newer, for its item tooltips in the panel.
-- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.11.0 or newer. Storage Hub does not load without it. It shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's.
+- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.12.0 or newer. Storage Hub does not load without it. It keeps the toggle key quiet while you type, shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's.
 
 ## Install
 

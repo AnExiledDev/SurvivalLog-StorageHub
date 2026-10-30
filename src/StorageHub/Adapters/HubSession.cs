@@ -52,13 +52,15 @@ internal sealed class HubSession
     private float _nextRefreshAt;
     private bool _isOpen;
     private bool _hasLoggedIcons;
-    private KeyCode _toggleKey = KeyCode.F8;
-    private string _toggleKeyName = nameof(KeyCode.F8);
+    private KeyCode _toggleKey = KeyCode.None;
+    private string _toggleKeyName = "";
     private bool _isVerbose;
     private bool _isKeepOn;
     private bool _isHomeListOn;
     private bool? _sentLive;
     private string _sentLiveKey = "";
+    private readonly Func<bool> _isToggleKeyDown;
+    private readonly Func<bool> _isTyping;
     private float _nextLiveCheckAt;
 
     /// <summary>What a built catalog was built from: the item table, the world (whose load drops the names) and the language.</summary>
@@ -72,6 +74,8 @@ internal sealed class HubSession
         _log = log;
         _keep = keep;
         _isSliceSpent = () => Stopwatch.GetTimestamp() >= _sliceEndsAt;
+        _isToggleKeyDown = () => Input.GetKeyDown(_toggleKey);
+        _isTyping = () => _keyboard.IsClaimed || ExiledToolkit.Typing.IsActive;
     }
 
     /// <summary>
@@ -81,7 +85,8 @@ internal sealed class HubSession
     public void Use(KeyCode toggleKey, bool isVerbose, bool isKeepOn, bool isHomeListOn)
     {
         _toggleKey = toggleKey;
-        _toggleKeyName = toggleKey.ToString();
+        // "" for an unbound key, so the page names no key instead of "None".
+        _toggleKeyName = toggleKey == KeyCode.None ? "" : toggleKey.ToString();
         _isVerbose = isVerbose;
         _isKeepOn = isKeepOn;
         _isHomeListOn = isHomeListOn;
@@ -111,7 +116,8 @@ internal sealed class HubSession
         // One call says whether any key went down this frame; most frames none did, and each key check is a call into the game.
         var isAnyKeyDown = Input.anyKeyDown;
 
-        if (isAnyKeyDown && Input.GetKeyDown(_toggleKey))
+        // A key typed into a text box (this panel's search, another mod's field) is the player's text, not the toggle key.
+        if (isAnyKeyDown && Hotkey.Fires(_toggleKey != KeyCode.None, _isToggleKeyDown, _isTyping))
         {
             ToggleOpen();
 

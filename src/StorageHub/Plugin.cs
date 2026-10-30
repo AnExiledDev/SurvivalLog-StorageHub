@@ -19,7 +19,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.16.3";
+    private const string Version = "0.16.4";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
@@ -28,9 +28,9 @@ public sealed class Plugin : BasePlugin
     {
         OptionalUiSize.Bind(Config);
 
-        var toggleKey = Config.Bind("Panel", "ToggleKey", KeyCode.F8,
-            "The key that opens and closes the Storage Hub panel. Default: F8.\n" +
-            "打开和关闭 Storage Hub 面板的按键。默认 F8。");
+        var toggleKey = Config.Bind("Panel", "ToggleKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
+            "The key that opens and closes the Storage Hub panel. Unbound by default: the chest button in the HUD opens the panel. Set a key here to open it from the keyboard too.\n" +
+            "打开和关闭 Storage Hub 面板的按键。默认不绑定：HUD 里的箱子按钮可以打开面板。在这里设置按键后，也可以用键盘打开。");
         var isVerbose = Config.Bind("Diagnostics", "Verbose", false,
             new ConfigDescription("Write extra detail to BepInEx/storage-hub.log: every planned move, what the keep list left in your bag, and how well each storage's tags matched an item. Turn it on to find out why an item went where it did. Default: off.\n" +
             "在 BepInEx/storage-hub.log 日志里写入更多细节：每一步计划的移动、「留在背包」清单留在背包里的物品，以及每个储物家具的标签和物品有多匹配。想弄清某件物品为什么被放到那里时再打开。默认关闭。", null, "ModManager.Advanced"));

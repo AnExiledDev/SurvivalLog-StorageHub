@@ -8,7 +8,7 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `ToggleKey` | `F8` | The key that opens and closes the Storage Hub panel. Use a Unity key name such as `F7` or `Insert`; the settings file lists every accepted name. |
+| `ToggleKey` | `None` | The key that opens and closes the Storage Hub panel. Unbound by default: the chest button in the HUD opens the panel. Set a Unity key name such as `F7` or `Insert` to open it from the keyboard too; the settings file lists every accepted name. The key does nothing while you type in a text box. |
 
 ## Keep
 

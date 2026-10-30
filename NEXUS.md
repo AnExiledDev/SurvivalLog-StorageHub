@@ -1,5 +1,5 @@
 Name: Storage Hub
-Summary: Find anything you own in seconds: F8 opens one searchable list of everything in your bag and home storages. Put your whole bag away into the right tagged storages in one click, keep chosen items on you, and get a Home tab at the stove, workbench and other stations. Drone deliveries put themselves away and storages tidy themselves.
+Summary: Find anything you own in seconds: a HUD button opens one searchable list of everything in your bag and home storages. Put your whole bag away into the right tagged storages in one click, keep chosen items on you, and get a Home tab at the stove, workbench and other stations. Drone deliveries put themselves away and storages tidy themselves.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
@@ -8,7 +8,7 @@ Survival Log makes you open storage after storage to find something, and again t
 
 [size=5]Main features[/size]
 [list]
-[*][b]The panel[/b]: press F8, or the chest button in the HUD, to search every item you own at home, see where each one sits, and take it into your bag or put it away. Take a whole storage's worth, or with [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url] (optional) pick how many with a slider. Every button says what it does when you point at it.[/*]
+[*][b]The panel[/b]: press the chest button in the HUD to search every item you own at home, see where each one sits, and take it into your bag or put it away. Take a whole storage's worth, or with [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url] (optional) pick how many with a slider. Every button says what it does when you point at it.[/*]
 [*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen and on most station screens. Material racks count as tagged Materials and take only what they have a slot for. With Neighbor Basket 0.2.0 or newer (optional), its "Put away" button empties the neighbor's basket the same way.[/*]
 [*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest, and "Fill bag from storage" pulls in what your bag is short of. Each row shows how many storage holds, and marks items storage has none of.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
@@ -45,7 +45,7 @@ Works in English and Chinese.
 [*]Survival Log 1.1.19611. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [*]Optional: [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url], to take part of a stack.[/*]
-[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.11.0 or newer. Storage Hub does not load without it. It shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own UiScale setting can set a size for this mod alone.[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.12.0 or newer. Storage Hub does not load without it. It keeps the toggle key quiet while you type, shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own UiScale setting can set a size for this mod alone.[/*]
 [/list]
 
 [size=5]Installation[/size]
@@ -77,7 +77,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 
 [size=5]主要功能[/size]
 [list]
-[*][b]面板[/b]：按 F8 或点 HUD 里的箱子按钮，搜索家里拥有的所有物品，查看每件物品在哪里，把它取进背包或收纳起来。可以把一个储物家具里的全部取出；装了 [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url]（可选）时，还能用滑块选择取出多少。鼠标指向任何按钮都会说明它的作用。[/*]
+[*][b]面板[/b]：点 HUD 里的箱子按钮，搜索家里拥有的所有物品，查看每件物品在哪里，把它取进背包或收纳起来。可以把一个储物家具里的全部取出；装了 [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url]（可选）时，还能用滑块选择取出多少。鼠标指向任何按钮都会说明它的作用。[/*]
 [*][b]按标签收纳[/b]：把整个背包，或家里地面上的所有物品，放进标签对应的储物家具。物品栏界面和大部分设施界面的 Mods 菜单里也有这两个按钮。材料架算作标签为「材料」的储物家具，只接收它有空位的物品。装了 Neighbor Basket 0.2.0 或更新版本（可选）时，它的「收纳」按钮会用同样的方式清空邻居的篮子。[/*]
 [*][b]留在背包[/b]：按名称选择物品并设定保留数量。收纳背包时会在背包里留下这么多，其余的收纳起来；「从储物家具补满背包」会取出背包还缺的物品。每一行都显示储物家具里有多少，并标出储物家具里没有的物品。[/*]
 [*][b]即将腐败[/b]：列出所有会腐败的食物，最快腐败的排在前面，并显示所在位置和剩余时间。[/*]
@@ -111,7 +111,7 @@ Storage Hub 不在你的存档里保存任何自己的数据，也不修改游�
 [*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url]，用于取出一堆中的一部分。[/*]
-[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.11.0 或更新版本。没有它本模组不会加载。面板关闭时，它把结果显示为弹出通知；它让在 Mod Manager 的「模组」界面改动的设置无需重启即可生效，它的界面大小设置还能放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。Storage Hub 自己的 UiScale 设置可以单独调整本模组的大小。[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.12.0 或更新版本。没有它本模组不会加载。打字时它让面板按键不起作用；面板关闭时，它把结果显示为弹出通知；它让在 Mod Manager 的「模组」界面改动的设置无需重启即可生效，它的界面大小设置还能放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。Storage Hub 自己的 UiScale 设置可以单独调整本模组的大小。[/*]
 [/list]
 
 [size=5]安装[/size]

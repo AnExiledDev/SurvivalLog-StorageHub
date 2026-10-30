@@ -552,6 +552,7 @@
     putAwayBag: 'Put whole bag away by tag',
     putAwayFloor: 'Put floor items away by tag',
     closeKeys: '{0} / Esc to close',
+    escClose: 'Esc to close',
     subItems: '{0} kinds of item across {1} storages and your bag',
     subRot: 'Food that spoils, soonest first, across {0} storages, your bag and the floor at home',
     subKeep: 'Putting the bag away leaves these in your bag',
@@ -1324,7 +1325,7 @@
     ui.floorButton.textContent = say('goFloor');
     tipFor(ui.floorButton, say('putAwayFloor'));
     tipFor(ui.x, say('closeTip'));
-    ui.closeKeys.textContent = say('closeKeys', window.__storagehubToggleKey || 'F8');
+    ui.closeKeys.textContent = window.__storagehubToggleKey ? say('closeKeys', window.__storagehubToggleKey) : say('escClose');
 
     // The keep view searches every item for the add list on the right, so the search box moves over there.
     var slot = state.view === 'keep' ? ui.rightTools : ui.leftTools;

@@ -22,7 +22,7 @@ internal sealed class WebPage
     private readonly Action<string> _log;
     private readonly Func<bool> _isPanelOpen;
     private readonly WordsOnce _words = new();
-    private string _toggleKey = "F8";
+    private string _toggleKey = "";
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;

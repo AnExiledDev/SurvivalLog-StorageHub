@@ -65,7 +65,7 @@ public abstract record PageCommand
     /// <summary>The search box gained or lost focus, so the game should send keys to the page or stop.</summary>
     public sealed record Focus(bool IsFocused) : PageCommand;
 
-    /// <summary>The inventory toolbar's Mods menu opened or closed; the page gets no keys, so Esc has to close it from here.</summary>
+    /// <summary>The home storage window on the inventory opened or closed; the page gets no keys, so Esc has to close it from here.</summary>
     public sealed record Menu(bool IsOpen) : PageCommand;
 
     /// <summary>The page script just installed itself.</summary>

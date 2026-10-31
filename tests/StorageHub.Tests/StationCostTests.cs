@@ -274,18 +274,10 @@ public class StationCostTests
     [Fact]
     public void The_page_poll_reads_the_frames_from_one_live_list()
     {
-        var script = OwnPart(PageScript());
+        var script = PageScript();
 
         Assert.Contains("var allFrames = document.getElementsByTagName('iframe');", script);
         Assert.DoesNotContain("document.querySelectorAll('iframe')", script);
-    }
-
-    [Fact]
-    public void The_page_hands_over_a_menu_entry_only_when_its_wanted_flag_changed()
-    {
-        var script = PageScript();
-
-        Assert.Contains("if (sent && sent.isWanted === isWanted && sent.hub === window.__slmodmenu) return;", script);
     }
 
     [Fact]
@@ -298,9 +290,6 @@ public class StationCostTests
     }
 
     /// <summary>The page outside the menu block it shares with the other mods, which has its own frame walk.</summary>
-    private static string OwnPart(string script) =>
-        Regex.Replace(script, @"// ===== BEGIN slmod-menu v2\..*?// ===== END slmod-menu v2 =====", "", RegexOptions.Singleline);
-
     private static string PageScript()
     {
         using var stream = typeof(StationCostTests).Assembly.GetManifestResourceStream("StorageHub.page.js") ?? throw new InvalidOperationException("page.js is not embedded in the test assembly");

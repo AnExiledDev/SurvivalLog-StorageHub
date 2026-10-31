@@ -91,9 +91,11 @@ internal sealed class WebPage
         _ => ToastKind.Info,
     };
 
-    /// <summary>Closes the inventory's Mods menu, which any mod carrying the slmod-menu block in its page.js may have made,
-    /// and the home storage window opened from it.</summary>
-    public void CloseMenu() => Run("window.__slmodmenu&&window.__slmodmenu.close();window.__storagehub&&window.__storagehub.closePop&&window.__storagehub.closePop()");
+    /// <summary>Opens the home storage window on the inventory screen, from its Mods menu row.</summary>
+    public void OpenPop() => Run("window.__storagehub&&window.__storagehub.openPop&&window.__storagehub.openPop()");
+
+    /// <summary>Closes the home storage window.</summary>
+    public void ClosePop() => Run("window.__storagehub&&window.__storagehub.closePop&&window.__storagehub.closePop()");
 
     /// <summary>
     /// The words go in front only when the page does not have them yet (a new language or key): they are a few

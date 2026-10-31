@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -223,6 +224,17 @@ public static class Texts
         var listed = string.Join(isChinese ? "、" : ", ", entries.Take(shown));
 
         return entries.Count > shown ? ListMore.Say(isChinese, listed, entries.Count - shown) : listed;
+    }
+
+    /// <summary>A word the page uses, by its key; for the Mods menu rows, which share the page's wording.</summary>
+    public static Phrase PageWord(string key)
+    {
+        foreach (var (wordKey, phrase) in Page)
+        {
+            if (wordKey == key) return phrase;
+        }
+
+        throw new ArgumentException("no page word " + key, nameof(key));
     }
 
     private static List<Phrase> Collect()

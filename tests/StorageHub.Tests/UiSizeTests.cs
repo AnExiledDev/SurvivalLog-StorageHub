@@ -126,6 +126,24 @@ public class UiSizeTests
     }
 
     /// <summary>page.js on PageFake.js; <paramref name="before"/> runs between the two.</summary>
+    /// <summary>
+    /// The page gets no keys, so the plugin holds the game's hotkeys and takes Esc only while the window says it is
+    /// open; one left saying so would keep the game's keys held after the window shut.
+    /// </summary>
+    [Fact]
+    public void The_inventory_window_tells_the_plugin_when_it_opens_and_when_it_shuts()
+    {
+        var page = new Page();
+
+        page.Run("openPop()");
+
+        Assert.Equal("slmod|storagehub|menu|1", page.Text("posted.filter(function (m) { return m.indexOf('slmod|storagehub|menu|') === 0; }).pop()"));
+
+        page.Run("window.__storagehub.closePop()");
+
+        Assert.Equal("slmod|storagehub|menu|0", page.Text("posted.filter(function (m) { return m.indexOf('slmod|storagehub|menu|') === 0; }).pop()"));
+    }
+
     private sealed class Page
     {
         private readonly Engine _engine = new();

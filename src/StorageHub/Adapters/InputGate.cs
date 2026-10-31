@@ -9,8 +9,8 @@ namespace StorageHub.Adapters;
 /// <summary>
 /// While the panel is open: stops the game's hotkeys, so typing "e" in the search box does not also open a menu, and
 /// sends every click to the web UI. The game only passes a click to the web UI where one of its own pages reported a
-/// button, which the panel is not. While the inventory's Mods menu is open it stops the hotkeys too, so the Esc that
-/// closes the menu does not also close the inventory. While one of its text fields has focus (the Home tab's search
+/// button, which the panel is not. While the inventory's home storage window is open it stops the hotkeys too, so the
+/// Esc that closes the window does not also close the inventory. While one of its text fields has focus (the Home tab's search
 /// included) it stops the hotkeys as well, so A and D typed there do not switch the game's inventory tabs. Static because a Harmony patch has nowhere else to look.
 /// </summary>
 internal static class InputGate

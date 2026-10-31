@@ -19,6 +19,21 @@ public class TextsTests
     }
 
     [Theory]
+    [InlineData("homeTitle", "Home storage", "家中储物")]
+    [InlineData("putAwayTag", "Put away by tag", "按标签收纳")]
+    [InlineData("menuFloor", "Put away floor", "收纳地面物品")]
+    public void The_mods_menu_rows_use_the_page_wording_in_both_languages(string key, string english, string chinese)
+    {
+        Assert.Equal(new Phrase(english, chinese), Texts.PageWord(key));
+    }
+
+    [Fact]
+    public void A_mods_menu_row_naming_a_word_the_page_lacks_fails_at_load_rather_than_showing_a_key()
+    {
+        Assert.Throws<ArgumentException>(() => Texts.PageWord("noSuchWord"));
+    }
+
+    [Theory]
     [MemberData(nameof(Entries))]
     public void Every_text_has_plain_english_and_a_real_chinese_translation(int index)
     {

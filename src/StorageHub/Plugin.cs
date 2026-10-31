@@ -19,7 +19,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.16.4";
+    private const string Version = "0.17.0";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
@@ -55,6 +55,7 @@ public sealed class Plugin : BasePlugin
         StationRules.UseLog(log.Write);
         InputGate.Apply(harmony, log.Write);
         PageMessages.Apply(harmony, log.Write);
+        session.AddMenuRows();
 
         OptionalLive.Watch(() =>
         {

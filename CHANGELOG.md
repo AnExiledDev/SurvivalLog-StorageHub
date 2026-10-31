@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0
+
+- The Mods menu now comes from Exiled's Toolkit, the same menu the other mods use. Home storage is still in it on the inventory, and Put away by tag and Put away floor on the inventory and the station screens.
+- Exiled's Toolkit 0.15.0 or newer is now required.
+- Made for Survival Log 1.1.20151.
+
 ## 0.16.4
 
 - The panel key is now unbound by default; use the chest button in the HUD, or set a key in the settings.

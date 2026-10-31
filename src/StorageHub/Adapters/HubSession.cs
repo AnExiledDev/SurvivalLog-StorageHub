@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using ExiledToolkit;
 using StorageHub.Core;
 using UnityEngine;
 
@@ -93,6 +94,17 @@ internal sealed class HubSession
         _page.UseToggleKey(_toggleKeyName);
     }
 
+    /// <summary>
+    /// The rows in the Mods menu that Exiled's Toolkit draws: the home storage window on the inventory while the home
+    /// list is on, and the two put-aways on the inventory and the station screens. Clicks arrive on the main thread.
+    /// </summary>
+    public void AddMenuRows()
+    {
+        ModsMenu.Add(MenuRows.Home(() => _page.OpenPop(), () => _isHomeListOn));
+        ModsMenu.Add(MenuRows.PutAwayBag(() => HandleSafely(new PageCommand.PutAwayBag())));
+        ModsMenu.Add(MenuRows.PutAwayFloor(() => HandleSafely(new PageCommand.PutAwayFloor())));
+    }
+
     /// <summary>Whether the Storage Hub panel is on screen, so a result line goes to its footer instead of a toast.</summary>
     public bool IsOpen => _isOpen;
 
@@ -124,10 +136,10 @@ internal sealed class HubSession
             return;
         }
 
-        // The menu is the inventory's top layer, so Esc closes it before the panel or the inventory.
+        // The home storage window sits over the inventory, so Esc closes it before the panel or the inventory.
         if (isAnyKeyDown && InputGate.IsMenuOpen && Input.GetKeyDown(KeyCode.Escape))
         {
-            _page.CloseMenu();
+            _page.ClosePop();
             InputGate.MenuClosed();
 
             return;
@@ -443,7 +455,7 @@ internal sealed class HubSession
                 break;
             case PageCommand.Ready:
                 _log("page script ready");
-                // A reloaded page has no menu, and one left marked open would hold the game's hotkeys for good.
+                // A reloaded page has no home window, and one left marked open would hold the game's hotkeys for good.
                 InputGate.MenuClosed();
                 // Nor does it have a focused field, and a claim left behind would keep Esc from closing the panel.
                 _keyboard.Release();

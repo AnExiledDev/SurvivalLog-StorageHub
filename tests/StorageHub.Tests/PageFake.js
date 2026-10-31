@@ -318,32 +318,6 @@ window.vuplex = {
   postMessage: function (message) { posted.push(message); }
 };
 
-// A Mods menu already in Root.html with a higher version than the block in page.js, so that block only registers with
-// it. The menu itself is tested in Exiled's Toolkit.
-var menuEntries = {};
-
-window.__slmodmenu = {
-  version: 99,
-  add: function (entry) {
-    menuEntries[entry.id] = entry;
-
-    return true;
-  },
-  update: function (id, changes) {
-    if (!menuEntries[id]) return false;
-
-    for (var key in changes) menuEntries[id][key] = changes[key];
-
-    return true;
-  },
-  remove: function () {},
-  setWanted: function () {},
-  place: function () {},
-  placeAll: function () {},
-  close: function () {},
-  watch: function () {}
-};
-
 // Exiled's Toolkit's UI size, recording what is handed to it. A panel's zoom is what a test writes on its style, and
 // zoomAt multiplies them up the tree as the real one multiplies the zooms it wrote.
 var handed = [];
@@ -403,10 +377,10 @@ function openInventory() {
   poll();
 }
 
-// The Storage Hub window on the inventory screen, opened from the Mods menu as a player does.
+// The Storage Hub window on the inventory screen, opened as the plugin does when the player picks its Mods menu row.
 function openPop() {
   openInventory();
-  menuEntries['storagehub.home'].run();
+  window.__storagehub.openPop();
 
   return gameDoc.querySelector('.slmh-pop');
 }

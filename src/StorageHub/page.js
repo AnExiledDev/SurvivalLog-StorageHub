@@ -1711,15 +1711,14 @@
   var HOME_CSS = [
     '.slmh-host{position:relative}',
     // While the list is shown the bag panel keeps its own content and size, only hidden, so nothing reflows.
-    '.slmh-on>:not(.panel-title):not(.col-t):not(.bag-tabs):not(.left-tabs):not(.slmh-pane){visibility:hidden}',
+    // The header beside a storage or the basket holds the tab bar, so it stays as it was.
+    '.slmh-on>:not(.panel-title):not(.col-t):not(.bag-tabs):not(.left-tabs):not(.header-slot):not(.slmh-pane){visibility:hidden}',
     // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
     '.slmh-forced .bag-tabs{display:flex!important}',
     '.slmh-forced #bagPanelTitle{display:none!important}',
     // The box the list fills keeps its background and frame; only what is in it is hidden.
     '.slmh-on>.slmh-box{visibility:visible!important}',
     '.slmh-on>.slmh-box>*{visibility:hidden}',
-    // The basket screen keeps its tab bar in a header the list would otherwise hide.
-    '.slmh-on>.header-slot{visibility:visible}',
     // Many storage tabs scroll sideways behind the bag's tab, Home and the arrows, as the stove's tabs do.
     '.slmh-scroll{min-width:0;overflow-x:hidden;scroll-behavior:smooth}',
     '.slmh-scroll>.bag-tab{flex:1 0 auto;white-space:nowrap}',

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.3
+
+- Fixed: opening the Home tab beside a storage, the basket or the car trunk hid the tab bar above it. The Backpack, Home and storage tabs now stay in place while the Home list shows.
+- Made for Survival Log 1.1.20151.
+
 ## 0.17.2
 
 - The tab bar at the workbench, the stove and the other crafting stations now has the same flat look as the storage screen's, with the chosen tab in gold and Home marked with a house.

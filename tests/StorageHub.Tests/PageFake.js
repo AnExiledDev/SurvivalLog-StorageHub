@@ -224,10 +224,10 @@ function matchesChain(element, parts) {
   return false;
 }
 
-// A tag, classes, ids and attributes (".bag-tab[data-owner]", "#sh-tip", "[data-tip]"); the script asks the page for
+// A tag, classes, ids, attributes and :not() (".bag-tab[data-owner]", "#sh-tip", "[data-tip]", ".bag-tab:not(.slmh-tab)"); the script asks the page for
 // nothing else along the paths the tests take.
 function matchesCompound(element, selector) {
-  var steps = selector.match(/^[a-z]+|\.[\w-]+|#[\w-]+|\[[\w-]+\]/g) || [];
+  var steps = selector.match(/^[a-z]+|\.[\w-]+|#[\w-]+|\[[\w-]+\]|:not\([^)]+\)/g) || [];
 
   if (steps.join('') !== selector) throw new Error('the fake page does not know the selector "' + selector + '"');
 
@@ -239,6 +239,8 @@ function matchesCompound(element, selector) {
         return element.id === step.slice(1);
       case '[':
         return element.hasAttribute(step.slice(1, -1));
+      case ':':
+        return !matchesCompound(element, step.slice(5, -1));
       default:
         return element.tagName === step.toUpperCase();
     }

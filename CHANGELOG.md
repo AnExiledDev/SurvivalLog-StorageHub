@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.2
+
+- The tab bar at the workbench, the stove and the other crafting stations now has the same flat look as the storage screen's, with the chosen tab in gold and Home marked with a house.
+- Made for Survival Log 1.1.20151.
+
 ## 0.17.1
 
 - The Home tab beside a basket or a storage now shows its list inside the storage window, with the storage tabs still at the top, instead of over the game.

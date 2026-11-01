@@ -1662,6 +1662,35 @@
     '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.slmh-arrow{width:22px;border:0;border-radius:0;background:#111113;font-size:15px}'
   ].join('');
 
+  // The same segmented bar at every other station with a Home tab (workbench, stove, shredder, trade and the rest): their
+  // bars share one shape, a pinned group, the scroll buttons and a scrolling group, under these class names.
+  var SEG_PIN = ['.left-tab-pinned', '.bag-tab-pinned', '.bag-tab-pinned-slot'];
+  var SEG_ROW = ['.left-tabs-scroll', '.bag-tabs-scroll'];
+  var SEG_TAB = ['.left-tab', '.bag-tab'];
+
+  function segAll(parts, tail) {
+    return parts.map(function (part) { return '.slmh-seg ' + part + (tail || ''); }).join(',');
+  }
+
+  var SEG_CSS = [
+    '.slmh-seg{gap:0!important;align-items:stretch;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
+    segAll(SEG_PIN.concat(SEG_ROW)) + '{gap:0!important;margin:0!important}',
+    segAll(SEG_PIN, '::after') + '{display:none!important}',
+    segAll(SEG_TAB) + '{flex:0 0 auto;margin:0;padding:4px 11px 5px;font-size:13px;font-weight:600;letter-spacing:.3px;background-color:transparent;background-image:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;box-shadow:none;text-shadow:none;color:rgba(255,255,255,.55)}',
+    segAll(SEG_TAB, ':hover') + '{color:#fff;background-color:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}',
+    segAll(SEG_TAB, '.active') + '{color:#1a1408;background-color:#FFC83A;background-image:none;border-color:rgba(255,255,255,.1);box-shadow:none;text-shadow:none;font-weight:700}',
+    segAll(SEG_TAB, '.locked') + '{color:rgba(255,255,255,.28);background-color:transparent}',
+    '.slmh-seg .slmh-tab{padding-left:28px;color:#FFC83A;background-image:url("' + homeIcon('#FFC83A') + '");background-repeat:no-repeat;background-position:10px 50%;background-size:13px}',
+    '.slmh-seg .slmh-tab.active{color:#1a1408;background-image:url("' + homeIcon('#1a1408') + '")}',
+    '.slmh-seg .tab-scroll-btn{width:22px;margin:0;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;background:#111113;color:rgba(255,255,255,.75);font-size:15px}',
+    '.slmh-seg .tab-scroll-btn:hover:not(:disabled){color:#fff;background:#1c1c1f;border-color:rgba(255,255,255,.1)}'
+  ].join('');
+
+  // The bar the segmented look goes on: the whole row, where the page's tab list is only its scrolling part.
+  function segBar(tabs) {
+    return tabs.closest('.left-tabs,.bag-tabs') || tabs;
+  }
+
   function homeIcon(colour) {
     return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + colour +
       '" stroke-width="2.6" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/></svg>');
@@ -2046,6 +2075,11 @@
     panel.classList.add('slmh-host');
     panel.classList.toggle('slmh-on', home.isShown);
     panel.classList.toggle('slmh-forced', !hasGameTab);
+
+    if (!home.station.scrollTabs) {
+      addStyle(doc, 'slmh-segstyle', SEG_CSS);
+      setClass(segBar(tabs), 'slmh-seg', true);
+    }
 
     var box = boxOf(panel);
 
@@ -2484,6 +2518,7 @@
     if (home.tab && home.tab.parentNode) home.tab.parentNode.removeChild(home.tab);
     if (home.back && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (home.arrows) removeArrows();
+    if (home.tabsEl) segBar(home.tabsEl).classList.remove('slmh-seg');
 
     if (home.panel) {
       home.panel.classList.remove('slmh-host', 'slmh-on', 'slmh-forced');

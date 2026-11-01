@@ -1610,7 +1610,9 @@
   // 'bag' pages keep an owner per tab and switch with SWITCH_BAG, 'cart' pages keep a tab list in State and switch by
   // index, the drone trade keeps its tabs in Vue, so only the drawn tabs tell their owners, and the workbench
   // ('tooltable') keeps its last bag message in a script variable, tab 0 the bag, 1 the drawer and 2 on its cabinets.
-  // quick is the right click that moves an item straight into the station.
+  // quick is the right click that moves an item straight into the station. box names the child of the bag panel that
+  // draws its dark box (beside the basket or a storage the bag panel itself has none); the list fills that box, which
+  // stays drawn while the grid in it is hidden.
   var BAG_TABS = { tabs: '#bagTabs', pin: '#bagTabPinned', tab: 'bag-tab', tag: 'div', model: 'bag' };
   var CART_TABS = { tab: 'left-tab', tag: 'button', panel: '.cart', model: 'cart', quick: true };
   var STATION_PAGES = [
@@ -1625,10 +1627,10 @@
     // The basket screen is the bag screen with the basket beside the bag, so it is matched before the inventory. Its bag
     // side's tabs ('atab') are Vue's, switched by index; the plugin names the storage behind each, and Home goes after
     // the bag's tab with the storage tabs scrolling past it.
-    { kind: 'basket', page: /BackpackUI\.html/, host: '.bag-panel.is-basket-panel', scope: 'scopeBasket', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
+    { kind: 'basket', page: /BackpackUI\.html/, host: '.bag-panel.is-basket-panel', scope: 'scopeBasket', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', box: 'panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
     // Any other storage open beside the bag works the same way at home. Out exploring the plugin answers that it is
     // away, and the screen keeps the inventory's window instead of a Home tab.
-    { kind: 'storage', page: /BackpackUI\.html/, host: '.bag-panel.is-storage', scope: 'scopeStorage', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
+    { kind: 'storage', page: /BackpackUI\.html/, host: '.bag-panel.is-storage', scope: 'scopeStorage', tabs: '.bag-slot.is-anchored .bag-tabs', pin: null, tab: 'bag-tab', tag: 'div', panel: '.bag-slot.is-anchored > .bag-panel', box: 'panel', model: 'atab', quick: true, homeAfterFirst: true, scrollTabs: true },
     { kind: 'inventory', page: /BackpackUI\.html/, host: '.bag-panel .panel' }
   ];
   // A wheel notch moves the storage tabs one tab; an arrow pages to the first tab not wholly shown.
@@ -1684,6 +1686,9 @@
     // With only the bag the game hides its tab bar, so the bag gets a tab of its own beside ours.
     '.slmh-forced .bag-tabs{display:flex!important}',
     '.slmh-forced #bagPanelTitle{display:none!important}',
+    // The box the list fills keeps its background and frame; only what is in it is hidden.
+    '.slmh-on>.slmh-box{visibility:visible!important}',
+    '.slmh-on>.slmh-box>*{visibility:hidden}',
     // The basket screen keeps its tab bar in a header the list would otherwise hide.
     '.slmh-on>.header-slot{visibility:visible}',
     // Many storage tabs scroll sideways behind the bag's tab, Home and the arrows, as the stove's tabs do.
@@ -2041,6 +2046,10 @@
     panel.classList.add('slmh-host');
     panel.classList.toggle('slmh-on', home.isShown);
     panel.classList.toggle('slmh-forced', !hasGameTab);
+
+    var box = boxOf(panel);
+
+    if (box && !box.classList.contains('slmh-box')) box.classList.add('slmh-box');
 
     if (hasGameTab && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (!hasGameTab) showBackTab(doc, pinned);
@@ -2478,6 +2487,7 @@
 
     if (home.panel) {
       home.panel.classList.remove('slmh-host', 'slmh-on', 'slmh-forced');
+      Array.prototype.forEach.call(home.panel.querySelectorAll('.slmh-box'), function (box) { box.classList.remove('slmh-box'); });
       Array.prototype.forEach.call(home.panel.querySelectorAll('.slmh-was'), function (tab) {
         tab.classList.remove('slmh-was');
         tab.classList.add('active');
@@ -2543,24 +2553,64 @@
     renderHome();
   }
 
-  // The pane covers the panel below its tab bar, inside the panel's padding. Those are the panel's own pixels, and
-  // the pane's zoom scales its offsets, so they are written over its zoom to keep the same box at any size.
+  // The pane covers the panel below its tab bar, inside the panel's padding, or fills the inside of the station's own
+  // box. Those are the panel's own pixels, and the pane's zoom scales its offsets, so they are written over its zoom to
+  // keep the same box at any size.
   function placePane() {
     var root = home.ui.root;
     var tabs = home.tabsEl;
-    var style = home.doc.defaultView.getComputedStyle(home.panel);
+    var view = home.doc.defaultView;
+    var style = view.getComputedStyle(home.panel);
+    var box = boxOf(home.panel);
     var zoom = uiZoom(root);
     var inset = function (px) { return Math.round((parseFloat(px) || 0) / zoom) + 'px'; };
-    var place = {
-      top: inset(offsetTopIn(tabs, home.panel) + tabs.offsetHeight + PANE_TAB_GAP),
-      left: inset(style.paddingLeft),
-      right: inset(style.paddingRight),
-      bottom: inset(style.paddingBottom)
+    var place = box ? boxInside(box, view.getComputedStyle(box)) : {
+      top: offsetTopIn(tabs, home.panel) + tabs.offsetHeight + PANE_TAB_GAP,
+      left: style.paddingLeft,
+      right: style.paddingRight,
+      bottom: style.paddingBottom
     };
 
     Object.keys(place).forEach(function (side) {
-      if (root.style[side] !== place[side]) root.style[side] = place[side];
+      var at = inset(place[side]);
+
+      if (root.style[side] !== at) root.style[side] = at;
     });
+  }
+
+  // The station's own box among the bag panel's children, or null when the station has none.
+  function boxOf(panel) {
+    var name = home.station && home.station.box;
+
+    if (!name || !panel) return null;
+
+    for (var i = 0; i < panel.children.length; i++) {
+      if (panel.children[i].classList.contains(name)) return panel.children[i];
+    }
+
+    return null;
+  }
+
+  // The inside of the box (within its border and padding), as distances from the bag panel's edges.
+  function boxInside(box, style) {
+    var px = function (value) { return parseFloat(value) || 0; };
+    var top = offsetTopIn(box, home.panel);
+    var left = offsetLeftIn(box, home.panel);
+
+    return {
+      top: top + px(style.borderTopWidth) + px(style.paddingTop),
+      left: left + px(style.borderLeftWidth) + px(style.paddingLeft),
+      right: home.panel.clientWidth - left - box.offsetWidth + px(style.borderRightWidth) + px(style.paddingRight),
+      bottom: home.panel.clientHeight - top - box.offsetHeight + px(style.borderBottomWidth) + px(style.paddingBottom)
+    };
+  }
+
+  function offsetLeftIn(node, panel) {
+    var left = 0;
+
+    for (var at = node; at && at !== panel; at = at.offsetParent) left += at.offsetLeft;
+
+    return left;
   }
 
   // How far below the panel's top a node sits; the basket screen's tab bar sits inside a positioned header.

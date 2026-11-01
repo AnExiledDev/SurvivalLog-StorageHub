@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.1
+
+- The Home tab beside a basket or a storage now shows its list inside the storage window, with the storage tabs still at the top, instead of over the game.
+- Made for Survival Log 1.1.20151.
+
 ## 0.17.0
 
 - The Mods menu now comes from Exiled's Toolkit, the same menu the other mods use. Home storage is still in it on the inventory, and Put away by tag and Put away floor on the inventory and the station screens.

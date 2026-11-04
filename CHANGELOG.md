@@ -2,6 +2,7 @@
 
 ## 0.17.3
 
+- **Warning:** needs Exiled's Toolkit 0.15.0 or newer. Storage Hub no longer loads without it. Install or update the Toolkit first.
 - Fixed: opening the Home tab beside a storage, the basket or the car trunk hid the tab bar above it. The Backpack, Home and storage tabs now stay in place while the Home list shows.
 - Made for Survival Log 1.1.20151.
 

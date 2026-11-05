@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using ExiledToolkit.Web;
 
 namespace StorageHub.Core;
 
@@ -39,7 +40,7 @@ public static class StationView
     {
         var wished = isWished ?? (_ => false);
         var storages = inventory.Storages.Where(IsListed).Select(storage => StorageJson(inventory, storage, isUsable, iconOf, wished));
-        var json = new StringBuilder(4096).Append("{\"kind\":").Append(HubView.Str(KindName(kind))).Append(",\"storages\":[").AppendJoin(',', storages).Append(']');
+        var json = new StringBuilder(4096).Append("{\"kind\":").Append(JsText.Literal(KindName(kind))).Append(",\"storages\":[").AppendJoin(',', storages).Append(']');
 
         if (tabs != null) json.Append(",\"tabs\":[").AppendJoin(',', tabs.Select(Id)).Append(']');
         if (isAway) json.Append(",\"away\":true");
@@ -111,7 +112,7 @@ public static class StationView
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .Select(item => item.Json);
 
-        return $"{{\"id\":{Id(storage.OwnerId)},\"name\":{HubView.Str(storage.Name)},\"items\":[{string.Join(",", items)}]}}";
+        return $"{{\"id\":{Id(storage.OwnerId)},\"name\":{JsText.Literal(storage.Name)},\"items\":[{string.Join(",", items)}]}}";
     }
 
     private static (string Name, bool IsWished, string Json) ItemJson(string name, IReadOnlyList<ItemStack> stacks, Func<ItemStack, bool> isUsable, string? icon, bool isWished)
@@ -119,10 +120,10 @@ public static class StationView
         var usable = stacks.FirstOrDefault(isUsable);
         var shown = usable ?? stacks[0];
         var count = stacks.Sum(stack => stack.Count).ToString(CultureInfo.InvariantCulture);
-        var json = $"{{\"item\":{Id(shown.ItemId)},\"cfg\":{shown.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{HubView.Str(name)},\"count\":{count},\"icon\":{(icon is null ? "null" : HubView.Str(icon))},\"ok\":{(usable is null ? "false" : "true")}{(isWished ? ",\"wish\":true" : "")}}}";
+        var json = $"{{\"item\":{Id(shown.ItemId)},\"cfg\":{shown.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{JsText.Literal(name)},\"count\":{count},\"icon\":{(icon is null ? "null" : JsText.Literal(icon))},\"ok\":{(usable is null ? "false" : "true")}{(isWished ? ",\"wish\":true" : "")}}}";
 
         return (name, isWished, json);
     }
 
-    private static string Id(long id) => HubView.Str(id.ToString(CultureInfo.InvariantCulture));
+    private static string Id(long id) => JsText.Literal(id.ToString(CultureInfo.InvariantCulture));
 }

@@ -12,6 +12,7 @@ public class StationTabBarTests
     public StationTabBarTests()
     {
         _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
+        _engine.Execute(Resource("ExiledToolkit.api.js"));
         _engine.Execute(Resource("StorageHub.page.js"));
         // The stove's page: its bag panel with the tab bar, the pinned group holding the bag's tab, and the scrolling group.
         _engine.Execute(

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
+using ExiledToolkit;
+using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
 using HarmonyLib;
 using StorageHub.Adapters;
 using StorageHub.Core;
@@ -14,19 +17,23 @@ using UnityEngine;
 namespace StorageHub;
 
 [BepInPlugin(Guid, "Storage Hub", Version)]
-[BepInDependency(OptionalLive.ToolkitGuid, OptionalLive.ToolkitVersion)]
+[BepInDependency(ToolkitGuid, ToolkitVersion)]
 [BepInDependency(StackingGuid, BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.17.3";
+    private const string Version = "0.17.4";
+
+    /// <summary>The oldest Exiled's Toolkit the mod loads with: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
+    private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
+    private const string ToolkitVersion = ">=0.19.0";
 
     /// <summary>Stacking moves one unit of a stack when the Home tab sends an item to the bag; without it the whole stack moves.</summary>
     private const string StackingGuid = "com.dev.survivallog.stacking";
 
     public override void Load()
     {
-        OptionalUiSize.Bind(Config);
+        ModUiSize.Bind(Config, "StorageHub");
 
         var toggleKey = Config.Bind("Panel", "ToggleKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
             "The key that opens and closes the Storage Hub panel. Unbound by default: the chest button in the HUD opens the panel. Set a key here to open it from the keyboard too.\n" +
@@ -43,37 +50,36 @@ public sealed class Plugin : BasePlugin
         var isStorageTabsOn = Config.Bind("Stations", "StorageTabs", true,
             "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station takes, next to the game's own storage tabs. At home, opening a storage, the neighbor's basket or the car trunk also gives every home storage a tab above your bag, empty or not. Default: on.\n" +
             "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的储物标签并列。在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具也都会在背包上方有一个标签，空的也有。默认开启。");
-        var log = new HubLog(Log, Path.Combine(Paths.BepInExRootPath, "storage-hub.log"));
-        var harmony = new Harmony(Guid);
+        var log = new ModLog(Log, "storage-hub.log");
+        var hooks = new PatchKit(new Harmony(Guid), log.Write);
 
         HubSession? session = null;
         var page = new WebPage(log.Write, () => session?.IsOpen == true);
         var keep = new KeepListKeeper(new KeepListFile(Path.Combine(Paths.ConfigPath, Guid + ".keep.json")), () => DateTime.Now, log.Write);
-        session = new HubSession(new GameStorages(log.Write), page, new WebKeyboard(), log.Write, keep);
+        var inbox = ExiledToolkit.Web.PageInbox.Listen(PageCommand.Prefix);
+        session = new HubSession(new GameStorages(log.Write), page, new ExiledToolkit.Web.WebKeyboard(), inbox, log.Write, keep);
 
         log.Write($"===== Storage Hub {Version} started");
         StationRules.UseLog(log.Write);
-        InputGate.Apply(harmony, log.Write);
-        PageMessages.Apply(harmony, log.Write);
         session.AddMenuRows();
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             session.Use(toggleKey.Value, isVerbose.Value, isKeepOn.Value, isHomeListOn.Value);
             log.Write($"toggle key {toggleKey.Value}, verbose {isVerbose.Value}, keep list {isKeepOn.Value}, home storage list {isHomeListOn.Value}");
         }, toggleKey, isVerbose, isKeepOn, isHomeListOn);
 
-        OptionalLive.Watch(isStorageTabsOn, isOn =>
+        LiveSettings.Watch(isStorageTabsOn, isOn =>
         {
             log.Write($"storage tabs {isOn}");
-            StationHooks.Use(harmony, isOn, log.Write);
+            StationHooks.Use(hooks, isOn);
         });
 
         StoragePanel.Session = session;
         StoragePanel.Log = log.Write;
         AddComponent<StoragePanel>();
-        StartOrganizer(harmony, log);
-        StartDeliveryPutAway(harmony, page, log);
+        StartOrganizer(hooks, log);
+        StartDeliveryPutAway(hooks, page, log);
         WarmUpInBackground(log);
     }
 
@@ -83,13 +89,12 @@ public sealed class Plugin : BasePlugin
     /// code is compiled without being run, so nothing here touches the game. A failure only costs those firsts their head
     /// start, and is noted in the mod's file only (the BepInEx console is left to the game's thread).
     /// </summary>
-    private static void WarmUpInBackground(HubLog log) =>
+    private static void WarmUpInBackground(ModLog log) =>
         Task.Run(() =>
         {
             try
             {
                 WarmUp.Run();
-                PageMessages.WarmUp();
 
                 foreach (var type in typeof(WarmUp).Assembly.GetTypes())
                 {
@@ -120,7 +125,7 @@ public sealed class Plugin : BasePlugin
         }
     }
 
-    private void StartDeliveryPutAway(Harmony harmony, WebPage page, HubLog log)
+    private void StartDeliveryPutAway(PatchKit hooks, WebPage page, ModLog log)
     {
         var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true,
             "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. With this off, those events never finish when the drone hub unloads the drone for you. Default: on.\n" +
@@ -132,11 +137,11 @@ public sealed class Plugin : BasePlugin
 
         var deliveries = new DeliveryPutAway(DeliveryHooks.TakeNext, new GameStorages(log.Write), new DroneRetrieves(log.Write, log.WriteFileOnly), page, log.Write, log.WriteFileOnly);
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             log.Write($"auto put-away of drone deliveries {autoPutAway.Value}, skip racks with robot put off {skipRobotPutOff.Value}");
             deliveries.Use(skipRobotPutOff.Value);
-            DeliveryHooks.Use(harmony, autoPutAway.Value, log.Write);
+            DeliveryHooks.Use(hooks, autoPutAway.Value);
         }, autoPutAway, skipRobotPutOff);
 
         DeliveryTicker.Deliveries = deliveries;
@@ -144,7 +149,7 @@ public sealed class Plugin : BasePlugin
         AddComponent<DeliveryTicker>();
     }
 
-    private void StartOrganizer(Harmony harmony, HubLog log)
+    private void StartOrganizer(PatchKit hooks, ModLog log)
     {
         var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", true,
             "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: on.\n" +
@@ -161,13 +166,13 @@ public sealed class Plugin : BasePlugin
 
         var bags = new BagOrganizer(OrganizeHooks.TakeDue, log.Write);
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             var smallMaxArea = Math.Max(0, smallItemMaxArea.Value);
 
             log.Write($"organize on open {organizeOnOpen.Value}, compact small items {compactSmallItems.Value}, small means up to {smallMaxArea} cells, merge stacks {mergeStacks.Value}");
             bags.Use(new PackOptions(smallMaxArea, compactSmallItems.Value), mergeStacks.Value);
-            OrganizeHooks.Use(harmony, organizeOnOpen.Value, compactSmallItems.Value, log.Write);
+            OrganizeHooks.Use(hooks, organizeOnOpen.Value, compactSmallItems.Value, log.Write);
         }, organizeOnOpen, compactSmallItems, smallItemMaxArea, mergeStacks);
 
         OrganizeTicker.Bags = bags;

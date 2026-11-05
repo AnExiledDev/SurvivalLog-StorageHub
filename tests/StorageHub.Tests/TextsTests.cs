@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ExiledToolkit.Kit;
+using ExiledToolkit.Web;
 using StorageHub.Core;
 using Xunit;
 using static StorageHub.Tests.Fixtures;
@@ -173,7 +175,7 @@ public class TextsTests
         var script = PageWords.Script(isChinese: true, "F8");
 
         Assert.StartsWith("window.__storagehubWords={", script);
-        Assert.All(Texts.Page, word => Assert.Contains(HubView.Str(word.Key) + ":" + HubView.Str(word.Phrase.Zh), script));
+        Assert.All(Texts.Page, word => Assert.Contains(JsText.Literal(word.Key) + ":" + JsText.Literal(word.Phrase.Zh), script));
     }
 
     /// <summary>Here rather than with the other cost tests: the statement is kept in one static, which only this class also uses.</summary>
@@ -187,7 +189,7 @@ public class TextsTests
         var chinese = PageWords.Script(isChinese: true, "F7");
         var otherKey = PageWords.Script(isChinese: false, "F9");
 
-        Assert.Contains(HubView.Str("homeTab") + ":" + HubView.Str(Texts.Page.Single(word => word.Key == "homeTab").Phrase.Zh), chinese);
+        Assert.Contains(JsText.Literal("homeTab") + ":" + JsText.Literal(Texts.Page.Single(word => word.Key == "homeTab").Phrase.Zh), chinese);
         Assert.Contains("window.__storagehubToggleKey=\"F9\";", otherKey);
         Assert.Contains("window.__storagehubToggleKey=\"F7\";", PageWords.Script(isChinese: false, "F7"));
     }

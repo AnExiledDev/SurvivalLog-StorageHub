@@ -280,15 +280,6 @@ public class StationCostTests
         Assert.DoesNotContain("document.querySelectorAll('iframe')", script);
     }
 
-    [Fact]
-    public void The_page_works_out_the_hud_stamp_only_when_the_key_or_the_language_changed()
-    {
-        var script = PageScript();
-
-        Assert.Contains("var stamp = hudStamp();", script);
-        Assert.Contains("if (hudStampFor.key !== hud.key || hudStampFor.words !== words()) {", script);
-    }
-
     /// <summary>The page outside the menu block it shares with the other mods, which has its own frame walk.</summary>
     private static string PageScript()
     {

@@ -1,6 +1,6 @@
 # Storage Hub settings
 
-Settings live in `BepInEx\config\com.dev.survivallog.storagehub.cfg`, created the first time the game starts with the mod. Each heading below is a section in that file, like `[Panel]`. Change them in game on the Mod Manager's Mods screen, where they take effect at once, or edit the file while the game is closed. Delete the file to get the defaults back. Without Exiled's Toolkit installed, changes made on the Mods screen take effect at the next game start instead.
+Settings live in `BepInEx\config\com.dev.survivallog.storagehub.cfg`, created the first time the game starts with the mod. Each heading below is a section in that file, like `[Panel]`. Change them in game on the Mod Manager's Mods screen, where they take effect at once, or edit the file while the game is closed. Delete the file to get the defaults back.
 
 The keep list itself is not a setting. Change it in the panel ("Keep in bag"); it is saved in `BepInEx\config\com.dev.survivallog.storagehub.keep.json`.
 
@@ -45,7 +45,7 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `UiScale` | `0` | How big Storage Hub's own windows, panels and messages are drawn, in percent, from 75 to 200. At `0` they follow the UI size set in Exiled's Toolkit (its `UiScale`). Needs Exiled's Toolkit 0.11.0 or newer. |
+| `UiScale` | `0` | How big Storage Hub's own windows, panels and messages are drawn, in percent, from 75 to 200. At `0` they follow the UI size set in Exiled's Toolkit (its `UiScale`). |
 
 ## Diagnostics
 

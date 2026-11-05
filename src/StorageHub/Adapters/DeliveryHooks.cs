@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using ExiledToolkit.Game;
 using GameCore.HotUpdate.Battle.Logic;
-using HarmonyLib;
 using StorageHub.Core;
 
 namespace StorageHub.Adapters;
@@ -17,8 +17,7 @@ internal static class DeliveryHooks
 {
     private static readonly object Gate = new();
     private static readonly Queue<Landing> Landings = new();
-    private static Action<string> _log = _ => { };
-    private static bool _hasReportedHookFailure;
+    private static PatchKit? _hooks;
     private static bool _isOn;
     private static bool _isHooked;
 
@@ -26,24 +25,17 @@ internal static class DeliveryHooks
     /// Called on the main thread at start and after each change. The hook goes in the first time the put-away is turned
     /// on; turned off, it records no more landings, and one already recorded is still put away.
     /// </summary>
-    public static void Use(Harmony harmony, bool isOn, Action<string> log)
+    public static void Use(PatchKit hooks, bool isOn)
     {
-        _log = log;
+        _hooks = hooks;
         _isOn = isOn;
 
         if (!isOn || _isHooked) return;
 
         _isHooked = true;
 
-        try
-        {
-            harmony.Patch(AccessTools.Method(typeof(StrangerTradeActiveManager), nameof(StrangerTradeActiveManager.SettleDroneReturn)), prefix: new HarmonyMethod(typeof(DeliveryHooks), nameof(BeforeSettle)));
-            _log("drone deliveries are put away");
-        }
-        catch (Exception ex)
-        {
-            _log($"could not hook {nameof(StrangerTradeActiveManager)}.{nameof(StrangerTradeActiveManager.SettleDroneReturn)}, drone deliveries stay where they land: {ex.Message}");
-        }
+        hooks.Patch(typeof(DeliveryHooks), typeof(StrangerTradeActiveManager), nameof(StrangerTradeActiveManager.SettleDroneReturn), prefix: nameof(BeforeSettle),
+            done: "drone deliveries are put away", consequence: "drone deliveries stay where they land");
     }
 
     /// <summary>The oldest landing not yet handled, if any.</summary>
@@ -76,10 +68,7 @@ internal static class DeliveryHooks
         }
         catch (Exception ex)
         {
-            if (_hasReportedHookFailure) return;
-
-            _hasReportedHookFailure = true;
-            _log("the drone landing hook failed (only the first failure is logged): " + ex);
+            _hooks?.Fail("noticing a drone landing", ex);
         }
     }
 }

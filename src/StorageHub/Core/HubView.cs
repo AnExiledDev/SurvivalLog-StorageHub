@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using ExiledToolkit.Web;
 
 namespace StorageHub.Core;
 
@@ -18,9 +19,6 @@ public sealed record KeepView(bool IsOn, IReadOnlyList<KeepRow> Rows);
 /// </summary>
 public static class HubView
 {
-    private const char LineSeparator = (char)0x2028;
-    private const char ParagraphSeparator = (char)0x2029;
-
     /// <summary>
     /// The view; rot is the "Rotting soon" list, soonest first, and keep is the keep list. Each is sent empty when not
     /// given, the keep list as turned on. canSplit says whether part of a stack can be taken (Stacking is installed).
@@ -28,7 +26,7 @@ public static class HubView
     public static string Build(Inventory inventory, Func<int, string?> iconOf, IReadOnlyList<RotRow>? rot = null, KeepView? keep = null, bool canSplit = true)
     {
         var json = new StringBuilder(4096);
-        var storages = inventory.Storages.Select(storage => $"{{\"id\":{Id(storage.OwnerId)},\"name\":{Str(storage.Name)},\"kind\":{Str(KindName(storage.Kind))}{(storage.Bay == DroneBay.Drone ? ",\"drone\":true" : "")}}}");
+        var storages = inventory.Storages.Select(storage => $"{{\"id\":{Id(storage.OwnerId)},\"name\":{JsText.Literal(storage.Name)},\"kind\":{JsText.Literal(KindName(storage.Kind))}{(storage.Bay == DroneBay.Drone ? ",\"drone\":true" : "")}}}");
         var items = ItemSearch.Find(inventory, "").Select(row => ItemJson(row, iconOf(row.ConfigId)));
         var rotting = (rot ?? Array.Empty<RotRow>()).Select(row => RotJson(row, iconOf(row.ConfigId)));
         var keeping = keep ?? new KeepView(true, Array.Empty<KeepRow>());
@@ -49,54 +47,26 @@ public static class HubView
         items.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.ConfigId).ToList();
 
     /// <summary>One catalog item as the page reads it.</summary>
-    public static string CatalogRow(CatalogItem item, string? icon) => $"{{\"id\":{Num(item.ConfigId)},\"name\":{Str(item.Name)},\"icon\":{Icon(icon)}}}";
-
-    /// <summary>A JavaScript string literal, safe to paste into a script.</summary>
-    public static string Str(string? text)
-    {
-        var literal = new StringBuilder((text?.Length ?? 0) + 2).Append('"');
-
-        foreach (var character in text ?? "")
-        {
-            switch (character)
-            {
-                case '"':
-                    literal.Append("\\\"");
-                    break;
-                case '\\':
-                    literal.Append("\\\\");
-                    break;
-                // Line and paragraph separators end a line in older JavaScript, and '<' keeps "</script>" inert.
-                case < ' ' or LineSeparator or ParagraphSeparator or '<':
-                    literal.Append("\\u").Append(((int)character).ToString("x4", CultureInfo.InvariantCulture));
-                    break;
-                default:
-                    literal.Append(character);
-                    break;
-            }
-        }
-
-        return literal.Append('"').ToString();
-    }
+    public static string CatalogRow(CatalogItem item, string? icon) => $"{{\"id\":{Num(item.ConfigId)},\"name\":{JsText.Literal(item.Name)},\"icon\":{Icon(icon)}}}";
 
     private static string ItemJson(ItemRow row, string? icon)
     {
         var at = row.Locations.Select(location => $"[{Id(location.Storage.OwnerId)},{location.Count.ToString(CultureInfo.InvariantCulture)}]");
 
-        return $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"total\":{row.Total.ToString(CultureInfo.InvariantCulture)},\"at\":[{string.Join(",", at)}]}}";
+        return $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{JsText.Literal(row.Name)},\"icon\":{(icon is null ? "null" : JsText.Literal(icon))},\"total\":{row.Total.ToString(CultureInfo.InvariantCulture)},\"at\":[{string.Join(",", at)}]}}";
     }
 
     private static string KeepJson(KeepRow row, string? icon) =>
-        $"{{\"id\":{Num(row.ConfigId)},\"name\":{Str(row.Name)},\"icon\":{Icon(icon)},\"amount\":{Num(row.Amount)},\"held\":{Num(row.Held)}}}";
+        $"{{\"id\":{Num(row.ConfigId)},\"name\":{JsText.Literal(row.Name)},\"icon\":{Icon(icon)},\"amount\":{Num(row.Amount)},\"held\":{Num(row.Held)}}}";
 
     private static string Num(int value) => value.ToString(CultureInfo.InvariantCulture);
 
-    private static string Icon(string? icon) => icon is null ? "null" : Str(icon);
+    private static string Icon(string? icon) => icon is null ? "null" : JsText.Literal(icon);
 
     private static string RotJson(RotRow row, string? icon) =>
-        $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{Str(row.Name)},\"icon\":{(icon is null ? "null" : Str(icon))},\"count\":{row.Count.ToString(CultureInfo.InvariantCulture)},\"at\":{Id(row.OwnerId)},\"where\":{Str(row.Where)},\"left\":{Str(row.Label)},\"urgent\":{(row.IsUrgent ? "true" : "false")},\"hours\":{Num(row.HoursLeft)}}}";
+        $"{{\"id\":{row.ConfigId.ToString(CultureInfo.InvariantCulture)},\"name\":{JsText.Literal(row.Name)},\"icon\":{(icon is null ? "null" : JsText.Literal(icon))},\"count\":{row.Count.ToString(CultureInfo.InvariantCulture)},\"at\":{Id(row.OwnerId)},\"where\":{JsText.Literal(row.Where)},\"left\":{JsText.Literal(row.Label)},\"urgent\":{(row.IsUrgent ? "true" : "false")},\"hours\":{Num(row.HoursLeft)}}}";
 
-    private static string Id(long ownerId) => Str(ownerId.ToString(CultureInfo.InvariantCulture));
+    private static string Id(long ownerId) => JsText.Literal(ownerId.ToString(CultureInfo.InvariantCulture));
 
     private static string KindName(StorageKind kind) => kind switch
     {

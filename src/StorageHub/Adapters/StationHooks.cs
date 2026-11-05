@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ExiledToolkit.Game;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
 using GameCore.HotUpdate.ReduxUI;
-using HarmonyLib;
 using Il2CppInterop.Runtime;
 using StorageHub.Core;
 using Il2CppCabinets = Il2CppSystem.Collections.Generic.List<GameCore.HotUpdate.ToolCabinetInfo>;
@@ -28,8 +28,7 @@ namespace StorageHub.Adapters;
 /// </summary>
 internal static class StationHooks
 {
-    private static Action<string> _log = _ => { };
-    private static bool _hasReportedHookFailure;
+    private static PatchKit? _hooks;
     private static bool _isOn;
     private static bool _isHooked;
 
@@ -37,43 +36,32 @@ internal static class StationHooks
     /// Called on the main thread at start and after each change. The hooks go in the first time the tabs are turned on;
     /// turned off, they leave every station's list as the game made it from the next opening on.
     /// </summary>
-    public static void Use(Harmony harmony, bool isOn, Action<string> log)
+    public static void Use(PatchKit hooks, bool isOn)
     {
-        _log = log;
+        _hooks = hooks;
         _isOn = isOn;
 
         if (!isOn || _isHooked) return;
 
         _isHooked = true;
 
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCookingBagList", nameof(BeforeCooking), null, "the stove");
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetRatCageBagList", nameof(BeforeRatCage), null, "the rat cage");
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetBrewBagList", nameof(BeforeBrew), null, "the brewing barrel");
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetDyeBagList", nameof(BeforeDye), null, "the dye vat");
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetShredderBagList", nameof(BeforeShredder), null, "the shredder");
-        Patch(harmony, typeof(Reducer_Data_Item), "RA_GetCompressorBagList", nameof(BeforeCompressor), null, "the ration press");
-        Patch(harmony, typeof(ItemManager), nameof(ItemManager.CollectTradeContainers), null, nameof(AfterTradeContainers), "the drone trade");
-        Patch(harmony, typeof(Ac_Item_GetHandMadeBagList), nameof(Ac_Item_GetHandMadeBagList.SendAction), nameof(BeforeWorkbench), null, "the workbench");
-        Patch(harmony, typeof(Reducer_Web_BackpackUI), "BuildATabs", null, nameof(AfterBuildATabs), "the looting screen");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetCookingBagList", nameof(BeforeCooking), null, "the stove");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetRatCageBagList", nameof(BeforeRatCage), null, "the rat cage");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetBrewBagList", nameof(BeforeBrew), null, "the brewing barrel");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetDyeBagList", nameof(BeforeDye), null, "the dye vat");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetShredderBagList", nameof(BeforeShredder), null, "the shredder");
+        Patch(hooks, typeof(Reducer_Data_Item), "RA_GetCompressorBagList", nameof(BeforeCompressor), null, "the ration press");
+        Patch(hooks, typeof(ItemManager), nameof(ItemManager.CollectTradeContainers), null, nameof(AfterTradeContainers), "the drone trade");
+        Patch(hooks, typeof(Ac_Item_GetHandMadeBagList), nameof(Ac_Item_GetHandMadeBagList.SendAction), nameof(BeforeWorkbench), null, "the workbench");
+        Patch(hooks, typeof(Reducer_Web_BackpackUI), "BuildATabs", null, nameof(AfterBuildATabs), "the looting screen");
     }
 
-    private static void Patch(Harmony harmony, Type type, string method, string? prefix, string? postfix, string station)
-    {
-        try
-        {
-            harmony.Patch(
-                AccessTools.Method(type, method),
-                prefix: prefix == null ? null : new HarmonyMethod(typeof(StationHooks), prefix),
-                postfix: postfix == null ? null : new HarmonyMethod(typeof(StationHooks), postfix));
-            _log(type == typeof(Reducer_Web_BackpackUI)
+    private static void Patch(PatchKit hooks, Type type, string method, string? prefix, string? postfix, string station) =>
+        hooks.Patch(typeof(StationHooks), type, method, prefix: prefix, postfix: postfix,
+            done: type == typeof(Reducer_Web_BackpackUI)
                 ? $"{station} at home gets a bag tab for every home storage"
-                : $"{station} gets a bag tab for each home storage holding something it takes");
-        }
-        catch (Exception ex)
-        {
-            _log($"could not hook {type.Name}.{method}, {station} keeps only the game's own bag tabs: {ex.Message}");
-        }
-    }
+                : $"{station} gets a bag tab for each home storage holding something it takes",
+            consequence: $"{station} keeps only the game's own bag tabs");
 
     // Each hook checks the switch before anything else and runs its body in a plain try, with no closure, so a hook
     // with the tabs turned off costs a field read and nothing more.
@@ -376,11 +364,5 @@ internal static class StationHooks
     }
 
     /// <summary>An exception must never escape into the game's code, so a failing hook logs once and leaves the tabs alone.</summary>
-    private static void ReportFailure(Exception ex)
-    {
-        if (_hasReportedHookFailure) return;
-
-        _hasReportedHookFailure = true;
-        _log("adding storage tabs to a station failed, it keeps the game's own tabs (only the first failure is logged): " + ex);
-    }
+    private static void ReportFailure(Exception ex) => _hooks?.Fail("adding storage tabs to a station, it keeps the game's own tabs", ex);
 }

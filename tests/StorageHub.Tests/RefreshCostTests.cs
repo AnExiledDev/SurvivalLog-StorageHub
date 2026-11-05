@@ -1,3 +1,4 @@
+using ExiledToolkit.Kit;
 using StorageHub.Core;
 using Xunit;
 using static StorageHub.Tests.Fixtures;
@@ -187,27 +188,6 @@ public class RefreshCostTests
     }
 
     // ---- Nothing sent that the page already has ----
-
-    [Fact]
-    public void The_words_go_to_the_page_once_until_the_language_or_key_changes_or_the_page_reloads()
-    {
-        var words = new WordsOnce();
-        var english = PageWords.Script(isChinese: false, "F8");
-
-        Assert.Equal(english, words.Pending(english));
-
-        words.Sent(english);
-
-        Assert.Equal("", words.Pending(english));
-
-        var chinese = PageWords.Script(isChinese: true, "F8");
-
-        Assert.Equal(chinese, words.Pending(chinese));
-
-        words.Forget();
-
-        Assert.Equal(english, words.Pending(english));
-    }
 
     [Fact]
     public void An_unchanged_station_list_is_not_sent_to_a_page_that_still_holds_it()

@@ -165,43 +165,6 @@ public class PageCommandTests
     }
 }
 
-public class IconIndexTests
-{
-    private static readonly IconIndex Icons = IconIndex.Build(new[]
-    {
-        "Res/Food/UI_Item_Icon_Food_steak.png",
-        "Res/Material/UI_Item_Icon_Mat_S_1503002201.png",
-        "Res/Material/UI_Item_Icon_Shared.png",
-        "Res/Structure/UI_Item_Icon_Shared.png",
-    });
-
-    [Theory]
-    [InlineData("UI_Item_Icon_Food_steak")]
-    [InlineData("UI_Item_Icon_Food_steak.png")]
-    [InlineData("../../Res/Food/UI_Item_Icon_Food_steak.png")]
-    [InlineData("Assets\\Art\\UI\\ui_item_icon_food_steak.png")]
-    public void Any_form_of_an_icon_name_finds_the_web_file(string named)
-    {
-        Assert.Equal("Res/Food/UI_Item_Icon_Food_steak.png", Icons.Resolve(named));
-    }
-
-    [Fact]
-    public void Two_files_with_one_name_are_told_apart_by_the_folder_the_item_names()
-    {
-        Assert.Equal("Res/Structure/UI_Item_Icon_Shared.png", Icons.Resolve("Res/Structure/UI_Item_Icon_Shared.png"));
-        Assert.Equal("Res/Material/UI_Item_Icon_Shared.png", Icons.Resolve("UI_Item_Icon_Shared"));
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("UI_Item_Icon_Missing")]
-    public void An_item_without_a_web_icon_gets_none(string? named)
-    {
-        Assert.Null(Icons.Resolve(named));
-    }
-}
-
 public class HubViewTests
 {
     [Fact]
@@ -240,14 +203,5 @@ public class HubViewTests
         using var view = JsonDocument.Parse(HubView.Build(home, _ => null));
 
         Assert.Equal(name, view.RootElement.GetProperty("items")[0].GetProperty("name").GetString());
-    }
-
-    [Fact]
-    public void A_string_literal_survives_being_pasted_into_a_script()
-    {
-        var text = "Moved 3 stacks. \"Rope\" had nowhere to go" + (char)0x2029;
-
-        Assert.Equal(text, JsonSerializer.Deserialize<string>(HubView.Str(text)));
-        Assert.Equal("\"\"", HubView.Str(null));
     }
 }

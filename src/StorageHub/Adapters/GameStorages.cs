@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ExiledToolkit.Game;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
 using GameCore.HotUpdate.ReduxUI;
@@ -463,7 +464,7 @@ internal sealed class GameStorages
         var config = GameSingleton.Existing<ConfigManager>();
         var item = config == null ? null : ItemRow(config, configId);
 
-        return NonEmpty(item?.WebIcon) ?? NonEmpty(item?.Icon);
+        return GameNames.NonEmpty(item?.WebIcon) ?? GameNames.NonEmpty(item?.Icon);
     }
 
     /// <summary>
@@ -834,7 +835,7 @@ internal sealed class GameStorages
         // An id with no row is not kept: the unnamed text is cheap, and the cache stays the size of the real table.
         if (item == null) return Texts.UnnamedItem.Say(isChinese, configId);
 
-        return ItemNames.Set(configId, Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName) ?? Texts.UnnamedItem.Say(isChinese, configId));
+        return ItemNames.Set(configId, GameNames.ItemName(config, item) ?? Texts.UnnamedItem.Say(isChinese, configId));
     }
 
     /// <summary>A furniture's name by its kind, kept per table and language; a kind with no name falls back to its own instance.</summary>
@@ -848,20 +849,9 @@ internal sealed class GameStorages
         {
             var key = config._Config_Furniture_Dict is { } table && table.TryGetValue(configId, out var row) ? row?.Name : null;
 
-            name = FurnitureNames.Set(configId, Translate(config, key) ?? NonEmpty(key));
+            name = FurnitureNames.Set(configId, GameNames.Translate(config, key) ?? GameNames.NonEmpty(key));
         }
 
         return name ?? Texts.UnnamedStorage.Say(isChinese, furniture.InstanceId);
     }
-
-    private static string? Translate(ConfigManager config, string? key)
-    {
-        if (string.IsNullOrEmpty(key)) return null;
-
-        var text = config.GetLocalTxt(key);
-
-        return string.IsNullOrEmpty(text) || text == key ? null : text;
-    }
-
-    private static string? NonEmpty(string? text) => string.IsNullOrWhiteSpace(text) ? null : text;
 }

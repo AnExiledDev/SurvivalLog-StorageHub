@@ -1,23 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+using ExiledToolkit.Kit;
 
 namespace StorageHub.Core;
-
-/// <summary>One piece of on-screen text in the two languages the game ships. {0}, {1} are filled in by Say.</summary>
-public readonly record struct Phrase(string En, string Zh)
-{
-    public string Pick(bool isChinese) => isChinese ? Zh : En;
-
-    public string Say(bool isChinese, params object[] args) => string.Format(CultureInfo.InvariantCulture, Pick(isChinese), args);
-}
-
-/// <summary>A phrase about a count: English says "1 stack" and "2 stacks", Chinese has one form for both. {0} is the count.</summary>
-public readonly record struct Counted(Phrase One, Phrase Many)
-{
-    public string Say(bool isChinese, int count) => (count == 1 ? One : Many).Say(isChinese, count);
-}
 
 /// <summary>The words the mod puts on screen: results on the status line, place names, time left, and the panel's own labels.</summary>
 public static class Texts

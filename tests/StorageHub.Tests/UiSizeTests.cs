@@ -37,15 +37,20 @@ public class UiSizeTests
         Assert.Equal(0, page.Number("handedId('sh-toast').length"));
     }
 
+    /// <summary>The game may run Storage Hub's script before the Toolkit's; a panel drawn meanwhile is sized once it loads.</summary>
     [Fact]
-    public void Before_the_Toolkit_loads_the_panels_wait_for_it()
+    public void With_storage_hubs_script_first_the_plate_is_handed_over_once_the_toolkit_loads()
     {
-        var page = new Page("delete window.ExiledUi");
+        var page = new Page(isToolkitFirst: false);
 
         page.Run("window.__storagehub.status('Saved', 'ok')");
 
-        Assert.Equal(1, page.Number("window.__exiledUiWait.length"));
-        Assert.True(page.Is("window.__exiledUiWait[0][0].classList.contains('sh-plate')"));
+        Assert.Equal(0, page.Number("handed.length"));
+
+        page.LoadToolkit();
+
+        Assert.Equal(1, page.Number("handedWith('sh-plate').length"));
+        Assert.Equal("StorageHub", page.Text("handedWith('sh-plate')[0].options.mod"));
     }
 
     /// <summary>
@@ -125,7 +130,6 @@ public class UiSizeTests
         Assert.Equal("700px", page.Text("pop.style.height"));
     }
 
-    /// <summary>page.js on PageFake.js; <paramref name="before"/> runs between the two.</summary>
     /// <summary>
     /// The page gets no keys, so the plugin holds the game's hotkeys and takes Esc only while the window says it is
     /// open; one left saying so would keep the game's keys held after the window shut.
@@ -144,16 +148,19 @@ public class UiSizeTests
         Assert.Equal("slmod|storagehub|menu|0", page.Text("posted.filter(function (m) { return m.indexOf('slmod|storagehub|menu|') === 0; }).pop()"));
     }
 
+    /// <summary>page.js on PageFake.js, with the Toolkit's page API (api.js) run before it, or with false only at <see cref="LoadToolkit"/>.</summary>
     private sealed class Page
     {
         private readonly Engine _engine = new();
 
-        public Page(string? before = null)
+        public Page(bool isToolkitFirst = true)
         {
             _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
-            if (before != null) _engine.Execute(before);
+            if (isToolkitFirst) LoadToolkit();
             _engine.Execute(Resource("StorageHub.page.js"));
         }
+
+        public void LoadToolkit() => _engine.Execute(Resource("ExiledToolkit.api.js"));
 
         public void Run(string statements) => _engine.Execute(statements);
 

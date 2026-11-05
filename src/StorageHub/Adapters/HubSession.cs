@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using ExiledToolkit;
+using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
+using ExiledToolkit.Web;
 using StorageHub.Core;
 using UnityEngine;
 
@@ -11,12 +14,17 @@ namespace StorageHub.Adapters;
 
 /// <summary>
 /// The panel's game side: its open state, the item view it sends to page.js, and the moves the page asks for. Page
-/// messages arrive on the web view's thread, so they are queued and handled here, one frame at a time.
+/// messages arrive on the web view's thread, so they wait in the Toolkit's mailbox and are handled here, one frame at a time.
 /// </summary>
 internal sealed class HubSession
 {
-    private const float RefreshSeconds = 1f;
-    private const float LiveCheckSeconds = 1f;
+    private const double RefreshSeconds = 1;
+    private const double LiveCheckSeconds = 1;
+
+    // The names the panel, the inventory's home storage window and a focused text field hold the game's keys under.
+    private const string PanelHolder = "StorageHub.panel";
+    private const string MenuHolder = "StorageHub.menu";
+    private const string TypingHolder = "StorageHub.typing";
 
     /// <summary>How long the catalog build may run in one frame.</summary>
     private static readonly long SliceTicks = (long)(2.0 * Stopwatch.Frequency / 1000.0);
@@ -24,6 +32,7 @@ internal sealed class HubSession
     private readonly GameStorages _game;
     private readonly WebPage _page;
     private readonly WebKeyboard _keyboard;
+    private readonly PageMailbox _inbox;
     private readonly Action<string> _log;
     private readonly KeepListKeeper _keep;
     private readonly Dictionary<int, string?> _iconPaths = new();
@@ -32,9 +41,6 @@ internal sealed class HubSession
     private readonly BuiltView _builtStation = new();
     private readonly StationAnswers _stationAnswers = new();
     private readonly Func<bool> _isSliceSpent;
-
-    /// <summary>The session's clock starts here: Unity's time getters make an object on every call.</summary>
-    private static readonly long StartTicks = Stopwatch.GetTimestamp();
 
     // The read's names with the floor's and the keep list's added, kept while the read hands back the same names.
     private IReadOnlyDictionary<int, string>? _namesCopiedFrom;
@@ -50,8 +56,9 @@ internal sealed class HubSession
     private BesideBagStep _besideBag = new BesideBagStep.Idle();
     private Inventory _inventory = Inventory.Empty;
     private string _shownView = "";
-    private float _nextRefreshAt;
+    private double _nextRefreshAt;
     private bool _isOpen;
+    private bool _isMenuOpen;
     private bool _hasLoggedIcons;
     private KeyCode _toggleKey = KeyCode.None;
     private string _toggleKeyName = "";
@@ -62,16 +69,17 @@ internal sealed class HubSession
     private string _sentLiveKey = "";
     private readonly Func<bool> _isToggleKeyDown;
     private readonly Func<bool> _isTyping;
-    private float _nextLiveCheckAt;
+    private double _nextLiveCheckAt;
 
     /// <summary>What a built catalog was built from: the item table, the world (whose load drops the names) and the language.</summary>
     private readonly record struct CatalogKey(long Table, long World, bool IsChinese);
 
-    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, Action<string> log, KeepListKeeper keep)
+    public HubSession(GameStorages game, WebPage page, WebKeyboard keyboard, PageMailbox inbox, Action<string> log, KeepListKeeper keep)
     {
         _game = game;
         _page = page;
         _keyboard = keyboard;
+        _inbox = inbox;
         _log = log;
         _keep = keep;
         _isSliceSpent = () => Stopwatch.GetTimestamp() >= _sliceEndsAt;
@@ -110,13 +118,13 @@ internal sealed class HubSession
 
     public void Update()
     {
-        var now = Now();
+        var now = Clock.Now;
         _page.KeepInstalled(now);
 
         // The icon folder is walked on a worker thread from the first frame, long before anyone opens the panel.
         if (_icons == null) AreIconsIn();
 
-        if (PageMessages.HasQueued)
+        if (_inbox.HasWaiting)
         {
             foreach (var command in CommandBatch.WithoutRepeatedMoves(TakeQueuedCommands())) HandleSafely(command);
         }
@@ -137,10 +145,10 @@ internal sealed class HubSession
         }
 
         // The home storage window sits over the inventory, so Esc closes it before the panel or the inventory.
-        if (isAnyKeyDown && InputGate.IsMenuOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (isAnyKeyDown && _isMenuOpen && Input.GetKeyDown(KeyCode.Escape))
         {
             _page.ClosePop();
-            InputGate.MenuClosed();
+            MenuClosed();
 
             return;
         }
@@ -158,9 +166,6 @@ internal sealed class HubSession
         if (now >= _nextRefreshAt) PushView();
     }
 
-    /// <summary>Seconds since the session's clock started.</summary>
-    private static float Now() => (float)((Stopwatch.GetTimestamp() - StartTicks) / (double)Stopwatch.Frequency);
-
     private void ToggleOpen()
     {
         if (_isOpen) Close();
@@ -168,7 +173,7 @@ internal sealed class HubSession
     }
 
     /// <summary>The HUD button shows lit once a save is loaded; it is told only when that or the key changes.</summary>
-    private void SendLive(float now)
+    private void SendLive(double now)
     {
         if (now < _nextLiveCheckAt) return;
 
@@ -185,11 +190,11 @@ internal sealed class HubSession
         }
     }
 
-    private static List<PageCommand> TakeQueuedCommands()
+    private List<PageCommand> TakeQueuedCommands()
     {
         var commands = new List<PageCommand>();
 
-        while (PageMessages.TryTake(out var command)) commands.Add(command);
+        while (_inbox.TryTake(out var message)) commands.Add(PageCommand.Parse(message));
 
         return commands;
     }
@@ -220,7 +225,7 @@ internal sealed class HubSession
         }
 
         _isOpen = true;
-        InputGate.PanelOpened();
+        InputGate.Opened(PanelHolder);
         _shownView = view;
         _page.Open(view);
         ShowFreshPanelStatus(notReady);
@@ -232,10 +237,43 @@ internal sealed class HubSession
         if (!_isOpen) return;
 
         _isOpen = false;
-        _keyboard.Release();
-        InputGate.PanelClosed();
+        ReleaseKeyboard();
+        InputGate.Closed(PanelHolder);
         _page.Close();
         _game.Forget();
+    }
+
+    /// <summary>
+    /// The inventory's home storage window gets no keys of its own, so the game's hotkeys are held while it is open and
+    /// through the frame after it shuts, so the Esc that closed it does not also close the inventory.
+    /// </summary>
+    private void MenuOpened()
+    {
+        _isMenuOpen = true;
+        HotkeyGate.Hold(MenuHolder);
+    }
+
+    /// <summary>A window that was already shut changes nothing.</summary>
+    private void MenuClosed()
+    {
+        _isMenuOpen = false;
+        HotkeyGate.Release(MenuHolder);
+    }
+
+    /// <summary>
+    /// A page text field holds the game's hotkeys while it has focus, so A and D typed in the Home tab's search do not
+    /// switch the game's inventory tabs, and through the frame after it lets go, for the Esc or Enter that left it.
+    /// </summary>
+    private void ClaimKeyboard()
+    {
+        HotkeyGate.Hold(TypingHolder);
+        _keyboard.Claim();
+    }
+
+    private void ReleaseKeyboard()
+    {
+        HotkeyGate.Release(TypingHolder);
+        _keyboard.Release();
     }
 
     /// <summary>
@@ -303,7 +341,7 @@ internal sealed class HubSession
     /// </summary>
     private string ReadView(out string? notReady)
     {
-        _nextRefreshAt = Now() + RefreshSeconds;
+        _nextRefreshAt = Clock.Now + RefreshSeconds;
         notReady = RefreshInventory(out var reason) ? null : NotAvailable(reason);
 
         // The floor counts in the "Rotting soon" list; floor kinds no storage holds get their names added first.
@@ -442,30 +480,30 @@ internal sealed class HubSession
                 Close();
                 break;
             case PageCommand.Focus { IsFocused: true }:
-                _keyboard.Claim();
+                ClaimKeyboard();
                 break;
             case PageCommand.Focus:
-                _keyboard.Release();
+                ReleaseKeyboard();
                 break;
             case PageCommand.Menu { IsOpen: true }:
-                InputGate.MenuOpened();
+                MenuOpened();
                 break;
             case PageCommand.Menu:
-                InputGate.MenuClosed();
+                MenuClosed();
                 break;
             case PageCommand.Ready:
                 _log("page script ready");
                 // A reloaded page has no home window, and one left marked open would hold the game's hotkeys for good.
-                InputGate.MenuClosed();
+                MenuClosed();
                 // Nor does it have a focused field, and a claim left behind would keep Esc from closing the panel.
-                _keyboard.Release();
+                ReleaseKeyboard();
                 // A reloaded page has lost the HUD button's state, so the next check sends it again; the same for its station list.
                 _sentLive = null;
                 _stationAnswers.Forget();
                 ReopenAfterReload();
                 break;
             case PageCommand.NoScript:
-                InputGate.MenuClosed();
+                MenuClosed();
                 _page.Install();
                 break;
             case PageCommand.Unknown unknown:
@@ -963,7 +1001,7 @@ internal sealed class HubSession
     {
         if (_icons != null) return true;
 
-        _iconScan ??= StartIconScan();
+        _iconScan ??= WebIcons.StartScan();
 
         if (!_iconScan.IsCompleted) return false;
 
@@ -976,18 +1014,6 @@ internal sealed class HubSession
         _log(note);
 
         return true;
-    }
-
-    private static Task<(IconIndex Icons, string Note)> StartIconScan()
-    {
-        try
-        {
-            return WebIcons.StartScan();
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult((IconIndex.Empty, "no web icons, items will show letters instead: " + ex.Message));
-        }
     }
 
     /// <summary>The icon name format is a guess from the file names, so the first view logs how well it matched.</summary>

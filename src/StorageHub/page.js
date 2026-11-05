@@ -4,10 +4,10 @@
   if (window.__storagehub) return;
 
   var PREFIX = 'slmod|storagehub|';
+  // The HUD button's class, which Exiled's Toolkit gives its styled icon.
   var HUD_CLASS = 'sh-hud-btn';
   // Storage Hub's place in the HUD's tool column when Exiled's Toolkit lays it out in columns of four.
-  var DOCK_ORDER = '60';
-  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var DOCK_ORDER = 60;
   // A chest with its lid and clasp, on the 24-unit grid the game's HUD icons use.
   var CHEST_PATH = 'M4 4h16a1 1 0 0 1 1 1v4H3V5a1 1 0 0 1 1-1zm-1 7h7v2h4v-2h7v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z';
   var TIP_ID = 'sh-tip';
@@ -38,8 +38,11 @@
   var isRedrawHeld = false;
   // The take slider's last amount per item and storage ("item|storage"), so a refresh does not reset it.
   var takeAmounts = {};
-  // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
-  var hud = { isLive: false, key: '', button: null };
+  // Whether a save is loaded, so the HUD button shows, and the panel key its tip names. words: the words its tip was
+  // last written in.
+  var hud = { isLive: false, key: '', button: null, words: null };
+  // Exiled's Toolkit's page API, once its script has loaded.
+  var etk = null;
 
   // The panel's words, used until the plugin sends them in the game's language (window.__storagehubWords) before each call.
   var ENGLISH = {
@@ -183,10 +186,14 @@
     return text.replace(/\{(\d)\}/g, function (all, index) { return String(args[Number(index) + 1]); });
   }
 
+  // Runs fn with Exiled's Toolkit's page API: at once once its script has loaded, else when it loads, in order.
+  function withToolkit(fn) {
+    (window.ExiledToolkitReady = window.ExiledToolkitReady || []).push(fn);
+  }
+
+  // A message sent before the Toolkit's script has loaded goes when it loads.
   function send(message) {
-    try {
-      if (window.vuplex) window.vuplex.postMessage(PREFIX + message);
-    } catch (e) {}
+    withToolkit(function (toolkit) { toolkit.send(PREFIX, message); });
   }
 
   // One move at a time: a double click would otherwise queue the same move twice. Every move is answered by a status
@@ -205,20 +212,11 @@
     clearTimeout(busyTimer);
   }
 
-  // Hands a panel to Exiled's Toolkit to be drawn at the player's UI size. Before the Toolkit's script has loaded it
-  // waits in a list the Toolkit reads; without the Toolkit nothing happens.
+  // Hands a panel to Exiled's Toolkit to be drawn at the player's UI size, or at Storage Hub's own.
   function uiSize(node, options) {
-    options = Object.assign({ mod: 'StorageHub' }, options);
-    var toolkit = window.ExiledUi;
+    var sized = Object.assign({ mod: 'StorageHub' }, options);
 
-    if (toolkit) {
-      toolkit.size(node, options);
-      return;
-    }
-
-    var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
-    waiting.push([node, options]);
-    if (waiting.length > 32) waiting.shift();
+    withToolkit(function (toolkit) { toolkit.size(node, sized); });
   }
 
   // The zoom node is drawn at by the panels the Toolkit sizes that hold it, its own included; 1 without the Toolkit.
@@ -1833,7 +1831,7 @@
       home.askedAt = 0;
     }
 
-    if (home.station.scrollTabs && !home.isAway) addStyle(home.doc, 'slmh-tabcap', TAB_CAP_CSS);
+    if (home.station.scrollTabs && !home.isAway) etk.addStyle(home.doc, 'slmh-tabcap', TAB_CAP_CSS);
     if (isInventory()) keepPop();
     else keepHomeTab();
 
@@ -1957,17 +1955,9 @@
     return node;
   }
 
+  // Reached only from a station page the check found, which starts once the Toolkit's script has loaded.
   function addHomeStyle(doc) {
-    addStyle(doc, 'slmh-style', HOME_CSS);
-  }
-
-  function addStyle(doc, id, css) {
-    if (doc.getElementById(id)) return;
-
-    var style = make(doc, 'style');
-    style.id = id;
-    style.textContent = css;
-    doc.head.appendChild(style);
+    etk.addStyle(doc, 'slmh-style', HOME_CSS);
   }
 
   // The search, the scope buttons at a station, the list and the hint, added to box; returns the ui handles.
@@ -2076,7 +2066,7 @@
     panel.classList.toggle('slmh-forced', !hasGameTab);
 
     if (!home.station.scrollTabs) {
-      addStyle(doc, 'slmh-segstyle', SEG_CSS);
+      etk.addStyle(doc, 'slmh-segstyle', SEG_CSS);
       setClass(segBar(tabs), 'slmh-seg', true);
     }
 
@@ -3197,145 +3187,47 @@
   function patchCageSlots(found) {
     if (!found || found.station.kind !== 'ratcage' || found.doc.getElementById('slmh-cage-style')) return;
 
-    var style = make(found.doc, 'style');
-
-    style.id = 'slmh-cage-style';
-    style.textContent = CAGE_SLOT_CSS;
-    found.doc.head.appendChild(style);
+    etk.addStyle(found.doc, 'slmh-cage-style', CAGE_SLOT_CSS);
     // The page refits its zoom on resize, so the shorter panel takes effect at once.
     found.frame.contentWindow.dispatchEvent(new found.frame.contentWindow.Event('resize'));
-  }
-
-  // The key and the tip in the plugin's language: worked out again only when either changed, not every poll.
-  var hudStampFor = { key: null, words: null, stamp: '' };
-
-  function hudStamp() {
-    if (hudStampFor.key !== hud.key || hudStampFor.words !== words()) {
-      hudStampFor.key = hud.key;
-      hudStampFor.words = words();
-      hudStampFor.stamp = hud.key + '|' + say('hudTip');
-    }
-
-    return hudStampFor.stamp;
   }
 
   // Whether a save is loaded, so the HUD button shows, and the panel key its tip names.
   function live(isLive, key) {
     hud.isLive = !!isLive;
     hud.key = key || '';
-    patchHud();
+    updateHud();
   }
 
-  var hasReportedHudAccess = false;
-  var hasReportedHudPlaced = false;
-
-  // The HUD is a same-origin iframe the game creates and drops whenever it likes, so the button is checked every poll.
-  function patchHud() {
-    var frames = allFrames;
-
-    for (var i = 0; i < frames.length; i++) {
-      if ((frames[i].src || '').indexOf('CoreUI1.html') < 0) continue;
-
-      var doc = null;
-
-      try {
-        doc = frames[i].contentDocument;
-      } catch (e) {}
-
-      if (!doc) {
-        if (!hasReportedHudAccess) send('diag|cannot reach the HUD page document (root ' + location.protocol + ', iframe ' + frames[i].src + ')');
-        hasReportedHudAccess = true;
-        continue;
-      }
-
-      placeHudButton(doc);
-    }
-  }
-
-  // First in the tool column, as the other mods' buttons are: the column is anchored at the bottom, so the first child
-  // sits on top and the game's own buttons do not move. Drawn again only when the key or the language changed, so the
-  // game's hover state on it is not reset every poll.
-  function placeHudButton(doc) {
-    var stamp = hudStamp();
-
-    // The button this page last placed, still in place and current, needs no lookups.
-    if (hud.isLive && hud.button && hud.button.ownerDocument === doc && hud.button.isConnected && hud.button.getAttribute('data-stamp') === stamp) return;
-
-    var column = doc.querySelector('.vertical-tools');
-    var existing = doc.querySelector('.' + HUD_CLASS);
-
-    if (!column || !hud.isLive) {
-      if (existing) existing.remove();
-
-      return;
-    }
-
-    if (existing && existing.parentNode === column && existing.getAttribute('data-stamp') === stamp) {
-      hud.button = existing;
-
-      return;
-    }
-
-    if (existing) existing.remove();
-
-    var node = hudButton(doc);
-    hud.button = node;
-    node.setAttribute('data-stamp', stamp);
-    node.setAttribute('data-etk-dock', DOCK_ORDER);
-    column.insertBefore(node, column.firstChild);
-
-    if (!hasReportedHudPlaced) send('diag|HUD button placed in the tool column');
-    hasReportedHudPlaced = true;
-  }
-
-  // The same markup as the game's bag button: its classes, an svg icon, and the hover tip its stylesheet shows. The
-  // HUD page watches its body for new buttons and tells the game where they are, so a click on this one reaches it.
-  function hudButton(doc) {
-    var node = doc.createElement('button');
-    var svg = doc.createElementNS(SVG_NS, 'svg');
-    var path = doc.createElementNS(SVG_NS, 'path');
-    node.className = 'ui-btn icon-sq interactive-btn has-entry-tip ' + HUD_CLASS;
-    node.setAttribute('data-interactive', '');
-    svg.setAttribute('class', 'icon-svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    path.setAttribute('d', CHEST_PATH);
-    svg.appendChild(path);
-    node.appendChild(svg);
-    node.appendChild(entryTip(doc));
-    node.addEventListener('click', function (e) {
-      e.stopPropagation();
-      send('toggle');
+  // The chest button in the HUD's tool column, drawn like the game's bag button. Exiled's Toolkit puts it back
+  // whenever the HUD page is rebuilt and writes only what changed into it, so the game's hover state on it is kept.
+  function addHud() {
+    hud.words = words();
+    hud.button = etk.addHudButton({
+      id: HUD_CLASS,
+      order: DOCK_ORDER,
+      icon: CHEST_PATH,
+      title: 'Storage Hub',
+      tip: say('hudTip'),
+      key: hud.key,
+      shown: hud.isLive,
+      onClick: function () { send('toggle'); }
     });
-
-    return node;
   }
 
-  function entryTip(doc) {
-    var tip = doc.createElement('div');
-    var title = doc.createElement('div');
-    var body = doc.createElement('div');
-    tip.className = 'entry-tip';
-    title.className = 'entry-tip-title';
-    title.textContent = 'Storage Hub';
-    body.className = 'entry-tip-body';
-    body.textContent = say('hudTip');
+  function updateHud() {
+    if (!hud.button) return;
 
-    if (hud.key) {
-      var key = doc.createElement('span');
-      key.className = 'entry-tip-key';
-      key.textContent = hud.key;
-      title.appendChild(key);
-    }
-
-    tip.appendChild(title);
-    tip.appendChild(body);
-
-    return tip;
+    hud.words = words();
+    hud.button.update({ shown: hud.isLive, key: hud.key, tip: say('hudTip') });
   }
 
-  setInterval(function () {
+  // The station pages come and go, and a bag screen moves between the bag alone, a storage and the basket within one
+  // page, so the stations are checked every poll rather than once per page.
+  function pollStations() {
+    // The plugin's words arrive with its calls, so a new language reaches the button's tip here.
     try {
-      patchHud();
+      if (hud.words !== words()) updateHud();
     } catch (e) {}
 
     var found = null;
@@ -3353,8 +3245,15 @@
     try {
       patchStations(found);
     } catch (e) {}
-  }, 400);
+  }
 
   window.__storagehub = { open: open, setData: setData, close: close, status: status, catalog: catalog, station: station, openPop: openPop, closePop: shutPop, live: live };
+
+  // The station check starts first, so a HUD button that cannot be added costs only the button.
+  withToolkit(function (toolkit) {
+    etk = toolkit;
+    setInterval(pollStations, 400);
+    addHud();
+  });
   send('ready');
 })();

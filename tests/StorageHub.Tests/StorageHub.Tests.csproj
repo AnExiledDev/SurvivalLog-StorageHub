@@ -6,12 +6,20 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ToolkitDll Condition="'$(ToolkitDll)' == ''">D:\devnew\game-mods\SurvivalLog\mods\sl-exiled-toolkit\src\ExiledToolkit\bin\Release\ExiledToolkit.dll</ToolkitDll>
+    <!-- Exiled's Toolkit's source folder, the one its built DLL sits two folders under (bin\Release). -->
+    <ToolkitSrc>$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName('$(ToolkitDll)'))))))</ToolkitSrc>
   </PropertyGroup>
 
-  <!-- The pure core is compiled straight in, so the tests need none of the game or BepInEx assemblies. -->
+  <!-- The pure core is compiled straight in, with the Toolkit's plain helpers it uses, so the tests need none of the game or BepInEx assemblies. -->
   <ItemGroup>
     <Compile Include="..\..\src\StorageHub\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="$(ToolkitSrc)\Core\JsText.cs" Link="Toolkit\JsText.cs" />
+    <Compile Include="$(ToolkitSrc)\Core\Phrase.cs" Link="Toolkit\Phrase.cs" />
+    <Compile Include="$(ToolkitSrc)\Core\SlicedJob.cs" Link="Toolkit\SlicedJob.cs" />
     <EmbeddedResource Include="..\..\src\StorageHub\page.js" LogicalName="StorageHub.page.js" Link="page.js" />
+    <!-- The Toolkit's page API, which page.js uses, from the Toolkit's source. -->
+    <EmbeddedResource Include="$(ToolkitSrc)\api.js" LogicalName="ExiledToolkit.api.js" Link="Toolkit\api.js" />
     <!-- A fake Root.html for page.js, run in Jint. -->
     <EmbeddedResource Include="PageFake.js" LogicalName="StorageHub.Tests.PageFake.js" />
   </ItemGroup>

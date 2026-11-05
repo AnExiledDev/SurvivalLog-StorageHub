@@ -1,5 +1,5 @@
 Name: Storage Hub
-Summary: Find anything you own in seconds: a HUD button opens one searchable list of everything in your bag and home storages. Put your whole bag away into the right tagged storages in one click, keep chosen items on you, and get a Home tab at the stove, workbench and other stations. Drone deliveries put themselves away and storages tidy themselves.
+Summary: Put your whole bag away in one click: each item goes to the storage whose tag wants it, and the items you choose stay in your bag. Drone deliveries put themselves away and storages tidy themselves when you open them. A HUD button opens one searchable list of everything you own at home, and the stove, workbench and other stations get a Home tab.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]

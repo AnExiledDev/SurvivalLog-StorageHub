@@ -1,5 +1,5 @@
 Name: Storage Hub
-Summary: Put your whole bag away in one click: each item goes to the storage whose tag wants it, and the items you choose stay in your bag. Drone deliveries put themselves away and storages tidy themselves when you open them. A HUD button opens one searchable list of everything you own at home, and the stove, workbench and other stations get a Home tab.
+Summary: Put your whole bag away in one click: each item goes to the storage whose tag wants it, and the items you choose stay in your bag. Drone deliveries can put themselves away and storages can tidy themselves when you open them. A HUD button opens one searchable list of everything you own at home, and the stove, workbench and other stations get a Home tab.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
@@ -15,10 +15,10 @@ Survival Log makes you open storage after storage to find something, and again t
 [*][b]Home tab at stations[/b]: at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, workbench and drone trade, and at home whenever you open a storage, the neighbor's basket or the car trunk, the bag panel gets a searchable "Home" tab listing everything in your home storages, filtered to what that station uses. Click an item to put it in (one unit of a stack at the shredder, workbench and drone trade, with Stacking). In the drone trade, drag an offered item back onto the tab to take it off the offer. At an open storage or the trunk a click puts the item in it. At the basket, what the neighbor asks for today is marked "Wanted" and listed first. The same list is the "Home storage" window in the Mods menu. With [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url] (optional; 0.8.4 or newer here, 0.8.7 or newer in the panel), pointing at an item shows its tooltip.[/*]
 [*][b]Storage tabs at stations[/b]: those stations also get a bag tab for every home storage holding something they can use, next to the game's own storage tabs, and the workbench crafts from them too.[/*]
 [*][b]Storage tabs at home[/b]: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, so you can move things between any of them. A long row scrolls by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.[/*]
-[*][b]Drone deliveries[/b]: when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
-[*][b]Tidy storages[/b]: opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
+[*][b]Drone deliveries[/b]: turn on AutoPutAway and, when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
+[*][b]Tidy storages[/b]: with OrganizeOnOpen on, opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
 [/list]
-The keep list, deliveries, tidying and stack merging can each be turned off in the config.
+The keep list, deliveries, tidying and stack merging can each be turned off in the config. Drone deliveries and tidying on open start off, since they move your things without a click.
 
 [size=5]Keep in bag[/size]
 The game can't split a stack, so the keep list keeps whole stacks: the smallest stack that covers the amount, or else the fullest stacks until it is covered, the fresher one first between stacks of the same size. You often keep a few more than you asked for.
@@ -85,10 +85,10 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 [*][b]设施旁的「家中」标签[/b]：在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、工作台和无人机交易界面，以及在家里打开储物家具、邻居的篮子或小汽车后备箱时，背包面板多一个可搜索的「家中」标签，列出家里所有储物家具里的物品，并按这个设施能用的筛选。点击物品即可放进去（装了 Stacking 时，在粉碎机、工作台和无人机交易里每次放一件）。在无人机交易里，把已交出的物品拖回这个标签即可撤回。打开储物家具或后备箱时，点击物品会放进它里面。在篮子界面，邻居今天想要的物品标为「她想要」并排在最前。物品栏界面 Mods 菜单里的「家中储物」窗口也是同一个列表。装了 [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url]（可选；这里需要 0.8.4 或更新版本，面板里需要 0.8.7 或更新版本）时，鼠标指向物品会显示它的提示框。[/*]
 [*][b]设施旁的储物标签[/b]：这些设施还会为每个放着它能用的物品的家中储物家具加一个背包标签，和游戏自带的储物标签并列，工作台也会用这些标签里的材料制作。[/*]
 [*][b]家中的储物标签[/b]：在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具都会在背包上方有一个标签，空的也有，方便在它们之间搬东西。标签太多时，用箭头或鼠标滚轮按整个标签滚动，按 A 和 D 切换时会自动滚到选中的标签。外出探索时，搜刮界面保持游戏原样。[/*]
-[*][b]无人机送货[/b]：无人机回家时，它带回的物资会被放进对应标签的储物家具。卸空的无人机不会再提示你取回物资，这次送货也会计入要求取回物资的事件。有一个设置可以跳过机器人放置开关关闭的材料架。[/*]
-[*][b]整理储物家具[/b]：打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列，无人机交易里的「一键整理」也一样（已交出的堆叠数量不变）。[/*]
+[*][b]无人机送货[/b]：开启 AutoPutAway 后，无人机回家时，它带回的物资会被放进对应标签的储物家具。卸空的无人机不会再提示你取回物资，这次送货也会计入要求取回物资的事件。有一个设置可以跳过机器人放置开关关闭的材料架。[/*]
+[*][b]整理储物家具[/b]：开启 OrganizeOnOpen 后，打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列，无人机交易里的「一键整理」也一样（已交出的堆叠数量不变）。[/*]
 [/list]
-「留在背包」清单、无人机送货、整理和合并堆叠都可以在配置中单独关闭。
+「留在背包」清单、无人机送货、整理和合并堆叠都可以在配置中单独关闭。无人机送货和打开时整理默认关闭，因为它们会在你没有点击时移动你的物品。
 
 [size=5]留在背包[/size]
 游戏无法拆分堆叠，所以「留在背包」清单按整堆保留：优先留下刚好够数量的最小一堆，否则从最满的堆开始留，直到够数；大小相同的堆先留更新鲜的。所以实际留下的常常比你设定的多一些。

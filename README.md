@@ -15,11 +15,11 @@ Survival Log makes you open storage after storage to find something, and again t
 - **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench get a bag tab for every home storage holding something they can use, next to the game's own storage tabs.
 - **Storage tabs at home**: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, each named after its storage, so you can move things between any of them. When they do not fit, the bag tab and Home stay put and the rest scroll by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.
 - **Scrolling mouse slots**: the rat cage's mouse slots scroll past three rows, instead of the whole screen shrinking to fit a big cage.
-- **Drone deliveries**: when a drone comes home, what it brought is put away into the storages tagged for it.
-- **Tidy storages**: opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
+- **Drone deliveries**: turn on `AutoPutAway` and, when a drone comes home, what it brought is put away into the storages tagged for it.
+- **Tidy storages**: turn on `OrganizeOnOpen` and opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
 - **A log file**: what the mod did and anything that went wrong is written to `BepInEx\storage-hub.log`.
 
-The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)).
+The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)). Drone deliveries and tidying on open start off, since they move your things without a click; turn them on in the config or on the Mod Manager's Mods screen.
 
 The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names come from the game as it words them.
 

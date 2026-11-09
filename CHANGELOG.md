@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.5
+
+- Drone deliveries putting themselves away (`AutoPutAway`) and tidying a storage when you open it (`OrganizeOnOpen`) are now off for a new install, since both move your things without a click. Turn them on in the config or on the Mod Manager's Mods screen. Settings you already saved are kept.
+- Made for Survival Log 1.1.20719.
+
 ## 0.17.4
 
 - Now uses Exiled's Toolkit for its shared parts, so it needs Exiled's Toolkit 0.19.0 or newer.

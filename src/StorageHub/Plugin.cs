@@ -22,7 +22,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.17.4";
+    private const string Version = "0.17.5";
 
     /// <summary>The oldest Exiled's Toolkit the mod loads with: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -127,9 +127,9 @@ public sealed class Plugin : BasePlugin
 
     private void StartDeliveryPutAway(PatchKit hooks, WebPage page, ModLog log)
     {
-        var autoPutAway = Config.Bind("Delivery", "AutoPutAway", true,
-            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. With this off, those events never finish when the drone hub unloads the drone for you. Default: on.\n" +
-            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「按标签收纳整个背包」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时让要求你与无人机交易并取回物资的事件可以完成。关闭后，如果无人机中控台替你卸货，这类事件会一直无法完成。默认开启。");
+        var autoPutAway = Config.Bind("Delivery", "AutoPutAway", false,
+            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. With this off, those events never finish when the drone hub unloads the drone for you. Default: off, since it moves your things without a click.\n" +
+            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「按标签收纳整个背包」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时让要求你与无人机交易并取回物资的事件可以完成。关闭后，如果无人机中控台替你卸货，这类事件会一直无法完成。默认关闭，因为它会在你没有点击时移动你的物品。");
 
         var skipRobotPutOff = Config.Bind("Delivery", "SkipRacksWithRobotPutOff", false,
             "When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. Default: off.\n" +
@@ -151,9 +151,9 @@ public sealed class Plugin : BasePlugin
 
     private void StartOrganizer(PatchKit hooks, ModLog log)
     {
-        var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", true,
-            "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: on.\n" +
-            "每次打开储物家具时整理里面的物品。打开储物家具时不会整理你自己的背包。默认开启。");
+        var organizeOnOpen = Config.Bind("Organize", "OrganizeOnOpen", false,
+            "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: off, since it moves your things without a click.\n" +
+            "每次打开储物家具时整理里面的物品。打开储物家具时不会整理你自己的背包。默认关闭，因为它会在你没有点击时移动你的物品。");
         var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true,
             "Pack big items toward the bottom-right and small items toward the top-left, leaving as few gaps as it can and as much room as it can for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. Default: on.\n" +
             "大件物品靠右下角摆，小件物品靠左上角摆，尽量少留零散空格，给大件留出尽量多的空间。同类物品在不多占空间时会放在一起。游戏的「一键整理」按钮也会这样摆。关闭后，储物家具按游戏「一键整理」的方式整理，「一键整理」按钮保持原样。默认开启。");

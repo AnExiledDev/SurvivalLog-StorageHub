@@ -27,14 +27,14 @@ The keep list itself is not a setting. Change it in the panel ("Keep in bag"); i
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `AutoPutAway` | `true` | When a drone comes home, put what it brought into the storages tagged for it, the same way "Put whole bag away by tag" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. |
+| `AutoPutAway` | `false` | When a drone comes home, put what it brought into the storages tagged for it, the same way "Put whole bag away by tag" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. |
 | `SkipRacksWithRobotPutOff` | `false` | When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. |
 
 ## Organize
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `OrganizeOnOpen` | `true` | Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. |
+| `OrganizeOnOpen` | `false` | Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. |
 | `CompactSmallItems` | `true` | Pack big items toward the bottom-right and small items toward the top-left, leaving as few gaps as it can and as much room as it can for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. |
 | `SmallItemMaxArea` | `2` | Items that take up this many cells or fewer count as small when `CompactSmallItems` packs a storage. `0` means no item counts as small. |
 | `MergeStacks` | `true` | When a storage is tidied, first top up part-full stacks of the same item from each other. Food only merges when the stacks spoil within an hour of each other. Stacks on moldy cells are left alone. |

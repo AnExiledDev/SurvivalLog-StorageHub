@@ -4,7 +4,7 @@ Summary: Put your whole bag away in one click: each item goes to the storage who
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
 
-Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds one panel that lists every item in your bag, your storages at home and the workbench drawer, in the game's own style, and puts things away for you. Every move goes through the game's own quick-move, so freshness and durability are kept.
+Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds one panel that lists every item in your bag, your storages at home and the workbench drawer, in the game's style, and puts things away for you. Every move goes through the game's quick-move, so freshness and durability are kept.
 
 [size=5]Main features[/size]
 [list]
@@ -13,7 +13,7 @@ Survival Log makes you open storage after storage to find something, and again t
 [*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest, and "Fill bag from storage" pulls in what your bag is short of. Each row shows how many storage holds, and marks items storage has none of.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
 [*][b]Home tab at stations[/b]: at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, workbench and drone trade, and at home whenever you open a storage, the neighbor's basket or the car trunk, the bag panel gets a searchable "Home" tab listing everything in your home storages, filtered to what that station uses. Click an item to put it in (one unit of a stack at the shredder, workbench and drone trade, with Stacking). In the drone trade, drag an offered item back onto the tab to take it off the offer. At an open storage or the trunk a click puts the item in it. At the basket, what the neighbor asks for today is marked "Wanted" and listed first. The same list is the "Home storage" window in the Mods menu. With [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url] (optional; 0.8.4 or newer here, 0.8.7 or newer in the panel), pointing at an item shows its tooltip.[/*]
-[*][b]Storage tabs at stations[/b]: those stations also get a bag tab for every home storage holding something they can use, next to the game's own storage tabs, and the workbench crafts from them too.[/*]
+[*][b]Storage tabs at stations[/b]: those stations also get a bag tab for every home storage holding something they can use, next to the game's storage tabs, and the workbench crafts from them too.[/*]
 [*][b]Storage tabs at home[/b]: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, so you can move things between any of them. A long row scrolls by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.[/*]
 [*][b]Drone deliveries[/b]: turn on AutoPutAway and, when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
 [*][b]Tidy storages[/b]: with OrganizeOnOpen on, opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
@@ -33,7 +33,7 @@ Works in English and Chinese.
 [list]
 [*]No put-away ever fills a drone or the workbench drawer. "Take all into bag" does take from a drone, so check before taking all of something a drone is carrying.[/*]
 [*]Racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags are never tidied.[/*]
-[*]After Sort, the game's own layout shows for one frame before the compact one replaces it.[/*]
+[*]After Sort, the game's layout shows for one frame before the compact one replaces it.[/*]
 [*]Drone deliveries and stack merging only start after the prologue.[/*]
 [/list]
 

@@ -23,7 +23,7 @@ internal sealed record CatalogSource(long Table, long World, IEnumerable<int> Id
 
 /// <summary>
 /// The only code that reads or moves the game's items. Reads go through the UI store's item cache, the same
-/// source ItemTotals and BetterCrafting use; moves go through the game's own quick-move.
+/// source ItemTotals and BetterCrafting use; moves go through the game's quick-move.
 /// </summary>
 internal sealed class GameStorages
 {
@@ -75,7 +75,7 @@ internal sealed class GameStorages
     }
 
     /// <summary>
-    /// Days until each stack read since the last Forget spoils, by item id, as the game's own backpack shows it: -1 for
+    /// Days until each stack read since the last Forget spoils, by item id, as the game's backpack shows it: -1 for
     /// an item that never spoils or has stopped spoiling.
     /// </summary>
     public IReadOnlyDictionary<long, float> DaysLeft => _daysLeft;
@@ -256,7 +256,7 @@ internal sealed class GameStorages
         });
     }
 
-    /// <summary>What the game's own rack rule thinks of the stack, the rank its robots use, or null when the rack has no slot for it.</summary>
+    /// <summary>What the game's rack rule thinks of the stack, the rank its robots use, or null when the rack has no slot for it.</summary>
     public PutRank? RackRank(ItemStack stack, Storage storage)
     {
         if (!_furnitures.TryGetValue(storage.OwnerId, out var furniture)) return null;
@@ -375,7 +375,7 @@ internal sealed class GameStorages
     }
 
     /// <summary>
-    /// The game's own pickup, aimed at a storage instead of the bag, so the item keeps what a hand pickup keeps. True
+    /// The game's pickup, aimed at a storage instead of the bag, so the item keeps what a hand pickup keeps. True
     /// only when nothing is left on the floor; a storage that takes part of a stack leaves the rest for the next one.
     /// </summary>
     public bool PickUp(ItemStack floorStack, long targetOwnerId)
@@ -503,7 +503,7 @@ internal sealed class GameStorages
     public static bool IsBasket(Furniture? furniture, int basketId) => basketId > 0 && furniture != null && furniture.AgentConfigId == basketId;
 
     /// <summary>
-    /// Whether a station takes each stack from the last Read, by the game's own checks on the item the UI cache holds.
+    /// Whether a station takes each stack from the last Read, by the game's checks on the item the UI cache holds.
     /// A stack the cache no longer has is not taken. Every station but the rat cage judges an item by its kind alone,
     /// so each kind is asked once per list rather than once per stack, and no stack is looked up in the cache.
     /// </summary>
@@ -536,7 +536,7 @@ internal sealed class GameStorages
         return tabs;
     }
 
-    /// <summary>Out on an exploration map rather than at home, where looting keeps the game's own screen.</summary>
+    /// <summary>Out on an exploration map rather than at home, where looting keeps the game's screen.</summary>
     public static bool IsExploring() => VehicleConfig.IsInExploreInstance();
 
     /// <summary>
@@ -601,7 +601,7 @@ internal sealed class GameStorages
 
     public void CloseBackpack() => Ac_BackpackUI_Close.SendAction();
 
-    /// <summary>The game's own "open a storage beside the bag", as walking up to it does; -1 shows the bag alone.</summary>
+    /// <summary>The game's "open a storage beside the bag", as walking up to it does; -1 shows the bag alone.</summary>
     public bool AskForBags(long ownerId)
     {
         var player = GameSingleton.Existing<BattleLogicWorld>()?._AgentManager?.GetLeadingRole();
@@ -670,7 +670,7 @@ internal sealed class GameStorages
         }
     }
 
-    /// <summary>A material rack by the game's own rack table, so any rack the game adds counts too.</summary>
+    /// <summary>A material rack by the game's rack table, so any rack the game adds counts too.</summary>
     private bool IsMaterialRack(ConfigManager config, Furniture furniture)
     {
         var configId = furniture.AgentConfigId;
@@ -815,7 +815,7 @@ internal sealed class GameStorages
     }
 
     /// <summary>For items the backpack has no entry for yet (the floor, a bag read straight from the item manager).</summary>
-    // TimeScale is left out on purpose: the game's own shelf life read leaves it out too, so this matches its tooltip.
+    // TimeScale is left out on purpose: the game's shelf life read leaves it out too, so this matches its tooltip.
     private static float FallbackDaysLeft(ConfigManager? config, int configId, float startTime, float timeLeft, float presetShelfScale, float nowHours)
     {
         var row = config == null ? null : ItemRow(config, configId);

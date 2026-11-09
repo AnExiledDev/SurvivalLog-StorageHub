@@ -10,7 +10,7 @@ namespace StorageHub.Adapters;
 
 /// <summary>
 /// Puts a drone's delivery away into the tagged storages, the same way the bag's put-away does, a few frames after the
-/// drone settles: the hook only records the landing, and the cargo is moved here, outside the game's own settle. What
+/// drone settles: the hook only records the landing, and the cargo is moved here, outside the game's settle. What
 /// no storage takes stays where the game put it, and a drone left empty has its retrieve finished for it. One line per
 /// delivery goes to the toast and to storage-hub.log only, since a BepInEx line is written on the game's frame; failures
 /// go to both logs.

@@ -4,7 +4,7 @@ using System.Linq;
 namespace StorageHub.Core;
 
 /// <summary>
-/// What the neighbor's basket screen says she wants, as the game's own wish strip shows it: today's item categories,
+/// What the neighbor's basket screen says she wants, as the game's wish strip shows it: today's item categories,
 /// a crisis category, and food alone while she is dying. Nothing is wished while there is no rescue stage, while her
 /// wish is not shown yet, or while the basket is away, since the strip then shows no categories either.
 /// </summary>

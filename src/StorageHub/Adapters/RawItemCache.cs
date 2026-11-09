@@ -10,7 +10,7 @@ namespace StorageHub.Adapters;
 
 /// <summary>
 /// The UI store's item cache read straight from the game's memory, so reading every stack makes no interop object per
-/// stack. The fields' places come from the game's own type data, once; every item's class is checked before it is
+/// stack. The fields' places come from the game's type data, once; every item's class is checked before it is
 /// read. Anything not laid out as expected turns this reader off for good, says so once, and the caller goes through
 /// the game's objects instead, as it always did. What a read finds is only good for the frame it was taken in.
 /// </summary>

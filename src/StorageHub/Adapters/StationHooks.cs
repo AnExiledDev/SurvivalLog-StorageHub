@@ -14,7 +14,7 @@ using Il2CppTradeContainers = Il2CppSystem.Collections.Generic.List<GameCore.Hot
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// Adds a bag tab to a station for every home storage holding something the station takes, next to the game's own
+/// Adds a bag tab to a station for every home storage holding something the station takes, next to the game's
 /// tabs, whose locks are left as they are. The game builds a station's tabs from the storage list its opening action
 /// carries, so the storages are appended to that list before the reducer reads it: the fridge list at the stove
 /// (Reducer_Data_Item.RA_GetCookingBagList, RVA 0x29F54B0), the rat cage (RA_GetRatCageBagList, 0x29F6B50), the brewing
@@ -61,7 +61,7 @@ internal static class StationHooks
             done: type == typeof(Reducer_Web_BackpackUI)
                 ? $"{station} at home gets a bag tab for every home storage"
                 : $"{station} gets a bag tab for each home storage holding something it takes",
-            consequence: $"{station} keeps only the game's own bag tabs");
+            consequence: $"{station} keeps only the game's bag tabs");
 
     // Each hook checks the switch before anything else and runs its body in a plain try, with no closure, so a hook
     // with the tabs turned off costs a field read and nothing more.
@@ -218,7 +218,7 @@ internal static class StationHooks
 
     /// <summary>
     /// The looting screen shows the bag beside an opened storage, the basket or the trunk, and the bag side's tabs are
-    /// the game's own, as at a car's door boxes. At home every other home storage becomes one more tab there, so drag
+    /// the game's, as at a car's door boxes. At home every other home storage becomes one more tab there, so drag
     /// and drop, quick transfer and the switch keys work on it as on the bag; out exploring the tabs stay the game's.
     /// The game builds the tabs once per opening (Reducer_Web_BackpackUI.BuildATabs, RVA 0x2A5FE50, called only from
     /// RA_OpenUI), so they are appended right after. The game names every tab it does not know "Backpack", so each
@@ -325,7 +325,7 @@ internal static class StationHooks
     private readonly record struct HomeStorage(long OwnerId, int ConfigId);
 
     /// <summary>
-    /// Every home storage not already shown that holds something the station takes, in the game's own order.
+    /// Every home storage not already shown that holds something the station takes, in the game's order.
     /// </summary>
     private static List<HomeStorage> StoragesToAdd(StationKind kind, State_Data_Item state, HashSet<long> shown)
     {
@@ -364,5 +364,5 @@ internal static class StationHooks
     }
 
     /// <summary>An exception must never escape into the game's code, so a failing hook logs once and leaves the tabs alone.</summary>
-    private static void ReportFailure(Exception ex) => _hooks?.Fail("adding storage tabs to a station, it keeps the game's own tabs", ex);
+    private static void ReportFailure(Exception ex) => _hooks?.Fail("adding storage tabs to a station, it keeps the game's tabs", ex);
 }

@@ -12,7 +12,7 @@ public class PutAwayTests
     /// <summary>What the game ranks an item at in a storage tagged Materials and nothing else.</summary>
     private static readonly PutRank MaterialsOnly = new(Level: 4, Specificity: 15);
 
-    /// <summary>What the game's own rack rule ranks a material it has a slot for: one step more specific than MaterialsOnly.</summary>
+    /// <summary>What the game's rack rule ranks a material it has a slot for: one step more specific than MaterialsOnly.</summary>
     private static readonly PutRank RackSlot = new(Level: 4, Specificity: 16);
 
     private static Inventory WithRack(params ItemStack[] stacks) => Home(stacks) with { Storages = new[] { Bag, Fridge, Box, Rack } };

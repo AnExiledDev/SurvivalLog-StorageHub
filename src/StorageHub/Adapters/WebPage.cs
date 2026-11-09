@@ -7,7 +7,7 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// The panel's half that lives in the game's web UI: page.js, run in the root document the game's own pages sit in,
+/// The panel's half that lives in the game's web UI: page.js, run in the root document the game's pages sit in,
 /// the same way the ivmakk mods add their UI. Exiled's Toolkit keeps the script there (the web view can reload at any
 /// time and lose it); this names the calls the panel takes.
 /// </summary>

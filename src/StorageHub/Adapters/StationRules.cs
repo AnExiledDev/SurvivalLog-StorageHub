@@ -7,7 +7,7 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// What a station takes, asked of the game's own checks: the stove's ingredient rule, the rat cage's food rule
+/// What a station takes, asked of the game's checks: the stove's ingredient rule, the rat cage's food rule
 /// (spoilage included) or a live mouse, the brewing and dyeing ingredient flags, the shredder's list, the ration press's
 /// food rule, the drone trade's value, and the workbench's recipe materials. Read only, so the bag tab hooks may call it from inside a reducer.
 /// </summary>

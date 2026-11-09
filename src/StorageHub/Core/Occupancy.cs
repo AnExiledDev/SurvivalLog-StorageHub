@@ -51,7 +51,7 @@ internal sealed class Occupancy
         }
     }
 
-    /// <summary>The game's own search: the first free spot reading row by row from the top-left, inside the first cols by rows cells.</summary>
+    /// <summary>The game's search: the first free spot reading row by row from the top-left, inside the first cols by rows cells.</summary>
     public Cell? FirstFit(int w, int h, int cols, int rows)
     {
         for (var y = 0; y + h <= rows; y++)

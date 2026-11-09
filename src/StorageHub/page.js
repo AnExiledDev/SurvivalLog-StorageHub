@@ -1,5 +1,5 @@
 // Storage Hub's web panel. Runs in Root.html, the document every game page iframe sits in, and draws over all of
-// them. Styled with the game's own colours and fonts so it reads as part of the game. Talks to the plugin through vuplex.postMessage("slmod|storagehub|<verb>|<args>") and is driven by window.__storagehub.
+// them. Styled with the game's colours and fonts so it reads as part of the game. Talks to the plugin through vuplex.postMessage("slmod|storagehub|<verb>|<args>") and is driven by window.__storagehub.
 (function () {
   if (window.__storagehub) return;
 
@@ -1599,7 +1599,7 @@
   // The home storage list. At a station it is a tab in the bag panel's own tab bar: choosing it
   // shows the list in the bag grid's place, at the same size, so the page's layout and zoom never change. On the
   // inventory screen it is a window opened from the Mods menu. The plugin sends the storages with an ok flag per
-  // item, decided by the station's own rules. At a station, a usable item goes in the way the game's own click does
+  // item, decided by the station's own rules. At a station, a usable item goes in the way the game's click does
   // it: its storage's bag tab is shown underneath, then the item is clicked there. Anything else, or an item whose
   // storage has no tab, is taken into the bag.
   //
@@ -1645,7 +1645,7 @@
     '.bag-slot.is-anchored .bag-tabs::-webkit-scrollbar{display:none}',
     '.bag-slot.is-anchored .bag-tabs>.bag-tab{flex:1 0 auto;white-space:nowrap}',
     // One segmented bar: small tabs split by hairlines, the chosen one filled gold, so more storages fit. Only on a bar
-    // the Home tab is in, so looting out exploring keeps the game's own tabs.
+    // the Home tab is in, so looting out exploring keeps the game's tabs.
     '.bag-slot.is-anchored .bag-tabs.slmh-scroll{gap:0;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
     '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.bag-tab{flex:0 0 auto;padding:4px 11px 5px;font-size:13px;letter-spacing:.3px;background:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;color:rgba(255,255,255,.55)}',
     '.bag-slot.is-anchored .bag-tabs.slmh-scroll>.bag-tab:hover{color:#fff;background-color:rgba(255,255,255,.06)}',
@@ -2371,7 +2371,7 @@
     home.back = makeTab(doc, 'slmh-back');
     home.tab.addEventListener('click', showHome);
     panel.classList.add('slmh-host');
-    // Any other tab leaves the list; the game's own click on that tab then does the rest.
+    // Any other tab leaves the list; the game's click on that tab then does the rest.
     tabs.addEventListener('click', function (e) {
       var tab = e.target.closest(tabClass);
 

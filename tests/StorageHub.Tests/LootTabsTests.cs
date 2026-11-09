@@ -21,7 +21,7 @@ public class LootTabsTests
     [Fact]
     public void The_open_storage_and_tabs_the_game_already_shows_are_not_added_twice()
     {
-        // The cabinet is open on the right; the bag (1) and a car box (9) are the game's own tabs.
+        // The cabinet is open on the right; the bag (1) and a car box (9) are the game's tabs.
         Assert.Equal(new long[] { 200, 400 }, LootTabs.ToAdd(true, false, Homes, new long[] { 300, 1, 9 }));
     }
 

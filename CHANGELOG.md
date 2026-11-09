@@ -97,7 +97,7 @@
 
 ## 0.14.3
 
-- Out exploring, the looting screen's tabs keep the game's own look; the new tab style is only at home.
+- Out exploring, the looting screen's tabs keep the game's look; the new tab style is only at home.
 - Switching storages with A and D scrolls the tab row to the chosen tab.
 - The tab row scrolls by whole tabs, so the first tab after the arrow is never cut in half. The arrows move to the next tabs not fully shown, and each mouse wheel notch moves one tab.
 - Made for Survival Log 1.1.19611.
@@ -236,7 +236,7 @@ Changes since 0.3.2:
 - Put-away actions moved into a shared Mods menu.
 - Storages tidy when you open them: a compact layout packs small items, stacks merge, and moldy bags are tidied around their mold.
 - Drone deliveries are put away where their tags say, fill material racks, and count toward retrieve-supplies events.
-- Material racks are ranked the way the game's own robots rank them. New setting `SkipRacksWithRobotPutOff` leaves out racks with their robot put switch off.
+- Material racks are ranked the way the game's robots rank them. New setting `SkipRacksWithRobotPutOff` leaves out racks with their robot put switch off.
 - The panel, menu entries and messages are in Simplified Chinese too, and every config entry is explained in plain English and Chinese.
 - The panel footer names the key you set.
 - Fixes: no lost units, clicks or lists; an emptied drone stops offering a retrieve; the mod only reads game objects after the game has built them.

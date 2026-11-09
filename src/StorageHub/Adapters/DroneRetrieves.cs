@@ -7,7 +7,7 @@ namespace StorageHub.Adapters;
 
 /// <summary>
 /// Finishes a drone's retrieve once a delivery put-away has emptied its bag, so the drone stops offering to retrieve
-/// nothing and drops its marker. The steps are the game's own Retrieve supplies (RetrieveDroneCargo) without opening
+/// nothing and drops its marker. The steps are the game's Retrieve supplies (RetrieveDroneCargo) without opening
 /// the drone's bag, plus the hub panel refresh its automatic unload sends. Never throws into the game: a failure is
 /// logged and the drone is left as it was.
 /// </summary>

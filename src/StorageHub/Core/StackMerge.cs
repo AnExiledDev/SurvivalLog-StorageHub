@@ -70,7 +70,7 @@ public static class MergeRule
         return a.UseTimes == b.UseTimes && a.MaxUseTimes == b.MaxUseTimes;
     }
 
-    /// <summary>Clock hours to expiry times the spoil rate where the item sits, as the game's own portion merge measures it.</summary>
+    /// <summary>Clock hours to expiry times the spoil rate where the item sits, as the game's portion merge measures it.</summary>
     private static float ShelfHoursLeft(StackFreshness item, float nowHours) => (item.ExpiresAt - nowHours) * item.TimeScale;
 }
 

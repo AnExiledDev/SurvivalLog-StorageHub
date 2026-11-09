@@ -15,7 +15,7 @@ public readonly record struct GridSize(int Cols, int Rows)
 }
 
 /// <summary>
-/// The room a layout may use: the bag's grid less its Blocked cells. Blocked cells are the bag's mold. The game's own
+/// The room a layout may use: the bag's grid less its Blocked cells. Blocked cells are the bag's mold. The game's
 /// PackNewItemAvoidingMold packs around them too, and food left on one is infected at the next spread round, so no
 /// layout ever places an item on one.
 /// </summary>
@@ -102,7 +102,7 @@ public static class Packing
     }
 
     /// <summary>
-    /// The game's own Sort (BagPacker.PackItems): biggest first, then by category and item type, each into the first
+    /// The game's Sort (BagPacker.PackItems): biggest first, then by category and item type, each into the first
     /// free spot reading row by row from the top-left.
     /// </summary>
     public static PackResult PackLikeGame(BagSpace space, IReadOnlyList<PackItem> items) =>

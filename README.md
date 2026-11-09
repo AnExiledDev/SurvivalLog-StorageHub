@@ -2,7 +2,7 @@
 
 One searchable list of everything in your bag and your storages at home, buttons that put things away where their tags say they belong, a keep list for what you always carry, tidier storages, and drone deliveries that put themselves away.
 
-Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened from a chest button in the HUD, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage whose tags fit it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's own quick-move and pickup, so freshness and durability are kept.
+Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened from a chest button in the HUD, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage whose tags fit it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's quick-move and pickup, so freshness and durability are kept.
 
 ## Features
 
@@ -12,7 +12,7 @@ Survival Log makes you open storage after storage to find something, and again t
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
 - **Home storage list**: a searchable list of everything in your home storages. At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and at home whenever you open a storage, the neighbor's basket or the car trunk, it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. At the shredder, the workbench and the drone trade a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. At an open storage or the trunk a click puts the item in it. At the basket a click puts the item in the basket, and what the neighbor asks for today is marked "Wanted" and listed first. In the window, "Open" shows a storage beside your bag. Pointing at an item in the list shows its item tooltip with Info Pack 0.8.4 or later installed (optional), or a short one with its count and storage without it.
-- **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench get a bag tab for every home storage holding something they can use, next to the game's own storage tabs.
+- **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench get a bag tab for every home storage holding something they can use, next to the game's storage tabs.
 - **Storage tabs at home**: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, each named after its storage, so you can move things between any of them. When they do not fit, the bag tab and Home stay put and the rest scroll by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.
 - **Scrolling mouse slots**: the rat cage's mouse slots scroll past three rows, instead of the whole screen shrinking to fit a big cage.
 - **Drone deliveries**: turn on `AutoPutAway` and, when a drone comes home, what it brought is put away into the storages tagged for it.
@@ -45,7 +45,7 @@ Before a save is loaded, the panel opens empty and says `Not available right now
 
 ### Rotting soon
 
-The "Rotting soon" tab lists food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). The list is split into Spoiled, Under a day, This week and Later. Spoiled food and food with under an hour left are shown in red, and food with under a day left in amber. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the game's own figure, the one its inventory tooltip shows.
+The "Rotting soon" tab lists food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). The list is split into Spoiled, Under a day, This week and Later. Spoiled food and food with under an hour left are shown in red, and food with under a day left in amber. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the game's figure, the one its inventory tooltip shows.
 
 The search box filters this list too, and clicking a row shows that item on the right. Food that is only on the floor has no detail to show, so its rows don't click. The "Items" tab goes back to the full item list.
 
@@ -59,7 +59,7 @@ Each stack in your bag is offered to your home storages in this order:
 
 1. Storages whose tag rule wants the item. The closest-fitting rule goes first, and between equal fits, a storage that already holds that item goes first. Tag rules that care about freshness (a fridge, say) see each stack's real time left.
 
-   A material rack has no tags, so it counts as tagged Materials and is ranked the way the game's own robots rank it: one step closer than a storage tagged Materials and nothing else. It only takes the materials it has a slot for.
+   A material rack has no tags, so it counts as tagged Materials and is ranked the way the game's robots rank it: one step closer than a storage tagged Materials and nothing else. It only takes the materials it has a slot for.
 2. Storages that already hold some of that item, even with no tag for it.
 3. Nothing else. A stack no storage wants stays in your bag, and the status line names it.
 
@@ -69,7 +69,7 @@ No put-away ever fills a drone, since a drone's bag can hold goods it is about t
 
 With [Neighbor Basket](https://github.com/AnExiledDev/SurvivalLog-NeighborBasket) 0.2.0 or newer installed (optional), its "Put away" button on the basket screen sends what the neighbor's basket holds, such as her gifts back, to your storages in the same order. What no storage wants stays in the basket.
 
-Floor pickup uses the same order, then falls back to your bag. Items the game's own drone collects after a wave are left for the drone.
+Floor pickup uses the same order, then falls back to your bag. Items the game's drone collects after a wave are left for the drone.
 
 ## Keep in bag
 
@@ -127,7 +127,7 @@ This is how tidying works with the default settings. You can turn off the tidy o
 
 - Opening a storage tidies it a moment after the screen appears. Only the storage side is tidied; your own bag is never rearranged when you open a storage.
 - Big items are packed toward the bottom-right corner and small items (2 cells or fewer by default) usually toward the top-left. Several layouts are built. One fills the smallest square in the top-left corner with the small items; each of the others sets the items down one at a time, each where it touches the most of the bag's edges, mold and items already placed. The one whose free space is best is kept. Best means, in order: the fewest empty cells that only a small item could fill, the most room for big items, the biggest free block, and the fewest separate free areas. On a tie, the layout with more items of the same kind side by side wins. The same storage always packs the same way.
-- If no compact layout can hold everything, the game's own Sort layout is used; if neither can, nothing moves.
+- If no compact layout can hold everything, the game's Sort layout is used; if neither can, nothing moves.
 - The game's Sort button packs the same way: the game sorts first, then the side you sorted is repacked. That includes your own bag when you press Sort on it, and the bag shown in the drone trade when you press Auto Organize there. Stacks offered in the trade are moved with the rest but never merged.
 - A storage that is already tidy is left alone. A storage is tidied once per opening, so whatever you move by hand stays put until you close and reopen it.
 - Items are never rotated; the game has no rotation.
@@ -141,7 +141,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - Items that never spoil merge when their uses left match, whenever they were picked up and whether they were found on the map, made or bought.
 - Stacks also have to match on everything else the item carries (mold, packaging, burn value, weight).
 - When partial stacks of one item stay apart, the log says why, once per item per session.
-- The stack limit is the game's own, so a limit raised by the Stacking mod is used. Works with or without Stacking installed.
+- The stack limit is the game's, so a limit raised by the Stacking mod is used. Works with or without Stacking installed.
 - A stack sitting on a moldy cell is never merged.
 - Merging only happens after the prologue.
 
@@ -150,7 +150,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - "Take all into bag" takes from every place listed for the item, a drone included. Check where an item sits before taking all of it if a drone holds trade goods.
 - Material racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags (the vehicle trunk and boxes, the workbench drawer, the shredder and compressor trays, the trap store) are never tidied, because the game places items in them by its own rules.
 - A storage whose grid on screen differs from its real grid is left alone, with one line in the log. So is a storage whose mold cannot be read.
-- After Sort, the game's own layout shows for one frame before the compact one replaces it.
+- After Sort, the game's layout shows for one frame before the compact one replaces it.
 - If the game refuses a tidy move, every item is put back where it was and one line goes to the log. Nothing is shown in game. In rare cases an item the game had saved outside the grid is not put back on its old cell; the log names it.
 - A delivered stack that topped up a stack already in the hub moves whole, including what was there before.
 - When the hub is full, the game leaves the cargo in the drone. Anything the game moves out of the drone later is not put away.

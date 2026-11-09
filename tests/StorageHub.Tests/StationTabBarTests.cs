@@ -4,7 +4,7 @@ using Xunit;
 namespace StorageHub.Tests;
 
 /// <summary>A station's tab bar takes the same flat, segmented look as the storage screen's while its Home tab is in it,
-/// and gives the game its own look back once the tab goes.</summary>
+/// and puts the normal look back once the tab goes.</summary>
 public class StationTabBarTests
 {
     private readonly Engine _engine = new();

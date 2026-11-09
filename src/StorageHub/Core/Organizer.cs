@@ -28,7 +28,7 @@ public abstract record OrganizePlan
 public static class Organizer
 {
     /// <summary>
-    /// The compact layout when it is on and holds everything, otherwise the game's own Sort layout, otherwise nothing.
+    /// The compact layout when it is on and holds everything, otherwise the game's Sort layout, otherwise nothing.
     /// A bag that already matches the chosen layout is not touched, so opening a tidy storage costs no writes. No layout
     /// uses a blocked cell, so an item sitting on mold always counts as out of place.
     /// </summary>

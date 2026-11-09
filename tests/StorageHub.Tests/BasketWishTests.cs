@@ -3,7 +3,7 @@ using Xunit;
 
 namespace StorageHub.Tests;
 
-/// <summary>Which rows the basket list marks as wanted: only what the game's own wish strip would show her asking for.</summary>
+/// <summary>Which rows the basket list marks as wanted: only what the game's wish strip would show her asking for.</summary>
 public class BasketWishTests
 {
     private const int Food = BasketWish.FoodCategory;

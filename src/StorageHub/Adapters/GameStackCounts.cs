@@ -5,7 +5,7 @@ using StorageHub.Core;
 namespace StorageHub.Adapters;
 
 /// <summary>
-/// The item counts of one bag, through the game's own count calls. A stack is looked up in the bag's item list on
+/// The item counts of one bag, through the game's count calls. A stack is looked up in the bag's item list on
 /// every read, never kept: the game pools a removed item's object, so a kept reference could still answer with the
 /// count it had before it was removed. A stack that has left the bag reads as gone, and a read that throws as
 /// unreadable, never as gone.

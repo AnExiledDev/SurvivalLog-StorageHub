@@ -22,8 +22,8 @@ public class TextsTests
 
     [Theory]
     [InlineData("homeTitle", "Home storage", "家中储物")]
-    [InlineData("putAwayTag", "Put away by tag", "按标签收纳")]
-    [InlineData("menuFloor", "Put away floor", "收纳地面物品")]
+    [InlineData("goBag", "Put bag away", "收纳背包")]
+    [InlineData("menuFloor", "Put floor away", "收纳地面物品")]
     public void The_mods_menu_rows_use_the_page_wording_in_both_languages(string key, string english, string chinese)
     {
         Assert.Equal(new Phrase(english, chinese), Texts.PageWord(key));

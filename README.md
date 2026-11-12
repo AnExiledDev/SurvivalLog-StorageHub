@@ -1,39 +1,46 @@
 # Storage Hub
 
-One searchable list of everything in your bag and your storages at home, buttons that put things away where their tags say they belong, a keep list for what you always carry, tidier storages, and drone deliveries that put themselves away.
+Storage Hub gives you one searchable list of everything in your bag and your storages at home, and puts your bag away for you, each item into the storage tagged for it. It can also keep the items you always carry in your bag, tidy your storages and put drone deliveries away.
 
-Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened from a chest button in the HUD, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage whose tags fit it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's quick-move and pickup, so freshness and durability are kept.
+Survival Log makes you open storage after storage to find something, and again to put it back. Storage Hub adds a panel, opened from a chest button in the HUD, that lists every item in your bag, in every storage at home and in the workbench drawer, with a search box. From there you can take items into your bag, or put your bag away with each item going to the storage tagged for it. It can leave the items you always want on you in your bag, tidy a storage each time you open it, and put a drone's cargo away when it lands. Every move goes through the game's quick-move and pickup, so freshness and durability are kept.
 
 ## Features
 
 - **The panel**: the chest button in the HUD opens a list of every kind of item in your bag, your storages at home and the workbench drawer, with icons, totals and a search box. Pick an item to see where it sits and how many are in each place, and take it or put it away from there.
-- **Put away by tag**: "Put bag away" sends everything in your bag to the storages whose tags want it. "Put floor away" does the same for what is lying on the floor at home, and puts anything no storage takes into your bag.
+- **Put away by tag**: "Put bag away" sends everything in your bag to the storages tagged for it. "Put floor away" does the same for what is lying on the floor at home, and puts anything no storage takes into your bag.
 - **Mods menu**: both put-away actions are also in the Mods menu on the game's inventory screen and in the bag panel of most station screens, so you don't need the panel for them.
 - **Keep in bag**: a list of items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest.
 - **Rotting soon**: switches the list to food that spoils, soonest first, with where it sits and how long it has left.
-- **Home storage list**: a searchable list of everything in your home storages. At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and at home whenever you open a storage, the neighbor's basket or the car trunk, it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At the stove or rat cage it shows what the station can use first; clicking a usable item puts it into the station, and anything else goes to your bag. At the shredder, the workbench and the drone trade a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer. At an open storage or the trunk a click puts the item in it. At the basket a click puts the item in the basket, and what the neighbor asks for today is marked "Wanted" and listed first. In the window, "Open" shows a storage beside your bag. Pointing at an item in the list shows its item tooltip with Info Pack 0.8.4 or later installed (optional), or a short one with its count and storage without it.
+- **Home storage list**: a searchable list of everything in your home storages. It is a "Home" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and at home whenever you open a storage, the neighbor's basket or the car trunk. On the inventory screen it is the "Home storage" window in the Mods menu. What a click does depends on where you are:
+  - At the stove or rat cage, the list shows what the station can use first. Clicking a usable item puts it into the station, and anything else goes to your bag.
+  - At the shredder, the workbench and the drone trade, a click puts in or offers one unit of a stack (with Stacking installed). In the drone trade, dragging an offered item from the drone onto the Home tab takes it back off the offer.
+  - At an open storage or the trunk, a click puts the item in it.
+  - At the basket, a click puts the item in the basket. What the neighbor wants right now is marked "Wanted" and listed first.
+  - In the "Home storage" window, "Open" shows a storage beside your bag.
+
+  Pointing at an item in the list shows its item tooltip when Info Pack 0.8.4 or later is installed (optional). Without it you get a short tooltip with the count and the storage.
 - **Storage tabs at stations**: the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench get a bag tab for every home storage holding something they can use, next to the game's storage tabs.
-- **Storage tabs at home**: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, each named after its storage, so you can move things between any of them. When they do not fit, the bag tab and Home stay put and the rest scroll by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.
+- **Storage tabs at home**: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, each named after its storage, so you can move things between any of them. When they do not fit, the bag tab and Home stay put and the rest scroll by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. When you loot out exploring, the screen looks the same as without the mod.
 - **Scrolling mouse slots**: the rat cage's mouse slots scroll past three rows, instead of the whole screen shrinking to fit a big cage.
 - **Drone deliveries**: turn on `AutoPutAway` and, when a drone comes home, what it brought is put away into the storages tagged for it.
-- **Tidy storages**: turn on `OrganizeOnOpen` and opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells that only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
+- **Tidy storages**: turn on `OrganizeOnOpen` and opening a storage tidies it. Big items go toward the bottom-right and small ones usually toward the top-left, packed so there are as few wasted gaps as possible and as much room as possible for big items. Items of the same kind stay together when that costs no room. Partial stacks of the same item are topped up from each other first. The game's Sort button packs the same way.
 - **A log file**: what the mod did and anything that went wrong is written to `BepInEx\storage-hub.log`.
 
-The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)). Drone deliveries and tidying on open start off, since they move your things without a click; turn them on in the config or on the Mod Manager's Mods screen.
+The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)). Drone deliveries and tidying on open start off, since they move your things without a click. Turn them on in the config or on the Mod Manager's Mods screen.
 
-The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names come from the game as it words them.
+The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names are the same as in the game.
 
-Storage Hub keeps nothing of its own in your save and does not edit game files. The items it moves stay where it put them, so removing the mod undoes nothing.
+Storage Hub keeps nothing of its own in your save and does not edit game files. If you remove the mod, the items it moved stay where they are.
 
 ## The panel
 
 The chest button at the top of the HUD's tool column opens and closes it once a save is loaded. A key can do the same: `ToggleKey` is unbound by default, so set one in the settings if you want it, and it does nothing while you type in a text box. `Esc` and the `x` in the top-right corner close it too. While the panel is open, the game's hotkeys are paused, so typing in the search box does not also open a game menu.
 
-- Three tabs along the top switch between "Items", "Rotting soon" and "Keep in bag". Each shows how many rows it holds; the "Rotting soon" count turns red when something has spoiled or has under an hour left.
+- Three tabs along the top switch between "Items", "Rotting soon" and "Keep in bag". Each shows how many rows it holds. The "Rotting soon" count turns red when something has spoiled or has under an hour left.
 - The search box filters the list by name. With several words, an item has to match all of them. The "All places" drop-down beside it shows only the items in one storage, or in your bag.
 - Each item row shows its icon, name and total, and under the name where it sits, your bag first (for example "Bag 4", then "Fridge 12").
 - Click an item on the left to see it on the right: its total and how many places hold it, then one row per place (Bag, Storage or Drawer) with how many are there.
-- "Take all" on a storage's row moves that storage's stacks of the item into your bag. With [Stacking](https://www.nexusmods.com/survivallog/mods/74) installed (optional), a row holding more than one also has a slider: drag it to pick how many, then press "Take 5" to take just that many. Without Stacking the game moves stacks whole, so the slider is left out and a line says so. "Take all into bag" at the top takes the item from every place that holds it.
+- "Take all" on a storage's row moves that storage's stacks of the item into your bag. With [Stacking](https://www.nexusmods.com/survivallog/mods/74) installed (optional), a row holding more than one also has a slider: drag it to pick how many, then press "Take 5" to take just that many. Without Stacking the game can only move whole stacks, so there is no slider and a line under the item says so. "Take all into bag" at the top takes the item from every place that holds it.
 - "Put away" on the Bag row, or "Put away by tag" at the top, puts your bag's stacks of that one item away.
 - "Put bag away" (the big button at the bottom right) and "Put floor away" beside it put away your whole bag, or everything on the floor at home.
 - The result shows on the status line at the bottom, for example `Moved 4 stacks.` or `Moved 3 stacks. 1 had nowhere to go: Rope.` It is green when everything moved, amber when something was left behind and red when something failed. When the panel is closed, results show as a short message near the bottom of the screen instead.
@@ -45,13 +52,13 @@ Before a save is loaded, the panel opens empty and says `Not available right now
 
 ### Rotting soon
 
-The "Rotting soon" tab lists food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). The list is split into Spoiled, Under a day, This week and Later. Spoiled food and food with under an hour left are shown in red, and food with under a day left in amber. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the game's figure, the one its inventory tooltip shows.
+The "Rotting soon" tab lists food that spoils: everything in your bag, your storages and on the floor at home, soonest first, with where it sits and the time left (`spoiled`, `under 1h`, `5h`, `2d 3h`). The list is split into Spoiled, Under a day, This week and Later. Spoiled food and food with under an hour left are shown in red, and food with under a day left in amber. Items that never spoil, and food the game has stopped spoiling, are left out. The time left is the same as the game's item tooltip shows.
 
 The search box filters this list too, and clicking a row shows that item on the right. Food that is only on the floor has no detail to show, so its rows don't click. The "Items" tab goes back to the full item list.
 
 ### Mods menu
 
-On the game's inventory screen, a "Mods" button sits next to the game's Sort button on your bag's item tab. It holds "Home storage" (the searchable list of your home storages), "Put away by tag" (your whole bag) and "Put away floor". Other mods that use the same menu, such as Unpack All, list their actions there too. `Esc` or a click elsewhere closes it. The menu does not show during the prologue. The same Mods button is in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), with "Put away by tag" and "Put away floor"; "Home storage" stays on the inventory, since those screens have the Home tab.
+On the game's inventory screen, a "Mods" button sits next to the game's Sort button on your bag's item tab. It holds "Home storage" (the searchable list of your home storages), "Put bag away" and "Put floor away". Other mods that use the same menu, such as Unpack All, list their actions there too. `Esc` or a click elsewhere closes it. The menu does not show during the prologue. The same Mods button is in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), with "Put bag away" and "Put floor away". "Home storage" is only on the inventory, since those screens have the Home tab.
 
 ## Putting things away
 
@@ -63,7 +70,7 @@ Each stack in your bag is offered to your home storages in this order:
 2. Storages that already hold some of that item, even with no tag for it.
 3. Nothing else. A stack no storage wants stays in your bag, and the status line names it.
 
-If a storage is full, the next one in line gets a turn. A whole stack moves at once; the game cannot split one.
+If a storage is full, the next one in line gets a turn. A whole stack moves at once, since the game cannot split one.
 
 No put-away ever fills a drone, since a drone's bag can hold goods it is about to trade away, and nothing is ever put into the workbench drawer. A drone hub takes put-aways like any other storage.
 
@@ -73,13 +80,13 @@ Floor pickup uses the same order, then falls back to your bag. Items the game's 
 
 ## Keep in bag
 
-The keep list names items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest. That covers "Put whole bag away by tag", "Put away by tag" and "Put away" on one item in the panel, and "Put away by tag" in the Mods menu. Floor pickup and drone deliveries ignore the list.
+The keep list names items you always want on you, and how many of each. Putting your bag away leaves that many in your bag and stores the rest. That covers "Put bag away" and "Put away" on one item in the panel, and "Put bag away" in the Mods menu. Floor pickup and drone deliveries ignore the list.
 
 - The "Keep in bag" tab opens the list on the left. Each row shows the item's icon and name, how many to keep, how many your bag holds now, and a bar that fills as your bag gets to that amount. When your bag holds fewer than that, the bar and the count turn amber and say how many you are short.
 - Use `-` and `+` to change the amount, or type a number and press Enter. `Esc` while typing puts the old number back and closes the panel. Amounts go from 0 to 9999.
 - An amount of 0 keeps the item on the list but keeps none of it, so you can turn one item off without losing its place.
 - The `x` at the end of a row takes the item off the list.
-- The right side adds items. With the search box empty it shows what is in your bag; type a name to search every item in the game (while that list is still loading, it searches the items you own). "+ Keep" adds the item, keeping as many as your bag holds now, or 1 if it holds none.
+- The right side adds items. With the search box empty it shows what is in your bag. Type a name to search every item in the game (while that list is still loading, it searches the items you own). "+ Keep" adds the item, keeping as many as your bag holds now, or 1 if it holds none.
 - On the "Items" list, each row has a bell that shows when you point at the row and adds the item the same way. Once the item is on the list, the bell stays lit with the amount on it, and pressing it opens the list. The item's detail on the right has the same button, with words ("Keep" or "Keep 5").
 - Changes are saved a moment after you stop clicking, and the status line confirms them, for example `Keeping 5 Red Apple in your bag.`
 - After a put-away, the status line says what stayed, for example `Moved 4 stacks. Kept in your bag: 6 Red Apple.`
@@ -111,7 +118,7 @@ With the keep list turned off in the settings, putting away moves everything, an
 
 ## Drone deliveries
 
-When a drone comes home and the game drops its cargo into the drone hub (or into the drone itself when the hub is full), Storage Hub puts each delivered stack away the same way "Put whole bag away by tag" does. What no storage takes stays where the game put it. Each delivery writes one line to the log and shows it as a short message on screen (on the panel's status line while the panel is open), for example `Drone delivery: 12 Wood to Wooden Box, 3 Red Apple to Fridge. Stayed in Drone hub: 2 Rope.`
+When a drone comes home and the game drops its cargo into the drone hub (or into the drone itself when the hub is full), Storage Hub puts each delivered stack away the same way the "Put bag away" button does. What no storage takes stays where the game put it. Each delivery writes one line to the log and shows it as a short message on screen (on the panel's status line while the panel is open), for example `Drone delivery: 12 Wood to Wooden Box, 3 Red Apple to Fridge. Stayed in Drone hub: 2 Rope.`
 
 - It works for every drone trip that brings cargo home.
 - No drone and no drone hub is ever a target for a delivery, not even one that already holds the item.
@@ -125,12 +132,12 @@ When a drone comes home and the game drops its cargo into the drone hub (or into
 
 This is how tidying works with the default settings. You can turn off the tidy on open, the compact layout or stack merging on their own (see [CONFIG.md](CONFIG.md)).
 
-- Opening a storage tidies it a moment after the screen appears. Only the storage side is tidied; your own bag is never rearranged when you open a storage.
-- Big items are packed toward the bottom-right corner and small items (2 cells or fewer by default) usually toward the top-left. Several layouts are built. One fills the smallest square in the top-left corner with the small items; each of the others sets the items down one at a time, each where it touches the most of the bag's edges, mold and items already placed. The one whose free space is best is kept. Best means, in order: the fewest empty cells that only a small item could fill, the most room for big items, the biggest free block, and the fewest separate free areas. On a tie, the layout with more items of the same kind side by side wins. The same storage always packs the same way.
-- If no compact layout can hold everything, the game's Sort layout is used; if neither can, nothing moves.
+- Opening a storage tidies it a moment after the screen appears. Only the storage side is tidied. Your own bag is never rearranged when you open a storage.
+- Big items are packed toward the bottom-right corner and small items (2 cells or fewer by default) usually toward the top-left. Several layouts are built. One fills the smallest square in the top-left corner with the small items. Each of the others sets the items down one at a time, each where it touches the most of the bag's edges, mold and items already placed. The one whose free space is best is kept. Best means, in order: the fewest empty cells that only a small item could fill, the most room for big items, the biggest free block, and the fewest separate free areas. On a tie, the layout with more items of the same kind side by side wins. The same storage always packs the same way.
+- If no compact layout can hold everything, the game's Sort layout is used. If neither can, nothing moves.
 - The game's Sort button packs the same way: the game sorts first, then the side you sorted is repacked. That includes your own bag when you press Sort on it, and the bag shown in the drone trade when you press Auto Organize there. Stacks offered in the trade are moved with the rest but never merged.
 - A storage that is already tidy is left alone. A storage is tidied once per opening, so whatever you move by hand stays put until you close and reopen it.
-- Items are never rotated; the game has no rotation.
+- Items are never rotated, since the game has no rotation.
 - Moldy cells are kept clear: no item is placed on one, and an item already sitting on one is moved off it. A storage that would only fit by using a moldy cell is left as it is.
 
 ### Merging stacks
@@ -151,7 +158,7 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 - Material racks, cooking furniture, compost bins, hot pots, locked bags and the game's special bags (the vehicle trunk and boxes, the workbench drawer, the shredder and compressor trays, the trap store) are never tidied, because the game places items in them by its own rules.
 - A storage whose grid on screen differs from its real grid is left alone, with one line in the log. So is a storage whose mold cannot be read.
 - After Sort, the game's layout shows for one frame before the compact one replaces it.
-- If the game refuses a tidy move, every item is put back where it was and one line goes to the log. Nothing is shown in game. In rare cases an item the game had saved outside the grid is not put back on its old cell; the log names it.
+- If the game refuses a tidy move, every item is put back where it was and one line goes to the log. Nothing is shown in game. In rare cases an item the game had saved outside the grid is not put back on its old cell, and the log names it.
 - A delivered stack that topped up a stack already in the hub moves whole, including what was there before.
 - When the hub is full, the game leaves the cargo in the drone. Anything the game moves out of the drone later is not put away.
 - The keep list is one list for all saves.
@@ -159,11 +166,11 @@ Before a tidy, partial stacks of the same item are topped up from each other. A 
 
 ## Requirements
 
-- Survival Log 1.1.20719. Built for this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.20719. Built for this version. A game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Stacking](https://www.nexusmods.com/survivallog/mods/74). With it, the panel can take part of a stack and "Fill bag from storage" takes just the amount short.
 - Optional: [Info Pack](https://www.nexusmods.com/survivallog/mods/81) 0.8.7 or newer, for its item tooltips in the panel.
-- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.19.0 or newer. Storage Hub does not load without it. It draws the Mods menu, keeps the toggle key quiet while you type, shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's.
+- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.19.0 or newer. Storage Hub does not load without it. It draws the Mods menu, keeps the toggle key quiet while you type, shows results as toasts while the panel is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting draws the Storage Hub panel and the inventory's Storage Hub window bigger or smaller. Storage Hub's own `UiScale` under Interface sets a size for this mod alone. At 0, the default, it follows the Toolkit's.
 - Optional: [Mod Manager](https://www.nexusmods.com/survivallog/mods/73). With it, you can change every setting in game on its Mods screen and see what each one does, without opening the config file.
 
 ## Install
@@ -188,11 +195,11 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.4 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.6 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 
-If the status line says `That failed, see BepInEx/storage-hub.log.`, the log has the details. To see why an item went where it did, turn on `Verbose` (see [CONFIG.md](CONFIG.md)): the log then lists every planned move and how each storage's tags ranked the item.
+If the status line says `Something went wrong. See BepInEx/storage-hub.log.`, the log has the details. To see why an item went where it did, turn on `Verbose` (see [CONFIG.md](CONFIG.md)): the log then lists every planned move and how each storage's tags ranked the item.
 
 ## Feedback and bug reports
 

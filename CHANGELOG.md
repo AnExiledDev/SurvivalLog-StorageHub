@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.6
+
+- Clearer wording in the settings, the panel and the Mods menu. In the Mods menu, "Put away by tag" is now "Put bag away" and "Put away floor" is now "Put floor away", the same names as the panel buttons.
+- Made for Survival Log 1.1.20719.
+
 ## 0.17.5
 
 - Drone deliveries putting themselves away (`AutoPutAway`) and tidying a storage when you open it (`OrganizeOnOpen`) are now off for a new install, since both move your things without a click. Turn them on in the config or on the Mod Manager's Mods screen. Settings you already saved are kept.
@@ -34,7 +39,7 @@
 
 ## 0.16.4
 
-- The panel key is now unbound by default; use the chest button in the HUD, or set a key in the settings.
+- The panel key is now unbound by default. Use the chest button in the HUD, or set a key in the settings.
 - The panel key no longer opens or closes the panel while you type in a text box.
 - Exiled's Toolkit 0.12.0 or newer is now required.
 - Made for Survival Log 1.1.20151.
@@ -97,7 +102,7 @@
 
 ## 0.14.3
 
-- Out exploring, the looting screen's tabs keep the game's look; the new tab style is only at home.
+- When you loot out exploring, the tabs look the same as without the mod. The new tab style is only at home.
 - Switching storages with A and D scrolls the tab row to the chosen tab.
 - The tab row scrolls by whole tabs, so the first tab after the arrow is never cut in half. The arrows move to the next tabs not fully shown, and each mouse wheel notch moves one tab.
 - Made for Survival Log 1.1.19611.
@@ -123,7 +128,7 @@
 
 - Fixed: at the neighbor's basket, a long row of storage tabs widened the bag panel past the left edge of the screen and left a wide gap between the bag and the basket. The tab row now stays as wide as the bag panel and scrolls.
 - At the basket, storage tabs are only added for storages holding something she asks for today, and each tab shows its storage's name instead of "Backpack".
-- Made for Survival Log 1.1.19131; works on 1.1.19611.
+- Made for Survival Log 1.1.19131. Also works on 1.1.19611.
 
 ## 0.13.0
 
@@ -208,7 +213,7 @@
 ## 0.8.3
 
 - The "Home" tab and the home storage tabs now also show at the workbench, with a "For the workbench" filter for anything a recipe uses. The workbench takes recipe materials from every storage tab it lists, so a home storage tab there also feeds crafting.
-- At a station, clicking an item in the "Home" tab that goes to your bag now moves one unit instead of the whole stack. This needs Stacking 0.5.0 or later; without it the whole stack moves as before.
+- At a station, clicking an item in the "Home" tab that goes to your bag now moves one unit instead of the whole stack. This needs Stacking 0.5.0 or later. Without it the whole stack moves as before.
 - The "Open" button in the "Home" tab now works at the drone trade.
 
 ## 0.8.2
@@ -218,12 +223,12 @@
 ## 0.8.1
 
 - Stack merging works again for items that never spoil, such as wire, dyes, fuel and seeds. They merge whenever they were picked up and whether they were found on the map, made or bought.
-- Food found on the map no longer differs from other food by the shelf factor it came with; the time left decides, as before.
+- Food found on the map no longer differs from other food by the shelf factor it came with. The time left decides, as before.
 - When partial stacks of one item stay apart, the log says why (which trait differs, or freshness or uses), once per item per session.
 
 ## 0.8.0
 
-- A searchable home storage list. At the stove and the rat cage it is a "Home" tab on the bag panel; on the inventory screen it is the "Home storage" window in the Mods menu. At a station, "For cooking" or "For the rat cage" shows only what it can use, and clicking a usable item puts it into the station; anything else goes to your bag. In the window, "Open" shows a storage beside your bag. `Esc` or the close button shuts it. New setting `HomeStorageList`.
+- A searchable home storage list. At the stove and the rat cage it is a "Home" tab on the bag panel. On the inventory screen it is the "Home storage" window in the Mods menu. At a station, "For cooking" or "For the rat cage" shows only what it can use, and clicking a usable item puts it into the station. Anything else goes to your bag. In the window, "Open" shows a storage beside your bag. `Esc` or the close button shuts it. New setting `HomeStorageList`.
 - The stove and the rat cage get a bag tab for every home storage holding something they can use. New setting `StorageTabs`.
 - At the rat cage, the mouse slots scroll past three rows, so a big cage no longer shrinks the whole screen.
 
@@ -232,11 +237,11 @@
 Changes since 0.3.2:
 
 - "Rotting soon" switches the list to food that spoils, soonest first, with where it sits and the time left.
-- A keep list names items you always carry; putting your bag away leaves that many in your bag.
+- A keep list names items you always carry. Putting your bag away leaves that many in your bag.
 - Put-away actions moved into a shared Mods menu.
 - Storages tidy when you open them: a compact layout packs small items, stacks merge, and moldy bags are tidied around their mold.
 - Drone deliveries are put away where their tags say, fill material racks, and count toward retrieve-supplies events.
 - Material racks are ranked the way the game's robots rank them. New setting `SkipRacksWithRobotPutOff` leaves out racks with their robot put switch off.
 - The panel, menu entries and messages are in Simplified Chinese too, and every config entry is explained in plain English and Chinese.
 - The panel footer names the key you set.
-- Fixes: no lost units, clicks or lists; an emptied drone stops offering a retrieve; the mod only reads game objects after the game has built them.
+- Fixed: units, clicks and lists no longer get lost. An emptied drone stops offering a retrieve. The mod only reads game objects after the game has built them.

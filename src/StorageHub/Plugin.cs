@@ -22,7 +22,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.17.5";
+    private const string Version = "0.17.6";
 
     /// <summary>The oldest Exiled's Toolkit the mod loads with: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -36,19 +36,19 @@ public sealed class Plugin : BasePlugin
         ModUiSize.Bind(Config, "StorageHub");
 
         var toggleKey = Config.Bind("Panel", "ToggleKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
-            "The key that opens and closes the Storage Hub panel. Unbound by default: the chest button in the HUD opens the panel. Set a key here to open it from the keyboard too.\n" +
-            "打开和关闭 Storage Hub 面板的按键。默认不绑定：HUD 里的箱子按钮可以打开面板。在这里设置按键后，也可以用键盘打开。");
+            "The key that opens and closes the Storage Hub panel. It is unbound by default, since the chest button in the HUD opens the panel. Set a key here to open it from the keyboard too.\n" +
+            "打开和关闭 Storage Hub 面板的按键。默认不绑定，因为 HUD 里的箱子按钮就能打开面板。在这里设置按键后，也可以用键盘打开。");
         var isVerbose = Config.Bind("Diagnostics", "Verbose", false,
             new ConfigDescription("Write extra detail to BepInEx/storage-hub.log: every planned move, what the keep list left in your bag, and how well each storage's tags matched an item. Turn it on to find out why an item went where it did. Default: off.\n" +
             "在 BepInEx/storage-hub.log 日志里写入更多细节：每一步计划的移动、「留在背包」清单留在背包里的物品，以及每个储物家具的标签和物品有多匹配。想弄清某件物品为什么被放到那里时再打开。默认关闭。", null, "ModManager.Advanced"));
         var isKeepOn = Config.Bind("Keep", "Enabled", true,
-            "When you put your bag away, leave the amounts on the panel's \"Keep in bag\" list in your bag. This counts for the whole bag and for one item at a time. Off: putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
-            "收纳背包时，按面板上「留在背包」清单里的数量把这些物品留在背包里。整个背包收纳和单件物品收纳都算。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。");
+            "When you put your bag away, the items on the panel's \"Keep in bag\" list stay in your bag, as many as the list says. This works when you put away the whole bag and when you put away one item. When off, putting away moves everything, and the list stays saved for when you turn this back on. Default: on.\n" +
+            "收纳背包时，面板上「留在背包」清单里的物品会按清单上的数量留在背包里。收纳整个背包和收纳单件物品时都有效。关闭后，收纳会把所有物品都放进储物家具，清单仍会保存，重新开启后照常生效。默认开启。");
         var isHomeListOn = Config.Bind("Stations", "HomeStorageList", true,
-            "Add a searchable list of your home storages: a \"Home\" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench and, at home, beside an open storage, the neighbor's basket or the car trunk, and a \"Home storage\" window in the Mods menu on the inventory screen. At a station, clicking an item the station takes puts it into the station (at the drone trade, into your side of the trade), and anything else goes to your bag. Beside a storage, the basket or the trunk, a click puts the item in it. Default: on.\n" +
-            "加入一个可搜索的家中储物家具列表：灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包面板上，以及在家里打开储物家具、邻居的篮子或小汽车后备箱时，多一个「家中」标签，背包界面的模组菜单里多一个「家中储物」窗口。在这些地方，点击这里能用的物品会直接放进去（无人机交易时放进你这一方的交易栏），其他物品放进背包。打开储物家具、篮子或后备箱时，点击物品会放进它里面。默认开启。");
+            "Adds a searchable list of everything in your home storages. It shows as a \"Home\" tab on the bag panel at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, and at home when you open a storage, the neighbor's basket or the car trunk. On the inventory screen it is the \"Home storage\" window in the Mods menu. At a station, clicking an item the station can use puts it into the station (at the drone trade, onto your side of the trade), and anything else goes to your bag. At an open storage, the basket or the trunk, clicking an item puts it in there. Default: on.\n" +
+            "加入一个可搜索的列表，列出家中储物家具里的所有物品。它是灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台背包面板上的「家中」标签，在家里打开储物家具、邻居的篮子或小汽车后备箱时也有。在物品栏界面，它是 Mods 菜单里的「家中储物」窗口。在设施旁，点击设施能用的物品会直接放进去（无人机交易时放进你这一方的交易栏），其他物品放进背包。打开储物家具、篮子或后备箱时，点击物品会放进里面。默认开启。");
         var isStorageTabsOn = Config.Bind("Stations", "StorageTabs", true,
-            "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station takes, next to the game's storage tabs. At home, opening a storage, the neighbor's basket or the car trunk also gives every home storage a tab above your bag, empty or not. Default: on.\n" +
+            "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station can use, next to the game's storage tabs. At home, opening a storage, the neighbor's basket or the car trunk also gives every home storage a tab above your bag, empty or not. Default: on.\n" +
             "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的储物标签并列。在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具也都会在背包上方有一个标签，空的也有。默认开启。");
         var log = new ModLog(Log, "storage-hub.log");
         var hooks = new PatchKit(new Harmony(Guid), log.Write);
@@ -128,8 +128,8 @@ public sealed class Plugin : BasePlugin
     private void StartDeliveryPutAway(PatchKit hooks, WebPage page, ModLog log)
     {
         var autoPutAway = Config.Bind("Delivery", "AutoPutAway", false,
-            "When a drone comes home, put what it brought into the storages tagged for it, the same way \"Put whole bag away by tag\" does. Anything no storage takes stays where the game put it. It also lets events that ask you to trade with a drone and pick up the supplies finish. With this off, those events never finish when the drone hub unloads the drone for you. Default: off, since it moves your things without a click.\n" +
-            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「按标签收纳整个背包」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。同时让要求你与无人机交易并取回物资的事件可以完成。关闭后，如果无人机中控台替你卸货，这类事件会一直无法完成。默认关闭，因为它会在你没有点击时移动你的物品。");
+            "When a drone comes home, put what it brought into the storages tagged for it, the same way the \"Put bag away\" button does. Anything no storage takes stays where the game put it. The delivery also counts as retrieving the supplies, so events that ask you to trade with a drone and retrieve the supplies can finish. With this off, those events can't finish when the drone hub unloads the drone for you. Default: off, since it moves your things without a click.\n" +
+            "无人机回家时，把它带回的物资按标签放进对应的储物家具，和面板上「收纳背包」按钮的做法一样。没有储物家具接收的物品留在游戏原本放的地方。这次送货也算作取回物资，所以要求你与无人机交易并取回物资的事件可以完成。关闭后，如果无人机中控台替你卸货，这类事件就无法完成。默认关闭，因为它会在你没有点击时移动你的物品。");
 
         var skipRobotPutOff = Config.Bind("Delivery", "SkipRacksWithRobotPutOff", false,
             "When on, drone deliveries leave out any material rack whose robot put switch is off, the way the game's robots do. When off, deliveries fill every rack that has a slot for the item. Default: off.\n" +
@@ -155,7 +155,7 @@ public sealed class Plugin : BasePlugin
             "Tidy a storage each time you open it. Your own bag is never tidied when you open a storage. Default: off, since it moves your things without a click.\n" +
             "每次打开储物家具时整理里面的物品。打开储物家具时不会整理你自己的背包。默认关闭，因为它会在你没有点击时移动你的物品。");
         var compactSmallItems = Config.Bind("Organize", "CompactSmallItems", true,
-            "Pack big items toward the bottom-right and small items toward the top-left, leaving as few gaps as it can and as much room as it can for big items. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. Off: storages are tidied the way the game's Sort does it, and the Sort button works as normal. Default: on.\n" +
+            "Pack big items toward the bottom-right and small items toward the top-left, leaving as few gaps and as much room for big items as possible. Items of the same kind stay together when that costs no room. The game's Sort button packs this way too. When off, storages are tidied the same way the game's Sort button does it, and the Sort button works as normal. Default: on.\n" +
             "大件物品靠右下角摆，小件物品靠左上角摆，尽量少留零散空格，给大件留出尽量多的空间。同类物品在不多占空间时会放在一起。游戏的「一键整理」按钮也会这样摆。关闭后，储物家具按游戏「一键整理」的方式整理，「一键整理」按钮保持原样。默认开启。");
         var smallItemMaxArea = Config.Bind("Organize", "SmallItemMaxArea", 2,
             new ConfigDescription("Items that take up this many cells or fewer count as small when CompactSmallItems packs a storage. 0 means no item counts as small. Default: 2.\n" +

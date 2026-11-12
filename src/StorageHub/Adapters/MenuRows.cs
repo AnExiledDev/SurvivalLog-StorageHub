@@ -20,7 +20,7 @@ internal static class MenuRows
     public static ModsMenuEntry Home(Action onClick, Func<bool> isShown) =>
         Row("storagehub.home", "homeTitle", "menuHomeTip", HomeIcon, 90, stations: false, onClick, isShown);
 
-    public static ModsMenuEntry PutAwayBag(Action onClick) => Row("storagehub.putaway", "putAwayTag", "menuPutAwayTip", PutAwayIcon, 100, stations: true, onClick);
+    public static ModsMenuEntry PutAwayBag(Action onClick) => Row("storagehub.putaway", "goBag", "menuPutAwayTip", PutAwayIcon, 100, stations: true, onClick);
 
     public static ModsMenuEntry PutAwayFloor(Action onClick) => Row("storagehub.floor", "menuFloor", "menuFloorTip", FloorIcon, 110, stations: true, onClick);
 

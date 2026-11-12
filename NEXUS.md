@@ -1,5 +1,5 @@
 Name: Storage Hub
-Summary: Put your whole bag away in one click: each item goes to the storage whose tag wants it, and the items you choose stay in your bag. Drone deliveries can put themselves away and storages can tidy themselves when you open them. A HUD button opens one searchable list of everything you own at home, and the stove, workbench and other stations get a Home tab.
+Summary: Put your whole bag away in one click: each item goes to the storage tagged for it, and the items you choose stay in your bag. Drone deliveries can put themselves away and storages can tidy themselves when you open them. A HUD button opens one searchable list of everything you own at home, and the stove, workbench and other stations get a Home tab.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
@@ -9,21 +9,21 @@ Survival Log makes you open storage after storage to find something, and again t
 [size=5]Main features[/size]
 [list]
 [*][b]The panel[/b]: press the chest button in the HUD to search every item you own at home, see where each one sits, and take it into your bag or put it away. Take a whole storage's worth, or with [url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url] (optional) pick how many with a slider. Every button says what it does when you point at it.[/*]
-[*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages whose tags want it. Also in the Mods menu on the inventory screen and on most station screens. Material racks count as tagged Materials and take only what they have a slot for. With Neighbor Basket 0.2.0 or newer (optional), its "Put away" button empties the neighbor's basket the same way.[/*]
-[*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest, and "Fill bag from storage" pulls in what your bag is short of. Each row shows how many storage holds, and marks items storage has none of.[/*]
+[*][b]Put away by tag[/b]: send your whole bag, or everything lying on the floor at home, into the storages tagged for them. Also in the Mods menu on the inventory screen and on most station screens. Material racks count as tagged Materials and take only what they have a slot for. With Neighbor Basket 0.2.0 or newer (optional), its "Put away" button empties the neighbor's basket the same way.[/*]
+[*][b]Keep in bag[/b]: pick items by name and set how many to keep. Putting your bag away leaves that many in your bag and stores the rest, and "Fill bag from storage" pulls in what your bag is short of. Each row shows how many your storages hold, and marks the items they have none of.[/*]
 [*][b]Rotting soon[/b]: all your food that spoils, soonest first, with where it sits and the time left.[/*]
-[*][b]Home tab at stations[/b]: at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, workbench and drone trade, and at home whenever you open a storage, the neighbor's basket or the car trunk, the bag panel gets a searchable "Home" tab listing everything in your home storages, filtered to what that station uses. Click an item to put it in (one unit of a stack at the shredder, workbench and drone trade, with Stacking). In the drone trade, drag an offered item back onto the tab to take it off the offer. At an open storage or the trunk a click puts the item in it. At the basket, what the neighbor asks for today is marked "Wanted" and listed first. The same list is the "Home storage" window in the Mods menu. With [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url] (optional; 0.8.4 or newer here, 0.8.7 or newer in the panel), pointing at an item shows its tooltip.[/*]
+[*][b]Home tab at stations[/b]: at the stove, rat cage, brewing barrel, dye vat, shredder, ration press, workbench and drone trade, and at home whenever you open a storage, the neighbor's basket or the car trunk, the bag panel gets a searchable "Home" tab listing everything in your home storages, filtered to what that station uses. Click an item to put it in (one unit of a stack at the shredder, workbench and drone trade, with Stacking). In the drone trade, drag an offered item back onto the tab to take it off the offer. At an open storage or the trunk, a click puts the item in it. At the basket, what the neighbor wants right now is marked "Wanted" and listed first. The same list is the "Home storage" window in the Mods menu. With [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url] (optional), pointing at an item shows its tooltip. That needs Info Pack 0.8.4 or newer here and 0.8.7 or newer in the panel.[/*]
 [*][b]Storage tabs at stations[/b]: those stations also get a bag tab for every home storage holding something they can use, next to the game's storage tabs, and the workbench crafts from them too.[/*]
-[*][b]Storage tabs at home[/b]: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, so you can move things between any of them. A long row scrolls by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. Out exploring, looting looks as the game made it.[/*]
+[*][b]Storage tabs at home[/b]: at home, opening a storage, the neighbor's basket or the car trunk gives every home storage a tab above your bag, empty or not, so you can move things between any of them. A long row scrolls by whole tabs with the arrows or the mouse wheel, and A and D bring the chosen tab into view. When you loot out exploring, the screen looks the same as without the mod.[/*]
 [*][b]Drone deliveries[/b]: turn on AutoPutAway and, when a drone comes home, its cargo is put away into the tagged storages. A drone left empty no longer asks you to retrieve supplies, and the delivery counts toward events that ask you to retrieve them. A setting leaves out material racks whose robot put switch is off.[/*]
-[*][b]Tidy storages[/b]: with OrganizeOnOpen on, opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, in whichever of several layouts leaves the fewest empty cells only a small item could fill and the most room for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
+[*][b]Tidy storages[/b]: with OrganizeOnOpen on, opening a storage packs big items toward the bottom-right and small ones usually toward the top-left, packed so there are as few wasted gaps as possible and as much room as possible for big items. Items of the same kind stay together when that costs no room. It also tops up partial stacks of the same item. The Sort button packs the same way, and so does Auto Organize in the drone trade (offered stacks keep their count).[/*]
 [/list]
 The keep list, deliveries, tidying and stack merging can each be turned off in the config. Drone deliveries and tidying on open start off, since they move your things without a click.
 
 [size=5]Keep in bag[/size]
-The game can't split a stack, so the keep list keeps whole stacks: the smallest stack that covers the amount, or else the fullest stacks until it is covered, the fresher one first between stacks of the same size. You often keep a few more than you asked for.
+The game can't split a stack, so the keep list keeps whole stacks. It keeps the smallest stack that covers the amount, or else the fullest stacks until the amount is covered. Between two stacks of the same size, it keeps the fresher one. So you often keep a few more than you asked for.
 
-The list is saved in [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it, and a file this version can't understand is copied aside with a .broken- name before starting fresh.
+The list is saved in [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.keep.json[/font]. [b]For now it is one list for all your saves.[/b] If that file can't be read, the mod refuses to put your bag away or change the list rather than overwrite it. A file this version can't understand is copied to a file with .broken- in its name, and the list starts empty.
 
 Storage Hub keeps nothing of its own in your save and does not edit game files.
 
@@ -62,7 +62,7 @@ Works in English and Chinese.
 Delete [font=Courier New]StorageHub.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder. The items it moved stay where they are.
 
 [size=5]Configuration[/size]
-To change the panel key or turn off any piece, edit [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.cfg[/font] while the game is closed, or do it in game on the Mod Manager's Mods screen, where changes take effect at once (see [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese).
+To change the panel key or turn off any piece, edit [font=Courier New]BepInEx\config\com.dev.survivallog.storagehub.cfg[/font] while the game is closed, or do it in game on the Mod Manager's Mods screen, where changes take effect at once (see [url=https://github.com/AnExiledDev/SurvivalLog-StorageHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting). The cfg file explains each setting in English and Chinese.
 
 [size=5]Feedback[/size]
 Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or post in this page's Posts tab. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and [font=Courier New]BepInEx\storage-hub.log[/font].
@@ -74,7 +74,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 [line]
 [size=5]简体中文[/size]
 
-在《Survival Log》里，找一件东西要打开一个又一个储物家具，放回去还要再来一遍。Storage Hub 加了一个面板，用游戏自己的风格列出背包、家里所有储物家具和工作台抽屉里的每件物品，并替你收纳。每次移动都走游戏自己的快速移动，所以新鲜度和耐久都会保留。
+在《Survival Log》里，找一件东西要打开一个又一个储物家具，放回去还要再来一遍。Storage Hub 加了一个面板，用游戏的风格列出背包、家里所有储物家具和工作台抽屉里的每件物品，并替你收纳。每次移动都通过游戏的快速移动，所以新鲜度和耐久都会保留。
 
 [size=5]主要功能[/size]
 [list]
@@ -82,11 +82,11 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-StorageHu
 [*][b]按标签收纳[/b]：把整个背包，或家里地面上的所有物品，放进标签对应的储物家具。物品栏界面和大部分设施界面的 Mods 菜单里也有这两个按钮。材料架算作标签为「材料」的储物家具，只接收它有空位的物品。装了 Neighbor Basket 0.2.0 或更新版本（可选）时，它的「收纳」按钮会用同样的方式清空邻居的篮子。[/*]
 [*][b]留在背包[/b]：按名称选择物品并设定保留数量。收纳背包时会在背包里留下这么多，其余的收纳起来；「从储物家具补满背包」会取出背包还缺的物品。每一行都显示储物家具里有多少，并标出储物家具里没有的物品。[/*]
 [*][b]即将腐败[/b]：列出所有会腐败的食物，最快腐败的排在前面，并显示所在位置和剩余时间。[/*]
-[*][b]设施旁的「家中」标签[/b]：在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、工作台和无人机交易界面，以及在家里打开储物家具、邻居的篮子或小汽车后备箱时，背包面板多一个可搜索的「家中」标签，列出家里所有储物家具里的物品，并按这个设施能用的筛选。点击物品即可放进去（装了 Stacking 时，在粉碎机、工作台和无人机交易里每次放一件）。在无人机交易里，把已交出的物品拖回这个标签即可撤回。打开储物家具或后备箱时，点击物品会放进它里面。在篮子界面，邻居今天想要的物品标为「她想要」并排在最前。物品栏界面 Mods 菜单里的「家中储物」窗口也是同一个列表。装了 [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url]（可选；这里需要 0.8.4 或更新版本，面板里需要 0.8.7 或更新版本）时，鼠标指向物品会显示它的提示框。[/*]
+[*][b]设施旁的「家中」标签[/b]：在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、工作台和无人机交易界面，以及在家里打开储物家具、邻居的篮子或小汽车后备箱时，背包面板多一个可搜索的「家中」标签，列出家里所有储物家具里的物品，并按这个设施能用的筛选。点击物品即可放进去（装了 Stacking 时，在粉碎机、工作台和无人机交易里每次放一件）。在无人机交易里，把已交出的物品拖回这个标签即可撤回。打开储物家具或后备箱时，点击物品会放进它里面。在篮子界面，邻居现在想要的物品标为「她想要」并排在最前。物品栏界面 Mods 菜单里的「家中储物」窗口也是同一个列表。装了 [url=https://www.nexusmods.com/survivallog/mods/81]Info Pack[/url]（可选）时，鼠标指向物品会显示它的提示框。这里需要 Info Pack 0.8.4 或更新版本，面板里需要 0.8.7 或更新版本。[/*]
 [*][b]设施旁的储物标签[/b]：这些设施还会为每个放着它能用的物品的家中储物家具加一个背包标签，和游戏自带的储物标签并列，工作台也会用这些标签里的材料制作。[/*]
 [*][b]家中的储物标签[/b]：在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具都会在背包上方有一个标签，空的也有，方便在它们之间搬东西。标签太多时，用箭头或鼠标滚轮按整个标签滚动，按 A 和 D 切换时会自动滚到选中的标签。外出探索时，搜刮界面保持游戏原样。[/*]
 [*][b]无人机送货[/b]：开启 AutoPutAway 后，无人机回家时，它带回的物资会被放进对应标签的储物家具。卸空的无人机不会再提示你取回物资，这次送货也会计入要求取回物资的事件。有一个设置可以跳过机器人放置开关关闭的材料架。[/*]
-[*][b]整理储物家具[/b]：开启 OrganizeOnOpen 后，打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。模组会在几种排法里选出只有小件才能填的空格最少、给大件留空间最多的那种。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列，无人机交易里的「一键整理」也一样（已交出的堆叠数量不变）。[/*]
+[*][b]整理储物家具[/b]：开启 OrganizeOnOpen 后，打开储物家具时，大件物品会被排到右下方，小件通常排到左上方。排列时尽量少留零碎空格，并给大件留出尽量多的空间。同类物品在不占用额外空间时会放在一起。它还会把同种物品未满的堆叠补满。「整理」按钮也按同样的方式排列，无人机交易里的「一键整理」也一样（已交出的堆叠数量不变）。[/*]
 [/list]
 「留在背包」清单、无人机送货、整理和合并堆叠都可以在配置中单独关闭。无人机送货和打开时整理默认关闭，因为它们会在你没有点击时移动你的物品。
 
@@ -101,7 +101,7 @@ Storage Hub 不在你的存档里保存任何自己的数据，也不修改游�
 [list]
 [*]任何收纳都不会把物品放进无人机或工作台抽屉。「全部收进背包」会从无人机里取东西，所以在全部取出无人机正在运送的物品之前请先确认。[/*]
 [*]架子、烹饪家具、堆肥箱、火锅、上锁的包和游戏的特殊背包永远不会被整理。[/*]
-[*]点击「整理」后，游戏自己的排列会先显示一帧，然后才被紧凑的排列替换。[/*]
+[*]点击「整理」后，游戏的排列会先显示一帧，然后才被紧凑的排列替换。[/*]
 [*]无人机送货和合并堆叠要在序章结束后才会开始工作。[/*]
 [/list]
 
@@ -112,7 +112,7 @@ Storage Hub 不在你的存档里保存任何自己的数据，也不修改游�
 [*]Survival Log 1.1.20719。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/74]Stacking[/url]，用于取出一堆中的一部分。[/*]
-[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 或更新版本。没有它本模组不会加载。它提供 Mods 菜单；打字时它让面板按键不起作用；面板关闭时，它把结果显示为弹出通知；它让在 Mod Manager 的「模组」界面改动的设置无需重启即可生效，它的界面大小设置还能放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。Storage Hub 自己的 UiScale 设置可以单独调整本模组的大小。[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 或更新版本。没有它本模组不会加载。它提供 Mods 菜单，打字时让面板按键不起作用，面板关闭时把结果显示为弹出通知，还让在 Mod Manager 的「模组」界面改动的设置无需重启即可生效。它的界面大小设置还能放大或缩小 Storage Hub 面板和背包界面上的 Storage Hub 窗口。Storage Hub 自己的 UiScale 设置可以单独调整本模组的大小。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/73]Mod Manager[/url]。装了它，可以在游戏里它的「模组」界面修改每项设置，并看到每项的说明，不用打开配置文件。[/*]
 [/list]
 

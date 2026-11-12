@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.7
+
+- Clearer wording in the settings.
+- Made for Survival Log 1.1.20719.
+
 ## 0.17.6
 
 - Clearer wording in the settings, the panel and the Mods menu. In the Mods menu, "Put away by tag" is now "Put bag away" and "Put away floor" is now "Put floor away", the same names as the panel buttons.

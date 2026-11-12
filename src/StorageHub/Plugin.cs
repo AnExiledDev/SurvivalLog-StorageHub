@@ -22,7 +22,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.17.6";
+    private const string Version = "0.17.7";
 
     /// <summary>The oldest Exiled's Toolkit the mod loads with: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -49,7 +49,7 @@ public sealed class Plugin : BasePlugin
             "加入一个可搜索的列表，列出家中储物家具里的所有物品。它是灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台背包面板上的「家中」标签，在家里打开储物家具、邻居的篮子或小汽车后备箱时也有。在物品栏界面，它是 Mods 菜单里的「家中储物」窗口。在设施旁，点击设施能用的物品会直接放进去（无人机交易时放进你这一方的交易栏），其他物品放进背包。打开储物家具、篮子或后备箱时，点击物品会放进里面。默认开启。");
         var isStorageTabsOn = Config.Bind("Stations", "StorageTabs", true,
             "At the stove, rat cage, brewing barrel, dye vat, shredder, ration press, drone trade and workbench, add a bag tab for every home storage holding something the station can use, next to the game's storage tabs. At home, opening a storage, the neighbor's basket or the car trunk also gives every home storage a tab above your bag, empty or not. Default: on.\n" +
-            "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏自带的储物标签并列。在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具也都会在背包上方有一个标签，空的也有。默认开启。");
+            "在灶台、鼠笼、酿酒桶、染料桶、粉碎机、口粮压制机、无人机交易和工作台的背包标签旁，为每个放着这里能用的物品的家中储物家具加一个标签，和游戏原本的储物标签并列。在家里打开储物家具、邻居的篮子或小汽车后备箱时，每个家中储物家具也都会在背包上方有一个标签，空的也有。默认开启。");
         var log = new ModLog(Log, "storage-hub.log");
         var hooks = new PatchKit(new Harmony(Guid), log.Write);
 

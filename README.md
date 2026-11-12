@@ -28,7 +28,7 @@ Survival Log makes you open storage after storage to find something, and again t
 
 The keep list, drone deliveries, tidying and stack merging each have their own setting, so you can turn off the ones you don't want (see [CONFIG.md](CONFIG.md)). Drone deliveries and tidying on open start off, since they move your things without a click. Turn them on in the config or on the Mod Manager's Mods screen.
 
-The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names are the same as in the game.
+The panel, the Mods menu entries and every message follow the game's language: English or Simplified Chinese. Item and storage names are the same ones the game shows.
 
 Storage Hub keeps nothing of its own in your save and does not edit game files. If you remove the mod, the items it moved stay where they are.
 
@@ -195,7 +195,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.6 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.7 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

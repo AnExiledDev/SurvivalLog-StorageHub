@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.8
+
+- Fixed: at the stove, the brewing barrel, the dye vat and other stations, the Home tab could push your last bag tab past the edge of the panel with no way to reach it. The arrows at the ends of the tab bar now show whenever the tabs don't fit.
+- Made for Survival Log 1.1.21671.
+
 ## 0.17.7
 
 - Clearer wording in the settings.

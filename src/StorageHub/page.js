@@ -2082,6 +2082,18 @@
     markActiveTab();
 
     if (home.station.scrollTabs) keepTabScroll(doc, tabs);
+    else recheckPageArrows(tabs);
+  }
+
+  // The Home tab and the flat look take room from the page's scrolling tab row after the page has checked whether the row
+  // needs its arrow buttons, and give the room back when they go. Each page checks again when the row scrolls, so a scroll
+  // event is sent: a row that now runs past the panel's edge gets its arrows, and one that fits again loses them.
+  function recheckPageArrows(tabs) {
+    var row = segBar(tabs).querySelector(SEG_ROW.join(','));
+    // A page that has already closed has no window left, and nothing to fix.
+    var win = row && row.ownerDocument.defaultView;
+
+    if (win) row.dispatchEvent(new win.Event('scroll'));
   }
 
   // After the pinned tabs, or right after the bag's own tab where the storage tabs follow in the same bar.
@@ -2507,7 +2519,10 @@
     if (home.tab && home.tab.parentNode) home.tab.parentNode.removeChild(home.tab);
     if (home.back && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (home.arrows) removeArrows();
-    if (home.tabsEl) segBar(home.tabsEl).classList.remove('slmh-seg');
+    if (home.tabsEl) {
+      segBar(home.tabsEl).classList.remove('slmh-seg');
+      recheckPageArrows(home.tabsEl);
+    }
 
     if (home.panel) {
       home.panel.classList.remove('slmh-host', 'slmh-on', 'slmh-forced');

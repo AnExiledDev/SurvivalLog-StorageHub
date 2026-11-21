@@ -22,7 +22,9 @@ public class StationTabBarTests
             "var bar = gameEl(panel, 'div', 'bag-tabs'); bar.id = 'bagTabs';" +
             "var pinned = gameEl(bar, 'div', 'bag-tab-pinned-slot'); pinned.id = 'bagTabPinned';" +
             "gameEl(pinned, 'div', 'bag-tab active').textContent = 'Inventory';" +
-            "gameEl(bar, 'div', 'bag-tabs-scroll');" +
+            "var row = gameEl(bar, 'div', 'bag-tabs-scroll');" +
+            // The page shows its arrow buttons from what it finds when the row scrolls; here it only counts the checks.
+            "var checks = 0; row.addEventListener('scroll', function () { checks++; });" +
             "document.frames.push({ src: 'file:///D:/Game/WebUI/Cooking/Cooking.html', contentDocument: gameDoc, contentWindow: gameWindow });" +
             "poll();" +
             "window.__storagehub.station({ kind: 'cooking', storages: [] });");
@@ -43,6 +45,21 @@ public class StationTabBarTests
 
         Assert.False(Is("gameDoc.querySelector('#bagTabs .slmh-tab')"));
         Assert.False(Is("bar.classList.contains('slmh-seg')"));
+    }
+
+    [Fact]
+    public void The_page_checks_its_tab_arrows_again_once_the_home_tab_is_in()
+    {
+        // The home tab takes room from the scrolling row, which may now run past the panel's edge.
+        Assert.True(_engine.Evaluate("checks").AsNumber() >= 1);
+    }
+
+    [Fact]
+    public void The_page_checks_its_tab_arrows_again_once_the_home_tab_goes()
+    {
+        _engine.Execute("checks = 0; window.__storagehub.station(null)");
+
+        Assert.True(_engine.Evaluate("checks").AsNumber() >= 1);
     }
 
     private bool Is(string expression) => _engine.Evaluate($"!!({expression})").AsBoolean();

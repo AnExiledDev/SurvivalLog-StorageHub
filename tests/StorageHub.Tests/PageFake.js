@@ -144,6 +144,12 @@ var FakeElement = class {
     (this.listeners[type] || []).slice().forEach(function (listener) { listener(event); });
   }
 
+  dispatchEvent(event) {
+    this.fire(event.type, event);
+
+    return true;
+  }
+
   focus() { if (this.ownerDocument) this.ownerDocument.activeElement = this; }
 
   blur() { if (this.ownerDocument && this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = null; }
@@ -349,7 +355,7 @@ function handedId(id) {
 
 // The inventory screen in a frame: its bag panel, the bag side's item tab toolbar and two panels side by side, 700 to
 // 1300 across and 200 to 900 down.
-var gameWindow = { innerWidth: 1920, innerHeight: 1080 };
+var gameWindow = { innerWidth: 1920, innerHeight: 1080, Event: function (type) { this.type = type; } };
 var gameDoc = new FakeDocument(gameWindow);
 
 gameWindow.document = gameDoc;

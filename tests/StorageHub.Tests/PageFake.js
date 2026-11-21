@@ -362,6 +362,9 @@ var gameWindow = { innerWidth: 1920, innerHeight: 1080, Event: function (type) {
 var gameDoc = new FakeDocument(gameWindow);
 
 gameWindow.document = gameDoc;
+// Every event sent to the page's window, by type.
+gameWindow.sent = [];
+gameWindow.dispatchEvent = function (event) { gameWindow.sent.push(event.type); return true; };
 
 function gameEl(parent, tag, className) {
   var node = gameDoc.createElement(tag);

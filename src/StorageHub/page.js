@@ -1780,7 +1780,7 @@
 
   // isShown: the station's home tab is chosen, or the inventory's window is open.
   // switchingUntil: a Home click is switching the game's tab until then, so that switch does not close the list.
-  var home = { data: null, isOff: false, isAway: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, observer: null, askedAt: 0, shownJson: '', shownTabs: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, reopen: null };
+  var home = { data: null, isOff: false, isAway: false, station: null, frame: null, doc: null, ui: null, tab: null, back: null, arrows: null, panel: null, tabsEl: null, barHeight: -1, observer: null, askedAt: 0, shownJson: '', shownTabs: '', query: '', isAllScope: false, folds: {}, openId: null, isShown: false, underTab: -1, switchingUntil: 0, reopen: null };
 
   function station(data) {
     if (data === null) {
@@ -2088,6 +2088,8 @@
 
     if (home.station.scrollTabs) keepTabScroll(doc, tabs);
     else recheckPageArrows(tabs);
+
+    refitPage(tabs);
   }
 
   // The bag's tab goes in a box at the front of the bar, the way the shredder draws it, so it stays put with Home while
@@ -2159,6 +2161,26 @@
     var win = row && row.ownerDocument.defaultView;
 
     if (win) row.dispatchEvent(new win.Event('scroll'));
+  }
+
+  // The Home tab and the flat look can make the tab bar taller after the page has zoomed itself to fit the window. The
+  // page then runs past the bottom of the window and scrolls (the drone trade with a big bag and Pack Rat's scroll bars
+  // off). Each page zooms to fit again on a resize event, so one is sent whenever the bar's height changes.
+  function refitPage(tabs) {
+    var bar = segBar(tabs);
+    var height = bar.offsetHeight;
+
+    if (height === home.barHeight) return;
+
+    home.barHeight = height;
+    sendResize(bar.ownerDocument);
+  }
+
+  function sendResize(doc) {
+    // A page that has already closed has no window left, and nothing to fit.
+    var win = doc && doc.defaultView;
+
+    if (win) win.dispatchEvent(new win.Event('resize'));
   }
 
   // After the pinned tabs, or right after the bag's own tab where the storage tabs follow in the same bar.
@@ -2588,6 +2610,7 @@
       unpinFirstTab(home.tabsEl);
       segBar(home.tabsEl).classList.remove('slmh-seg');
       recheckPageArrows(home.tabsEl);
+      sendResize(home.tabsEl.ownerDocument);
     }
 
     if (home.panel) {
@@ -2605,6 +2628,7 @@
     home.arrows = null;
     home.panel = null;
     home.tabsEl = null;
+    home.barHeight = -1;
   }
 
   function removeArrows() {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.10
+
+- Fixed: at the drone trade with a big bag and Pack Rat's scroll bars off, the screen could end up a little taller than the window and show a scroll bar. Every screen with a Home tab now shrinks to fit again once the tab is in.
+- Made for Survival Log 1.1.21671.
+
 ## 0.17.9
 
 - At the ration press, your bag's tab and the Home tab now sit together at the front of the tab bar and stay put while the storage tabs scroll, the same as at the shredder. Before, the Home tab was at the far end, past every storage tab, and your bag's tab scrolled out of sight with the rest.

@@ -1619,7 +1619,8 @@
     withTabs({ kind: 'brew', page: /BrewPanel\.html/, host: '.brew-system', scope: 'scopeBrew', panel: '.col', quick: true }, BAG_TABS),
     withTabs({ kind: 'dye', page: /DyePanel\.html/, host: '.dye-system', scope: 'scopeDye', panel: '.col', quick: true }, BAG_TABS),
     withTabs({ kind: 'shredder', page: /Shredder\.html/, host: '.cart', scope: 'scopeShredder', tabs: '.cart > .left-tabs', pin: '#tabPinned' }, CART_TABS),
-    withTabs({ kind: 'compressor', page: /Compressor\.html/, host: '.cart', scope: 'scopeCompressor', tabs: '#tabs', pin: null }, CART_TABS),
+    // The ration press draws every tab in its scrolling row, so its bag's tab is moved to a box at the front (pinFirst).
+    withTabs({ kind: 'compressor', page: /Compressor\.html/, host: '.cart', scope: 'scopeCompressor', tabs: '.cart > .left-tabs', pin: '.slmh-pinbox', pinFirst: true }, CART_TABS),
     { kind: 'trade', page: /TradeUI\.html/, host: '#app .cols', scope: 'scopeTrade', tabs: '.cols > .col > .bag-tabs', pin: '.bag-tab-pinned', tab: 'bag-tab', tag: 'button', panel: '.col', model: 'trade', quick: true },
     { kind: 'workbench', page: /ToolTable\.html/, host: '.backpack-panel', scope: 'scopeWorkbench', tabs: '.backpack-panel > .left-tabs', pin: '.left-tab-pinned', tab: 'left-tab', tag: 'button', panel: '.backpack-panel', model: 'tooltable', quick: true },
     // The basket screen is the bag screen with the basket beside the bag, so it is matched before the inventory. Its bag
@@ -1674,6 +1675,7 @@
     '.slmh-seg{gap:0!important;align-items:stretch;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:6px}',
     segAll(SEG_PIN.concat(SEG_ROW)) + '{gap:0!important;margin:0!important}',
     segAll(SEG_PIN, '::after') + '{display:none!important}',
+    '.slmh-pinbox{display:flex;flex:none}',
     segAll(SEG_TAB) + '{flex:0 0 auto;margin:0;padding:4px 11px 5px;font-size:13px;font-weight:600;letter-spacing:.3px;background-color:transparent;background-image:none;border:0;border-right:1px solid rgba(255,255,255,.1);border-radius:0;box-shadow:none;text-shadow:none;color:rgba(255,255,255,.55)}',
     segAll(SEG_TAB, ':hover') + '{color:#fff;background-color:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}',
     segAll(SEG_TAB, '.active') + '{color:#1a1408;background-color:#FFC83A;background-image:none;border-color:rgba(255,255,255,.1);box-shadow:none;text-shadow:none;font-weight:700}',
@@ -2046,8 +2048,11 @@
     var doc = home.doc;
     var st = home.station;
     var tabs = doc && doc.querySelector(st.tabs);
-    var pinned = tabs && (st.pin ? tabs.querySelector(st.pin) : tabs);
     var panel = tabs && tabs.closest(st.panel);
+
+    if (panel && st.pinFirst) pinFirstTab(doc, tabs);
+
+    var pinned = tabs && (st.pin ? tabs.querySelector(st.pin) : tabs);
 
     // The drone trade draws no tab bar for the bag alone, so it has no home tab then.
     if (!pinned || !panel) {
@@ -2083,6 +2088,66 @@
 
     if (home.station.scrollTabs) keepTabScroll(doc, tabs);
     else recheckPageArrows(tabs);
+  }
+
+  // The bag's tab goes in a box at the front of the bar, the way the shredder draws it, so it stays put with Home while
+  // the storage tabs scroll. The page draws all its tabs again on every change, the bag's included, and the one moved
+  // before is then thrown away.
+  function pinFirstTab(doc, tabs) {
+    var row = tabs.querySelector(SEG_ROW.join(','));
+    var drawn = row ? row.querySelectorAll(gameTabSelector()) : [];
+    var box = tabs.querySelector('.slmh-pinbox');
+
+    if (!drawn.length) return;
+
+    if (!box) {
+      box = doc.createElement('div');
+      box.className = 'left-tab-pinned slmh-pinbox';
+      tabs.insertBefore(box, tabs.firstElementChild);
+    }
+
+    var held = box.querySelectorAll(gameTabSelector());
+
+    if (held.length && drawn.length < cartTabs().length) return;
+
+    Array.prototype.forEach.call(held, function (tab) { box.removeChild(tab); });
+    box.insertBefore(drawn[0], box.firstElementChild);
+    revealNewChosenTab(doc, box, row, drawn);
+  }
+
+  // The page brings a newly chosen tab into view while the bag's tab is still in the row, so once that tab has moved out
+  // the chosen one can end up partly hidden. It is brought into view again, only when the choice changed, as the page does.
+  function revealNewChosenTab(doc, box, row, drawn) {
+    var state = doc.defaultView.State;
+    var chosen = state ? state.activeTab : -1;
+    var tab = drawn[chosen];
+
+    if (box.slmhChosen === chosen) return;
+
+    box.slmhChosen = chosen;
+
+    if (!tab || tab.parentNode !== row) return;
+
+    var left = tab.offsetLeft;
+    var right = left + tab.offsetWidth;
+
+    if (left < row.scrollLeft) row.scrollTo({ left: left, behavior: 'instant' });
+    else if (right > row.scrollLeft + row.clientWidth) row.scrollTo({ left: right - row.clientWidth, behavior: 'instant' });
+  }
+
+  // Puts the bag's tab back at the front of the row, unless the page has drawn the row again since, and takes the box away.
+  function unpinFirstTab(tabs) {
+    var box = tabs.querySelector('.slmh-pinbox');
+    var row = tabs.querySelector(SEG_ROW.join(','));
+
+    if (!box) return;
+
+    var held = box.children[0];
+    var drawn = row ? row.querySelectorAll('.left-tab').length : 0;
+
+    if (row && held && drawn < cartTabs().length) row.insertBefore(held, row.firstElementChild);
+
+    box.parentNode.removeChild(box);
   }
 
   // The Home tab and the flat look take room from the page's scrolling tab row after the page has checked whether the row
@@ -2520,6 +2585,7 @@
     if (home.back && home.back.parentNode) home.back.parentNode.removeChild(home.back);
     if (home.arrows) removeArrows();
     if (home.tabsEl) {
+      unpinFirstTab(home.tabsEl);
       segBar(home.tabsEl).classList.remove('slmh-seg');
       recheckPageArrows(home.tabsEl);
     }

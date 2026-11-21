@@ -58,7 +58,7 @@ The search box filters this list too, and clicking a row shows that item on the 
 
 ### Mods menu
 
-On the game's inventory screen, a "Mods" button sits next to the game's Sort button on your bag's item tab. It holds "Home storage" (the searchable list of your home storages), "Put bag away" and "Put floor away". Other mods that use the same menu, such as Unpack All, list their actions there too. `Esc` or a click elsewhere closes it. The menu does not show during the prologue. The same Mods button is in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), with "Put bag away" and "Put floor away". "Home storage" is only on the inventory, since those screens have the Home tab.
+On the game's inventory screen, a "Mods" button sits next to the game's Sort button on your bag's item tab. It holds "Home storage" (the searchable list of your home storages), "Put bag away" and "Put floor away". Other mods that use the same menu, such as Unpack All, list their actions there too. `Esc` or a click elsewhere closes it. The menu does not show during the prologue. The same Mods button is in the bag panel of the workbench, stove, ration press, greenhouse, drone hub, brewing barrel, dye vat, rat cage, material rack and shop screens (not the shredder or the drone trade), with "Put bag away" and "Put floor away". "Home storage" is only on the inventory. The stations with a Home tab show the same list there.
 
 ## Putting things away
 
@@ -195,7 +195,7 @@ The keep list is not in that file. Change it in the panel ("Keep in bag").
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.8 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
+Check `BepInEx\LogOutput.log` for a line starting `===== Storage Hub 0.17.9 started`. The lines after it name the toggle key and whether verbose logging and the keep list are on, say which game hooks went in, how the tidy and delivery settings are set, and, when a keep list was found, how many items it holds. A hook that failed gets a line starting `could not hook`, which says what will not work. A setting changed on the Mods screen writes its line again.
 
 The same lines are in `BepInEx\storage-hub.log`, which survives restarts, along with every move the mod makes.
 

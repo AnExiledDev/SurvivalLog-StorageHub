@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.9
+
+- At the ration press, your bag's tab and the Home tab now sit together at the front of the tab bar and stay put while the storage tabs scroll, the same as at the shredder. Before, the Home tab was at the far end, past every storage tab, and your bag's tab scrolled out of sight with the rest.
+- Made for Survival Log 1.1.21671.
+
 ## 0.17.8
 
 - Fixed: at the stove, the brewing barrel, the dye vat and other stations, the Home tab could push your last bag tab past the edge of the panel with no way to reach it. The arrows at the ends of the tab bar now show whenever the tabs don't fit.

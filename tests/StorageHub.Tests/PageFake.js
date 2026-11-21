@@ -89,6 +89,8 @@ var FakeElement = class {
 
   get firstChild() { return this.children.length ? this.children[0] : null; }
 
+  get firstElementChild() { return this.firstChild; }
+
   get lastChild() { return this.children.length ? this.children[this.children.length - 1] : null; }
 
   // In the page while some ancestor is a document's head or body.
@@ -218,10 +220,11 @@ var FakeElement = class {
   }
 };
 
-// "A B": the element matches B and some element around it matches A.
+// "A B": the element matches B and some element around it matches A. "A > B": its own parent matches A.
 function matchesChain(element, parts) {
   if (!matchesCompound(element, parts[parts.length - 1])) return false;
   if (parts.length === 1) return true;
+  if (parts[parts.length - 2] === '>') return !!element.parentElement && matchesChain(element.parentElement, parts.slice(0, -2));
 
   for (var around = element.parentElement; around; around = around.parentElement) {
     if (matchesChain(around, parts.slice(0, -1))) return true;

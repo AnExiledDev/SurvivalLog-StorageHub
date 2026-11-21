@@ -22,7 +22,7 @@ namespace StorageHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.storagehub";
-    private const string Version = "0.17.8";
+    private const string Version = "0.17.9";
 
     /// <summary>The oldest Exiled's Toolkit the mod loads with: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";

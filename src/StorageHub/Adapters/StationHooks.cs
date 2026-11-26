@@ -17,12 +17,12 @@ namespace StorageHub.Adapters;
 /// Adds a bag tab to a station for every home storage holding something the station takes, next to the game's
 /// tabs, whose locks are left as they are. The game builds a station's tabs from the storage list its opening action
 /// carries, so the storages are appended to that list before the reducer reads it: the fridge list at the stove
-/// (Reducer_Data_Item.RA_GetCookingBagList, RVA 0x29F54B0), the rat cage (RA_GetRatCageBagList, 0x29F6B50), the brewing
-/// barrel (RA_GetBrewBagList, 0x29F4870) and the dye vat (RA_GetDyeBagList, 0x29F5E20), and the tool cabinet list at
-/// the shredder (RA_GetShredderBagList, 0x29F6F40) and the ration press (RA_GetCompressorBagList, 0x29F4C50). The drone
-/// trade asks ItemManager.CollectTradeContainers (RVA 0x26C3D80) for its tabs, so that list gets them on the way out,
+/// (Reducer_Data_Item.RA_GetCookingBagList), the rat cage (RA_GetRatCageBagList), the brewing
+/// barrel (RA_GetBrewBagList) and the dye vat (RA_GetDyeBagList), and the tool cabinet list at
+/// the shredder (RA_GetShredderBagList) and the ration press (RA_GetCompressorBagList). The drone
+/// trade asks ItemManager.CollectTradeContainers for its tabs, so that list gets them on the way out,
 /// which also lets an aid drop take items from those storages. The workbench's reducer has no body of its own to hook,
-/// so its tool cabinet list is extended in Ac_Item_GetHandMadeBagList.SendAction (RVA 0x297E8B0) instead; the game fills
+/// so its tool cabinet list is extended in Ac_Item_GetHandMadeBagList.SendAction instead; the game fills
 /// a recipe from every tab it lists, so a home storage tab there also feeds crafting. Every target starts with plain
 /// stores, so all are safe to hook. Static because a Harmony patch has nowhere else to look.
 /// </summary>

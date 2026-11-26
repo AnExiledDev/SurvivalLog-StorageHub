@@ -2,6 +2,7 @@ using System;
 using ExiledToolkit.Game;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
+using StorageHub.Core;
 
 namespace StorageHub.Adapters;
 
@@ -18,9 +19,6 @@ internal sealed class DroneRetrieves
     /// the hub (Furniture.BuildSingleBtnData); the hub's own buttons follow the trip, which ResetTrip clears.
     /// </summary>
     private const string CargoRetrievedTag = "StrangerTradeCargoRetrieved";
-
-    /// <summary>The game's "Conduct Drone trade and retrieve supplies" action (Config_Action 9010), which events 10205, 52780 and 62780 ask for.</summary>
-    private const int RetrieveSuppliesActionId = 9010;
 
     private readonly Action<string> _log;
     private readonly Action<string> _note;
@@ -112,8 +110,8 @@ internal sealed class DroneRetrieves
         {
             if (GameSingleton.Existing<BattleLogicWorld>()?._DynamicEventManager is not { } events) return;
 
-            events.OnActionCompleted(RetrieveSuppliesActionId);
-            _note($"drone {droneId}: reported its retrieve (action {RetrieveSuppliesActionId}) to events");
+            events.OnActionCompleted(GameIds.RetrieveSuppliesAction);
+            _note($"drone {droneId}: reported its retrieve (action {GameIds.RetrieveSuppliesAction}) to events");
         }
         catch (Exception ex)
         {

@@ -15,6 +15,7 @@ public class PageRefitTests
         _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
         _engine.Execute(Resource("ExiledToolkit.api.js"));
         _engine.Execute(Resource("StorageHub.page.js"));
+        _engine.Execute("window.__storagehub.live(true, '')");
         // The stove's page, with a tab bar that stands 31 px in the game's look and 38 px in the flat one.
         _engine.Execute(
             "gameWindow.MutationObserver = function () { this.observe = function () {}; this.disconnect = function () {}; };" +

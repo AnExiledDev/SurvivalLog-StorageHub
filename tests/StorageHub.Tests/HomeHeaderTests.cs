@@ -15,6 +15,7 @@ public class HomeHeaderTests
         _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
         _engine.Execute(Resource("ExiledToolkit.api.js"));
         _engine.Execute(Resource("StorageHub.page.js"));
+        _engine.Execute("window.__storagehub.live(true, '')");
         _engine.Execute(
             "gameWindow.MutationObserver = function () { this.observe = function () {}; this.disconnect = function () {}; };" +
             "var host = gameEl(gameDoc.body, 'div', 'cooking-system');" +

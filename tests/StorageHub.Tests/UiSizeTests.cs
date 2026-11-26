@@ -158,6 +158,7 @@ public class UiSizeTests
             _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
             if (isToolkitFirst) LoadToolkit();
             _engine.Execute(Resource("StorageHub.page.js"));
+            _engine.Execute("window.__storagehub.live(true, '')");
         }
 
         public void LoadToolkit() => _engine.Execute(Resource("ExiledToolkit.api.js"));

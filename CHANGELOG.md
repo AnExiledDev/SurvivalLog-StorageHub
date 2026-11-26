@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.11
+
+- The check for station screens no longer runs on the main menu.
+- Item names follow a language pack picked in the menu once you load a save.
+- Made for Survival Log 1.1.21671.
+
 ## 0.17.10
 
 - Fixed: at the drone trade with a big bag and Pack Rat's scroll bars off, the screen could end up a little taller than the window and show a scroll bar. Every screen with a Home tab now shrinks to fit again once the tab is in.

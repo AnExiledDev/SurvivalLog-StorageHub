@@ -15,6 +15,7 @@ public class PressTabBarTests
         _engine.Execute(Resource("StorageHub.Tests.PageFake.js"));
         _engine.Execute(Resource("ExiledToolkit.api.js"));
         _engine.Execute(Resource("StorageHub.page.js"));
+        _engine.Execute("window.__storagehub.live(true, '')");
         // The ration press: its bag panel, the bar with an arrow at each end, and every tab drawn in the row between them.
         _engine.Execute(
             "gameWindow.MutationObserver = function () { this.observe = function () {}; this.disconnect = function () {}; };" +

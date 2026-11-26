@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
 using GameCore.HotUpdate.Battle.Logic;
 using StorageHub.Core;
-using UnityEngine;
 
 namespace StorageHub.Adapters;
 
@@ -33,7 +33,7 @@ internal sealed class DeliveryPutAway
     private LandingGroup? _group;
     private IReadOnlyList<long> _owners = Array.Empty<long>();
     private IReadOnlyList<ItemStack> _before = Array.Empty<ItemStack>();
-    private float _startedAt;
+    private double _startedAt;
     private IReadOnlyList<ItemStack> _seenLastTime = Array.Empty<ItemStack>();
     private bool _skipRobotPutOff;
 
@@ -91,7 +91,7 @@ internal sealed class DeliveryPutAway
 
         var seenNow = Delivery.Delivered(_before, _held);
 
-        switch (Delivery.Check(_seenLastTime, seenNow, Time.unscaledTime - _startedAt, LimitSeconds))
+        switch (Delivery.Check(_seenLastTime, seenNow, (float)(Clock.Now - _startedAt), LimitSeconds))
         {
             case DeliveryCheck.Wait:
                 _seenLastTime = seenNow;
@@ -121,7 +121,7 @@ internal sealed class DeliveryPutAway
 
         var group = Watch(new LandingGroup(new[] { _waiting[0] }));
         _waiting.RemoveAt(0);
-        _startedAt = Time.unscaledTime;
+        _startedAt = Clock.Now;
         _seenLastTime = Array.Empty<ItemStack>();
 
         return group;

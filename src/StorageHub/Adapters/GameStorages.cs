@@ -141,7 +141,18 @@ internal sealed class GameStorages
     }
 
     /// <summary>
-    /// Names are dropped when another world loads, as they always were: a language pack picked in the menu can rename
+    /// Forgets the names at every start of play: a load, a new game or a trip. AgentManager.StartBattle runs at each of
+    /// them, and its first 14 bytes have no relative jump or call. Without the hook, names are still forgotten when the
+    /// world object changes.
+    /// </summary>
+    public static void ForgetNamesOnStart(PatchKit hooks) =>
+        hooks.Patch(typeof(GameStorages), typeof(AgentManager), nameof(AgentManager.StartBattle), new[] { typeof(GameSaveData), typeof(GameMode) },
+            postfix: nameof(AfterStart), consequence: "item names are read again only when the world object changes");
+
+    private static void AfterStart() => _namedWorld = IntPtr.Zero;
+
+    /// <summary>
+    /// Names are dropped when another world loads or play starts again: a language pack picked in the menu can rename
     /// things without the table or the Chinese setting changing.
     /// </summary>
     private static void ForgetNamesOfOtherWorld(BattleLogicWorld world)

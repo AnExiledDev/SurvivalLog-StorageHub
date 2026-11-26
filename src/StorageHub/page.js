@@ -3328,8 +3328,10 @@
   }
 
   // The station pages come and go, and a bag screen moves between the bag alone, a storage and the basket within one
-  // page, so the stations are checked every poll rather than once per page.
+  // page, so the stations are checked every poll rather than once per page. On the main menu there is nothing to check.
   function pollStations() {
+    if (!hud.isLive) return;
+
     // The plugin's words arrive with its calls, so a new language reaches the button's tip here.
     try {
       if (hud.words !== words()) updateHud();
